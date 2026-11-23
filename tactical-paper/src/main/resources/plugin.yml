@@ -1,0 +1,28 @@
+name: Tactical
+version: '${version}'
+main: dev.tactical.paper.TacticalPlugin
+api-version: '26.3'
+description: Round-based 5v5 tactical shooter.
+load: POSTWORLD
+# Later phases add: depend: [packetevents]; softdepend: [voicechat, LuckPerms]
+permissions:
+  tactical.admin:
+    description: Full administrator access.
+    default: op
+    children:
+      tactical.admin.match: true
+      tactical.admin.reload: true
+      tactical.admin.logs: true
+      tactical.admin.debug: true
+  tactical.admin.match:
+    description: Create/end/pause/resume matches and force round results.
+    default: op
+  tactical.admin.reload:
+    description: Reload configuration files.
+    default: op
+  tactical.admin.logs:
+    description: View match recordings and errors.
+    default: op
+  tactical.admin.debug:
+    description: Debug tools (simulate eliminations, plants, defuses in test matches).
+    default: op

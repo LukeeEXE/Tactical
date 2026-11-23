@@ -1,0 +1,23 @@
+# Fast mode for administrators' isolated test matches (never ranked: no stats, XP, leaderboards).
+schema-version: 1
+id: test
+display-name: "<gray>Test"
+team-size: 5
+rounds-to-win: 5
+halftime-after-round: 4
+sudden-death-at: 4
+sudden-death-sides: random
+skip-vote: any
+ranked: false
+timers:
+  kit-select: 3
+  buy-phase: 2
+  round: 5
+  bomb: 4
+  plant: 1
+  defuse: 2
+  defuse-checkpoint: 1
+  round-end: 1
+  halftime: 3
+  sudden-death-kit-select: 2
+  postgame: 2

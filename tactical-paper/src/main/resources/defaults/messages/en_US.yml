@@ -1,0 +1,18 @@
+# Player-facing text in MiniMessage format (https://docs.advntr.dev/minimessage/format.html).
+# Placeholders look like <name>. Missing keys fall back to the built-in English text.
+schema-version: 1
+prefix: "<dark_gray>[<red>Tactical</red>]</dark_gray> "
+no-permission: "<red>You do not have permission to do that."
+match.created: "<green>Created <match> (<mode>) with <players> participants."
+match.kit-select: "<yellow>Kit selection (<phase>) — <seconds>s."
+match.kit-locked: "<gray><player> locked <white><kit></white>."
+match.round-start: "<gold>Round <round><sudden> — buy phase."
+match.round-live: "<red>Round <round> is LIVE."
+match.round-end: "<gold>Team <team></gold> <gray>wins round <round> (<reason>). <white><score_a> - <score_b>"
+match.halftime: "<yellow>Halftime! Teams switch sides. Pick your second-half kit."
+match.sudden-death: "<dark_red><bold>SUDDEN DEATH</bold></dark_red> <gray>— choose your first- or second-half kit."
+match.end: "<gold>Match over — <winner>. <white><score_a> - <score_b>"
+match.aborted: "<red>Match ended: <reason>."
+match.paused: "<yellow>Match paused by <by>.<reason>"
+match.resume-countdown: "<yellow>Resuming in <seconds>s..."
+match.resumed: "<green>Match resumed."

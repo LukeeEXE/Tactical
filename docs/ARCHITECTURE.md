@@ -1,6 +1,11 @@
 # Tactical Shooter for Minecraft Java 26.3: Phase 0 Architecture & Roadmap
 
-Status: **REVISED after review (rev 2). All open questions resolved (§10); awaiting final go-ahead for Phase 1.** No gameplay code has been written yet.
+Status: **APPROVED. Phase 1 implemented.** See `docs/STATUS.md` for what is done, partial and not started.
+
+> **Deviations from this document so far:**
+> - The planned `tactical-api` module is folded into `tactical-engine` until a public add-on API is needed.
+> - Only SQLite storage is implemented; MySQL/MariaDB are designed but not built.
+> - Test matches support *virtual participants* (engine-only players without a client), so full matches can be tested from the console.
 Working names: plugin `Tactical`, data folder `plugins/Tactical/`, resource namespace `tactical:`. All three can be renamed before Phase 1.
 
 ---

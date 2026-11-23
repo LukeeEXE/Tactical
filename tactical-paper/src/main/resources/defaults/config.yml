@@ -1,0 +1,32 @@
+# ============================================================================
+#  Tactical - general configuration
+#  Every key is documented in docs/config-reference.md.
+#  This file is NEVER overwritten by plugin updates. Delete a key to get its default back.
+# ============================================================================
+schema-version: 1
+
+storage:
+  # sqlite (default, zero setup). mysql/mariadb support is planned; see docs.
+  type: sqlite
+  # Relative to plugins/Tactical/
+  sqlite-file: data/tactical.db
+
+recording:
+  # Folder for per-match JSONL recordings, relative to plugins/Tactical/
+  folder: logs/matches
+  # Position/rotation sample interval for future browser replays (ticks, 20 = 1 second).
+  position-interval-ticks: 4
+  # Low-priority lines (position samples) are dropped if this many lines are waiting to be written.
+  queue-soft-limit: 50000
+  # Maximum time buffered lines may wait before being flushed to disk (milliseconds).
+  flush-interval-ms: 1000
+
+matches:
+  # How long a disconnected participant may rejoin their match (seconds).
+  rejoin-window-seconds: 180
+  # Countdown before a paused match resumes (seconds, 0 = immediate).
+  resume-countdown-seconds: 3
+
+debug:
+  # Logs every match state transition to the server console.
+  log-state-changes: true

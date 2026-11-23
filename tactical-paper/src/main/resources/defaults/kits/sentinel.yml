@@ -1,0 +1,7 @@
+# PLACEHOLDER kit. Phase 1 only reads id/name/description/enabled.
+# Equipment, abilities, shop and icons are added in Phase 3 (in-game kit editor).
+schema-version: 1
+id: sentinel
+name: "Sentinel"
+description: "Holds sites with traps."
+enabled: true
