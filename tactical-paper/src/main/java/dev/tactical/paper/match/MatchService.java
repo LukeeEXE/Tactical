@@ -68,6 +68,7 @@ public final class MatchService implements Service, Listener {
     private final RecorderService recorders;
     private final PlayerService players;
     private final AuditService audit;
+    private final dev.tactical.paper.lobby.LobbyService lobby;
     private final Tasks tasks;
     private final Logger log;
     private final MatchAnnouncer announcer;
@@ -80,7 +81,9 @@ public final class MatchService implements Service, Listener {
     private long serverTicks;
 
     public MatchService(Plugin plugin, ConfigService config, Database db, RecorderService recorders,
-                        PlayerService players, Messages messages, AuditService audit, Tasks tasks, Logger log) {
+                        PlayerService players, Messages messages, AuditService audit,
+                        dev.tactical.paper.lobby.LobbyService lobby, Tasks tasks, Logger log) {
+        this.lobby = lobby;
         this.plugin = plugin;
         this.config = config;
         this.db = db;
@@ -114,7 +117,14 @@ public final class MatchService implements Service, Listener {
     // ------------------------------------------------------------------ creation
 
     /** Request for a new match. {@code virtualPerTeam} engine-only players are added to each team (test matches). */
-    public record MatchRequest(String modeId, List<Player> teamA, List<Player> teamB, int virtualPerTeam, boolean test) {
+    public record MatchRequest(String modeId, String mapId, List<Player> teamA, List<Player> teamB, int virtualPerTeam, boolean test) {
+    }
+
+    private final List<MatchLifecycleHook> hooks = new ArrayList<>();
+
+    /** Registers a lifecycle participant (arenas, later voice/HUD). */
+    public void addHook(MatchLifecycleHook hook) {
+        hooks.add(hook);
     }
 
     /** Validates and creates a match. Completes on the main thread. */
@@ -126,8 +136,14 @@ public final class MatchService implements Service, Listener {
             return CompletableFuture.failedFuture(new IllegalArgumentException("Ranked matches need exactly "
                     + rules.teamSize() * 2 + " real players"));
         }
+        for (MatchLifecycleHook h : hooks) {
+            Optional<String> problem = h.validate(req);
+            if (problem.isPresent()) return CompletableFuture.failedFuture(new IllegalArgumentException(problem.get()));
+        }
         List<String> kitPool = config.enabledKitIds();
-        if (kitPool.isEmpty()) return CompletableFuture.failedFuture(new IllegalStateException("No enabled kits"));
+        for (MatchLifecycleHook h : hooks) kitPool = h.kits(req, kitPool);
+        if (kitPool.isEmpty()) return CompletableFuture.failedFuture(new IllegalStateException("No enabled kits for this match"));
+        final List<String> kits = kitPool;
         int sizeA = req.teamA().size() + req.virtualPerTeam();
         int sizeB = req.teamB().size() + req.virtualPerTeam();
         if (sizeA > rules.teamSize() || sizeB > rules.teamSize()) {
@@ -162,7 +178,7 @@ public final class MatchService implements Service, Listener {
                     throw new IllegalStateException(m.name() + " is no longer available");
                 }
             }
-            GameMatch match = new GameMatch(id, rules, req.test(), members, kitPool, recorders::open, log, this::onFlowEvent);
+            GameMatch match = new GameMatch(id, rules, req.test(), members, kits, recorders::open, log, this::onFlowEvent);
             matches.put(id, match);
             for (MatchMember m : members) {
                 if (m.virtual()) continue;
@@ -170,13 +186,20 @@ public final class MatchService implements Service, Listener {
                 Player p = Bukkit.getPlayer(m.uuid());
                 if (p != null) players.session(p).enterMatch(id, SessionContext.MATCH);
             }
-            recordHeader(match, kitPool);
-            persistStart(match);
+            recordHeader(match, kits, req);
+            persistStart(match, req.mapId());
             audit.record(requestedBy, "MATCH_CREATE", id.value(), "mode=" + rules.id() + " test=" + req.test()
                     + " virtualPerTeam=" + req.virtualPerTeam());
             match.flow().beginLoading();
-            // Phase 2 loads the map instance here before calling loaded().
-            match.flow().loaded();
+            CompletableFuture<Void> ready = CompletableFuture.completedFuture(null);
+            for (MatchLifecycleHook h : hooks) ready = ready.thenCompose(v -> h.prepare(match, req));
+            ready.whenCompleteAsync((v, t) -> {
+                if (t != null) {
+                    match.fail("match preparation failed", t.getCause() != null ? t.getCause() : t);
+                } else if (match.state() == MatchState.LOADING) {
+                    match.flow().loaded();
+                }
+            }, tasks.main());
             return match;
         }, tasks.main()).whenComplete((m, t) -> {
             if (t != null) tasks.main().execute(() -> reserved.removeAll(realIds));
@@ -204,7 +227,7 @@ public final class MatchService implements Service, Listener {
         });
     }
 
-    private void recordHeader(GameMatch match, List<String> kitPool) {
+    private void recordHeader(GameMatch match, List<String> kitPool, MatchRequest req) {
         ModeRules r = match.rules();
         Map<String, Object> rules = new LinkedHashMap<>();
         rules.put("team_size", r.teamSize());
@@ -224,8 +247,9 @@ public final class MatchService implements Service, Listener {
         data.put("mode", r.id());
         data.put("test", match.isTest());
         data.put("ranked", r.ranked() && !match.isTest());
-        data.put("map", null); // Phase 2: map id + configuration version
+        data.put("map", null);
         data.put("map_version", null);
+        for (MatchLifecycleHook h : hooks) data.putAll(h.header(req));
         data.put("rules", rules);
         data.put("kit_pool", kitPool);
         data.put("participants", teams);
@@ -279,6 +303,13 @@ public final class MatchService implements Service, Listener {
     }
 
     private void cleanup(GameMatch m) {
+        for (MatchLifecycleHook h : hooks) {
+            try {
+                h.teardown(m);
+            } catch (Throwable t) {
+                log.log(Level.SEVERE, "[match=" + m.id() + "] teardown hook failed", t);
+            }
+        }
         persistEnd(m);
         for (MatchMember mm : m.members()) {
             if (mm.virtual()) continue;
@@ -295,14 +326,15 @@ public final class MatchService implements Service, Listener {
         log.info("[match=" + m.id() + "] cleaned up (" + reason + ")");
     }
 
-    private void persistStart(GameMatch m) {
+    private void persistStart(GameMatch m, String mapId) {
         db.async(c -> {
             try (PreparedStatement ps = c.prepareStatement(
-                    "INSERT INTO matches (match_id, mode, started_at, is_test) VALUES (?, ?, ?, ?)")) {
+                    "INSERT INTO matches (match_id, mode, started_at, is_test, map_id) VALUES (?, ?, ?, ?, ?)")) {
                 ps.setString(1, m.id().value());
                 ps.setString(2, m.rules().id());
                 ps.setLong(3, m.createdAt());
                 ps.setInt(4, m.isTest() ? 1 : 0);
+                ps.setString(5, mapId);
                 return ps.executeUpdate();
             }
         });
@@ -362,9 +394,10 @@ public final class MatchService implements Service, Listener {
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
         GameMatch m = matchOf(p.getUniqueId()).orElse(null);
-        if (m == null) return;
-        if (m.flow().isFinished() || m.rejoinDeadline(p.getUniqueId()).isEmpty()) {
-            membership.remove(p.getUniqueId());
+        if (m == null || m.flow().isFinished() || m.rejoinDeadline(p.getUniqueId()).isEmpty()) {
+            if (m != null) membership.remove(p.getUniqueId());
+            // Logged out inside a (now deleted or foreign) match world: never leave them stranded there.
+            if (dev.tactical.paper.map.MapWorlds.isInstance(p.getWorld())) lobby.sendToLobby(p);
             return;
         }
         m.cancelRejoinWindow(p.getUniqueId());

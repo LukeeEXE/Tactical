@@ -82,7 +82,15 @@ public final class GameMatch {
 
     /** Ticks the engine. Any exception aborts THIS match only (logged with ids); other matches keep running. */
     void tick() {
-        if (failed) return;
+        if (failed) {
+            // A failed match must still reach CLEANUP so its resources are released and its recording finalised.
+            try {
+                if (flow.state() == MatchState.ABORTED) flow.tick();
+            } catch (Throwable t) {
+                log.log(Level.SEVERE, "[match=" + id + "] could not advance failed match to cleanup", t);
+            }
+            return;
+        }
         try {
             flow.tick();
         } catch (Throwable t) {

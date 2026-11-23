@@ -1,0 +1,17 @@
+# Custom blocks re-use vanilla block states that never appear otherwise:
+#   - double slabs:      minecraft:<any>_slab[type=double]   (single slabs and the full block keep their look)
+#   - glazed terracotta: minecraft:<color>_glazed_terracotta[facing=north|south|east|west]  (one block per facing)
+#                        minecraft:<color>_glazed_terracotta  (no facing: new texture, keeps vanilla rotation)
+# Textures go in resourcepack/assets/tactical/textures/<path>; models in resourcepack/assets/tactical/models/<path>.
+# Sounds (footsteps!) come from the vanilla block, so pick a slab whose material matches your texture.
+# After editing: /game pack rebuild, then /game blocks give <id> to get an item that places the exact state.
+schema-version: 1
+blocks: {}
+#  concrete_panel:
+#    name: "Concrete panel"
+#    state: "minecraft:stone_brick_slab[type=double]"
+#    texture: block/concrete_panel.png
+#  floor_tile_north:
+#    name: "Floor tile (north)"
+#    state: "minecraft:cyan_glazed_terracotta[facing=north]"
+#    model: block/floor_tile_north.json

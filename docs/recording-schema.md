@@ -48,11 +48,24 @@
 | `ERROR` | `message`, `state`, `exception`, `stacktrace` |
 | `MATCH_FOOTER` | `reason`, `events`, `low_priority_events`, `complete` |
 
+## Added in Phase 2
+| Type | `data` |
+|---|---|
+| `MATCH_HEADER` (extra) | `map`, `map_version`, `map_name`, `map_sites{id:{min,max}}` |
+| `SNAPSHOT_POSITIONS` | `players[{id,x,y,z,yaw,pitch,hp,alive,sneak?}]`, every `position-interval-ticks` (low priority) |
+| `DAMAGE` | `victim`, `attacker?`, `cause`, `amount`, `health_before`, `lethal` |
+| `PLAYER_KILL` | `killer`, `victim`, `weapon`, `projectile`, `location{x,y,z}` |
+| `BOMB_ASSIGN` / `BOMB_PICKUP` | `x,y,z` (carrier position, if real) |
+| `BOMB_DROP` | `x,y,z`, `reason` (`dropped`, `carrier_eliminated`, `carrier_disconnected`) |
+| `PLANT_START` / `PLANT_CANCEL` | `x,y,z,site` / `reason` (`released`, `left_site`, `not_on_ground`) |
+| `BOMB_PLANT_LOCATION` | `x,y,z,site` (ground position of the planted bomb) |
+| `DEFUSE_START` / `DEFUSE_PROGRESS` / `DEFUSE_CHECKPOINT` / `DEFUSE_CANCEL` | `x,y,z,from_ticks` / `progress_ticks` (every second) / `progress_ticks` / `reason`, `progress_ticks`, `checkpoint_reached` |
+| `BLOCK_CHANGE` | `action` (`barriers_removed` with `barriers[{barrier,blocks}]`, or `round_reset` with `blocks`) |
+
 ## Reserved for later phases
 These types are already defined in `EventTypes` but not yet emitted:
-- **Combat:** `SNAPSHOT_POSITIONS`, `SNAPSHOT_FULL`, `ATTACK`, `DAMAGE`, `ASSIST`, `PROJECTILE_LAUNCH`, `PROJECTILE_PATH`, `PROJECTILE_HIT`, `UTILITY_USE`, `UTILITY_EFFECT`
-- **Bomb:** `BOMB_ASSIGN`, `BOMB_DROP`, `BOMB_PICKUP`, `PLANT_START`, `PLANT_CANCEL`, `DEFUSE_START`, `DEFUSE_PROGRESS`, `DEFUSE_CHECKPOINT`, `DEFUSE_CANCEL`
-- **World and economy:** `BLOCK_CHANGE`, `PURCHASE`, `PURCHASE_FAILED`, `ECONOMY_CHANGE`, `ECONOMY_COMPENSATION`, `INVENTORY_CHANGE`, `ITEM_EXPIRED`
+- **Combat:** `SNAPSHOT_FULL`, `ATTACK`, `ASSIST`, `PROJECTILE_LAUNCH`, `PROJECTILE_PATH`, `PROJECTILE_HIT`, `UTILITY_USE`, `UTILITY_EFFECT`
+- **World and economy:** `PURCHASE`, `PURCHASE_FAILED`, `ECONOMY_CHANGE`, `ECONOMY_COMPENSATION`, `INVENTORY_CHANGE`, `ITEM_EXPIRED`
 - **System:** `AFK_ELIMINATION`, `VALIDATION_ERROR`, `WARNING`
 
 Their field lists will be added here as each one is implemented.

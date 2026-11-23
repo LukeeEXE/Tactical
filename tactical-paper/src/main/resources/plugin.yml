@@ -14,6 +14,26 @@ permissions:
       tactical.admin.reload: true
       tactical.admin.logs: true
       tactical.admin.debug: true
+      tactical.admin.maps: true
+      tactical.admin.pools: true
+      tactical.admin.pack: true
+      tactical.admin.lobby: true
+      tactical.bypass.hunger: true
+  tactical.admin.maps:
+    description: Create, edit, validate and publish maps.
+    default: op
+  tactical.admin.pools:
+    description: Manage map pools.
+    default: op
+  tactical.admin.pack:
+    description: Rebuild the resource pack and use the custom block palette.
+    default: op
+  tactical.admin.lobby:
+    description: Set the lobby spawn.
+    default: op
+  tactical.bypass.hunger:
+    description: In creative mode, keep the normal hunger bar (builders).
+    default: op
   tactical.admin.match:
     description: Create/end/pause/resume matches and force round results.
     default: op

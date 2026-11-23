@@ -48,16 +48,28 @@ public record ModeRules(
         int postgameTicks,
         SuddenDeathSides suddenDeathSides,
         SkipVoteRule skipVoteRule,
-        boolean ranked
+        boolean ranked,
+        BombRules bomb
 ) {
 
     public static final int TICKS_PER_SECOND = 20;
+
+    /** Convenience constructor with default bomb settings. */
+    public ModeRules(String id, String displayName, int teamSize, int roundsToWin, int halftimeAfterRound, int suddenDeathAt,
+                     int kitSelectTicks, int buyPhaseTicks, int roundTicks, int bombTicks, int plantTicks, int defuseTicks,
+                     int defuseCheckpointTicks, int roundEndTicks, int halftimeTicks, int suddenDeathKitSelectTicks,
+                     int postgameTicks, SuddenDeathSides suddenDeathSides, SkipVoteRule skipVoteRule, boolean ranked) {
+        this(id, displayName, teamSize, roundsToWin, halftimeAfterRound, suddenDeathAt, kitSelectTicks, buyPhaseTicks,
+                roundTicks, bombTicks, plantTicks, defuseTicks, defuseCheckpointTicks, roundEndTicks, halftimeTicks,
+                suddenDeathKitSelectTicks, postgameTicks, suddenDeathSides, skipVoteRule, ranked, BombRules.DEFAULT);
+    }
 
     public ModeRules {
         List<String> problems = validate(teamSize, roundsToWin, halftimeAfterRound, suddenDeathAt,
                 defuseTicks, defuseCheckpointTicks,
                 kitSelectTicks, buyPhaseTicks, roundTicks, bombTicks, plantTicks, roundEndTicks,
                 halftimeTicks, suddenDeathKitSelectTicks, postgameTicks);
+        if (bomb == null) bomb = BombRules.DEFAULT;
         if (!problems.isEmpty()) {
             throw new IllegalArgumentException("Invalid mode '" + id + "': " + String.join("; ", problems));
         }

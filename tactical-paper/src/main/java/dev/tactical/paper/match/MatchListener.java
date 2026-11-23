@@ -2,7 +2,6 @@ package dev.tactical.paper.match;
 
 import dev.tactical.engine.match.EliminationCause;
 import dev.tactical.engine.match.Participant;
-import dev.tactical.engine.record.EventTypes;
 import dev.tactical.paper.core.Service;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
@@ -19,11 +18,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.projectiles.ProjectileSource;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Server-side isolation and combat rules, evaluated on every interaction:
@@ -85,27 +80,11 @@ public final class MatchListener implements Service, Listener {
         if (!sameMatch(a, b)) event.setCancelled(true);
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onDeath(PlayerDeathEvent event) {
-        Player victim = event.getPlayer();
-        GameMatch m = matches.matchOf(victim.getUniqueId()).orElse(null);
-        if (m == null) return;
-        Player killer = victim.getKiller();
-        UUID killerId = killer != null && m.isMember(killer.getUniqueId()) ? killer.getUniqueId() : null;
-        EliminationCause cause = killerId == null ? EliminationCause.ENVIRONMENT
-                : killerId.equals(victim.getUniqueId()) ? EliminationCause.SUICIDE : EliminationCause.KILLED;
-        if (killerId != null && cause == EliminationCause.KILLED) {
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("killer", killerId);
-            data.put("victim", victim.getUniqueId());
-            data.put("weapon", killer.getInventory().getItemInMainHand().getType().getKey().asString());
-            data.put("location", Map.of("x", victim.getX(), "y", victim.getY(), "z", victim.getZ(),
-                    "world", victim.getWorld().getName()));
-            m.recorder().record(EventTypes.PLAYER_KILL, List.of(killerId, victim.getUniqueId()),
-                    m.member(killerId).map(MatchMember::team).orElse(null), data);
-        }
-        m.flow().eliminate(victim.getUniqueId(), killerId, cause);
-        // Phase 2 replaces vanilla death handling (instant spectator switch, no drops, no respawn screen).
+        // Matches without a map (console tests) still need deaths reported; arenas handle the rest.
+        matches.matchOf(event.getPlayer().getUniqueId())
+                .ifPresent(m -> m.flow().eliminate(event.getPlayer().getUniqueId(), null, EliminationCause.ENVIRONMENT));
     }
 
     private boolean allowedToHurt(Player attacker, Entity victimEntity) {

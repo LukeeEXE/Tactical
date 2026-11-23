@@ -1,5 +1,6 @@
 package dev.tactical.engine.config;
 
+import dev.tactical.engine.mode.BombRules;
 import dev.tactical.engine.mode.ModeRules;
 import dev.tactical.engine.mode.SkipVoteRule;
 import dev.tactical.engine.mode.SuddenDeathSides;
@@ -14,7 +15,7 @@ public final class ModeRulesParser {
 
     private static final List<String> TOP_KEYS = List.of("schema-version", "id", "display-name", "team-size",
             "rounds-to-win", "halftime-after-round", "sudden-death-at", "sudden-death-sides", "skip-vote", "ranked",
-            "timers");
+            "timers", "bomb");
     private static final List<String> TIMER_KEYS = List.of("kit-select", "buy-phase", "round", "bomb", "plant",
             "defuse", "defuse-checkpoint", "round-end", "halftime", "sudden-death-kit-select", "postgame");
 
@@ -57,11 +58,18 @@ public final class ModeRulesParser {
                 kitSelect, buy, roundT, bomb, plant, roundEnd, half, sdKit, post)) {
             root.error(problem);
         }
+        ConfigNode b = root.child("bomb");
+        b.warnUnknownKeys(List.of("defuse-radius", "pickup-radius", "interrupt-defuse-on-damage", "detonation-kill-radius"));
+        BombRules bd = BombRules.DEFAULT;
+        BombRules bombRules = new BombRules(b.number("defuse-radius", bd.defuseRadius(), 0.5, 16),
+                b.number("pickup-radius", bd.pickupRadius(), 0.5, 8),
+                b.bool("interrupt-defuse-on-damage", bd.interruptDefuseOnDamage()),
+                b.number("detonation-kill-radius", bd.detonationKillRadius(), 0, 64));
         if (report.errors().size() > before) {
             return Optional.empty();
         }
         return Optional.of(new ModeRules(id, display, teamSize, roundsToWin, halftime, sd, kitSelect, buy, roundT,
-                bomb, plant, defuse, checkpoint, roundEnd, half, sdKit, post, sides, skip, ranked));
+                bomb, plant, defuse, checkpoint, roundEnd, half, sdKit, post, sides, skip, ranked, bombRules));
     }
 
     private static int sec(ConfigNode timers, String key, double def) {

@@ -49,6 +49,7 @@ public final class EventTypes {
     public static final String PLANT_START = "PLANT_START";
     public static final String PLANT_CANCEL = "PLANT_CANCEL";
     public static final String BOMB_PLANTED = "BOMB_PLANTED";
+    public static final String BOMB_PLANT_LOCATION = "BOMB_PLANT_LOCATION";
     public static final String DEFUSE_START = "DEFUSE_START";
     public static final String DEFUSE_PROGRESS = "DEFUSE_PROGRESS";
     public static final String DEFUSE_CHECKPOINT = "DEFUSE_CHECKPOINT";

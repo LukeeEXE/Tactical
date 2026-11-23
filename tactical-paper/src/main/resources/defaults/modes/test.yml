@@ -21,3 +21,12 @@ timers:
   halftime: 3
   sudden-death-kit-select: 2
   postgame: 2
+bomb:
+  # Defuse range around the planted bomb; the particle ring shows exactly this radius.
+  defuse-radius: 3.5
+  # How close an attacker must walk to a dropped bomb to pick it up.
+  pickup-radius: 1.5
+  # Whether taking damage interrupts a defuse.
+  interrupt-defuse-on-damage: false
+  # Players within this radius die when the bomb explodes (0 = no damage).
+  detonation-kill-radius: 0

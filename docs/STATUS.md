@@ -20,7 +20,7 @@ Legend:
 | Player records and name history (offline lookup), sessions with context | ✅ | `SessionContext` drives the future chat, tab and HUD routing |
 | Teams: original identity A/B and current side | ✅ | Identity never changes; sides swap at halftime |
 | Match state machine with a legal-transition table | ✅ | Every state can reach CLOSED (tested) |
-| Round management: buy → live → planted → end, precedence rules | ✅ | Unit-tested; plant and defuse are currently fed by debug commands (real bomb in Phase 2) |
+| Round management: buy → live → planted → end, precedence rules | ✅ | Unit-tested; the real bomb arrived in Phase 2 |
 | Halftime, sudden death (4-4 / 8-8), match end, postgame, cleanup | ✅ | Full Quickplay and Competitive flows tested |
 | Kit selection ×3 (start, halftime, sudden death 1st/2nd-half kit), no teammate duplicates, deadlock-proof locking, auto-fill | ✅ | Logic and console only; the GUI comes in Phase 4 |
 | Pause / resume with countdown; timers, bomb and kit timers frozen | 🟡 | Engine freeze done and tested live. **Missing (Phase 6):** freezing player movement and projectiles, and restoring them |
@@ -72,3 +72,45 @@ Legend:
 - The exact item-model JSON for `custom_model_data` strings on the 26.3 client.
 
 These will be tested on your client when the HUD and resource pack are built.
+
+## Phase 2: Maps and core gameplay
+
+| Area | Status | Notes |
+|---|---|---|
+| Map definitions (YAML, schema v1), versioning, atomic saves and backups | ✅ | Hand edits trigger a DRAFT re-validation |
+| In-game editor: create, edit, leave, wand selection, particle preview, bounds, spawns, sites, barriers, construction zones, kits, modes, rename, delete | ✅ | Commands; the editor GUI comes with the GUI framework (Phase 4) |
+| Validation: structural + world checks (spawns not in blocks, standable sites, barrier contents, reset round-trip) | ✅ | "Accessible" = has a standable spot. Path-finding from spawn is not done. |
+| Validate/publish snapshots (matches never use the live template) | ✅ | |
+| Per-match world instances (copy snapshot → load → delete), stale cleanup on startup | ✅ | 56–74 ms per instance for a small map |
+| Map pools: create, delete, rename, add, remove, toggle, enable, disable, per-pool reasons | ✅ | Voting and matchmaking use them in Phase 4 |
+| Glass and barrier removal at buy-phase end, restore every round (block journal) | ✅ | Live-tested |
+| Generic "round-start block changes" beyond barriers | ⬜ | Barriers cover spawn walls; other scripted changes are not implemented |
+| Spawns per side, adventure mode, placeholder loadout | 🟡 | The loadout is a config placeholder until kits (Phase 3) |
+| Death → instant spectator of alive teammate (no death screen or drops), no enemy spectating, no spectator teleports | 🟡 | Implemented; **needs a client test**. Cycling inputs are logged; final controls in Phase 4 |
+| Boundaries and void elimination | ✅ | Every 10 ticks; not client-tested |
+| Bomb: carrier assignment, drop/pickup, plant (hold use in site, server-side ground check), planted display without collision, defuse ring, beeps, detonation | 🟡 | Implemented and compiled; **needs a client test** (no player can join from this environment) |
+| Defuse: sneak + stationary (server positions), radius, checkpoint owned by the bomb, interruption reasons recorded | ✅ | Logic unit-tested; Bukkit side needs a client test |
+| Halftime, sudden death, match completion on maps | ✅ | Full matches on a map instance live-tested |
+| Hunger hidden (permanent Hunger effect + transparent sprites), food locked, simulated regeneration | 🟡 | Implemented; visual result needs a client test |
+| Locator bar disabled in match worlds | ✅ | It would reveal player directions |
+| Lobby spawn (`/game lobby setspawn`), return to lobby after matches, rescue from deleted instances | ✅ | |
+| Position snapshots (`SNAPSHOT_POSITIONS`), `DAMAGE`, `PLAYER_KILL`, bomb events, `BLOCK_CHANGE` | ✅ | |
+| Resource pack builder: vanilla overrides, overrides folder, double slab + glazed terracotta blocks, validation, deterministic zip | ✅ | Unit-tested and live-built |
+| Pack hosting (built-in HTTP), auto-send on join and rebuild, pack format detected from the server | ✅ | HTTP tested with curl; client download untested |
+| `/game blocks list` and `give` (exact-state placement) | 🟡 | Implemented; the palette GUI comes in Phase 4 |
+| Test matches with real players and a map | 🟡 | Implemented; only virtual players tested |
+
+### Phase 2 live tests (Paper 26.3 build 259, console only)
+- The pack was built and served over HTTP (bad paths return 404), and its blockstates were inspected.
+- Map validated and published, and the snapshot taken. Validation failures were reported, including a spawn inside a block.
+- A full test-mode match on a map instance reached sudden death (4-5):
+  - barriers removed 21 + 21 blocks;
+  - the glass-only filter skipped a wooden plank;
+  - each round reset restored 42 blocks;
+  - the instance was deleted at cleanup.
+- A Quickplay and a Competitive match ran **on the same map at the same time**, in separate instances.
+- Two bugs were found and fixed:
+  - copied worlds kept Paper's world UUID metadata, so Paper refused to load them;
+  - a match that failed during loading never reached cleanup.
+
+See `docs/PLAYTEST-PHASE2.md` for the client checklist.

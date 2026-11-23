@@ -1,0 +1,127 @@
+package dev.tactical.engine.pack;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import dev.tactical.engine.config.ConfigReport;
+import dev.tactical.engine.config.YamlLoader;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class PackBuilderTest {
+
+    static final Set<String> KNOWN = Set.of("stone_brick_slab", "waxed_cut_copper_slab", "cyan_glazed_terracotta", "red_glazed_terracotta");
+
+    static List<CustomBlock> blocks(String yaml, ConfigReport r) {
+        return CustomBlock.parseFile(YamlLoader.parse(yaml, "blocks/test.yml", r).orElseThrow());
+    }
+
+    static void png(Path root, String rel, int w, int h) throws Exception {
+        Path p = root.resolve("assets/tactical/textures/" + rel);
+        Files.createDirectories(p.getParent());
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        javax.imageio.ImageIO.write(img, "png", p.toFile());
+    }
+
+    static Map<String, String> unzip(byte[] zip) throws Exception {
+        Map<String, String> out = new HashMap<>();
+        try (ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(zip))) {
+            ZipEntry e;
+            while ((e = in.getNextEntry()) != null) out.put(e.getName(), new String(in.readAllBytes(), StandardCharsets.ISO_8859_1));
+        }
+        return out;
+    }
+
+    @Test
+    void generatesDoubleSlabAndGlazedFacingBlocks(@TempDir Path root) throws Exception {
+        png(root, "block/panel.png", 16, 16);
+        png(root, "block/tile_n.png", 16, 16);
+        png(root, "block/copper.png", 32, 32);
+        ConfigReport r = new ConfigReport();
+        List<CustomBlock> b = blocks("""
+                blocks:
+                  panel: { state: "minecraft:stone_brick_slab[type=double]", texture: block/panel.png }
+                  copper: { state: "minecraft:waxed_cut_copper_slab[type=double]", texture: block/copper.png }
+                  tile_n: { state: "minecraft:cyan_glazed_terracotta[facing=north]", texture: block/tile_n.png }
+                """, r);
+        assertFalse(r.hasErrors(), r.issues().toString());
+        PackBuilder.Result res = new PackBuilder(97, 1, "test").build(root, b, KNOWN);
+        assertFalse(res.hasErrors(), res.issues().toString());
+        Map<String, String> files = unzip(res.zip());
+
+        JsonObject slab = JsonParser.parseString(files.get("assets/minecraft/blockstates/stone_brick_slab.json")).getAsJsonObject()
+                .getAsJsonObject("variants");
+        assertEquals("tactical:block/panel", slab.getAsJsonObject("type=double").get("model").getAsString());
+        assertEquals("minecraft:block/stone_brick_slab", slab.getAsJsonObject("type=bottom").get("model").getAsString());
+        assertEquals("minecraft:block/stone_brick_slab_top", slab.getAsJsonObject("type=top").get("model").getAsString());
+        JsonObject waxed = JsonParser.parseString(files.get("assets/minecraft/blockstates/waxed_cut_copper_slab.json")).getAsJsonObject()
+                .getAsJsonObject("variants");
+        assertEquals("minecraft:block/cut_copper_slab", waxed.getAsJsonObject("type=bottom").get("model").getAsString(),
+                "waxed slabs reuse the unwaxed vanilla models");
+
+        JsonObject glazed = JsonParser.parseString(files.get("assets/minecraft/blockstates/cyan_glazed_terracotta.json")).getAsJsonObject()
+                .getAsJsonObject("variants");
+        assertEquals("tactical:block/tile_n", glazed.getAsJsonObject("facing=north").get("model").getAsString());
+        assertFalse(glazed.getAsJsonObject("facing=north").has("y"), "custom facing blocks are not rotated");
+        assertEquals("minecraft:block/cyan_glazed_terracotta", glazed.getAsJsonObject("facing=east").get("model").getAsString());
+        assertEquals(270, glazed.getAsJsonObject("facing=east").get("y").getAsInt(), "untouched facings keep vanilla rotation");
+
+        assertTrue(files.containsKey("assets/tactical/models/block/panel.json"));
+        assertTrue(files.containsKey(PackBuilder.PROTECTED.iterator().next()));
+        JsonObject meta = JsonParser.parseString(files.get("pack.mcmeta")).getAsJsonObject().getAsJsonObject("pack");
+        assertEquals(97, meta.getAsJsonArray("min_format").get(0).getAsInt());
+    }
+
+    @Test
+    void deterministicOutput(@TempDir Path root) throws Exception {
+        png(root, "block/panel.png", 16, 16);
+        ConfigReport r = new ConfigReport();
+        List<CustomBlock> b = blocks("blocks:\n  panel: { state: \"minecraft:stone_brick_slab[type=double]\", texture: block/panel.png }\n", r);
+        String a = new PackBuilder(97, 1, "t").build(root, b, KNOWN).sha1();
+        Thread.sleep(5);
+        assertEquals(a, new PackBuilder(97, 1, "t").build(root, b, KNOWN).sha1(), "same inputs -> same SHA-1, no re-download");
+    }
+
+    @Test
+    void reportsConflictsMissingFilesAndProtectedPaths(@TempDir Path root) throws Exception {
+        png(root, "block/a.png", 16, 16);
+        png(root, "block/wide.png", 32, 16);
+        Path hud = root.resolve("assets/minecraft/textures/gui/sprites/hud/food_full_hunger.png");
+        Files.createDirectories(hud.getParent());
+        Files.write(hud, PackBuilder.transparentPng(9, 9));
+        Path badJson = root.resolve("assets/minecraft/models/block/stone.json");
+        Files.createDirectories(badJson.getParent());
+        Files.writeString(badJson, "{ not json");
+        ConfigReport r = new ConfigReport();
+        List<CustomBlock> b = blocks("""
+                blocks:
+                  a: { state: "minecraft:stone_brick_slab[type=double]", texture: block/a.png }
+                  b: { state: "minecraft:stone_brick_slab[type=double]", texture: block/a.png }
+                  c: { state: "minecraft:red_glazed_terracotta[facing=west]", texture: block/missing.png }
+                  d: { state: "minecraft:nonexistent_slab[type=double]", texture: block/a.png }
+                  e: { state: "minecraft:cyan_glazed_terracotta[facing=up]", texture: block/a.png }
+                  f: { state: "minecraft:stone_brick_slab[type=bottom]", texture: block/a.png }
+                """, r);
+        assertTrue(r.hasErrors(), "invalid facing / slab type are config errors");
+        PackBuilder.Result res = new PackBuilder(97, 1, "t").build(root, b, KNOWN);
+        String all = res.issues().toString();
+        assertTrue(all.contains("already used by 'a'"), all);
+        assertTrue(all.contains("texture not found"), all);
+        assertTrue(all.contains("does not exist on this server version"), all);
+        assertTrue(all.contains("hunger bar"), all);
+        assertTrue(all.contains("invalid JSON"), all);
+        assertTrue(all.contains("must be square"), all);
+    }
+}

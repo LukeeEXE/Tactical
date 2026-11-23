@@ -26,7 +26,39 @@ matches:
   rejoin-window-seconds: 180
   # Countdown before a paused match resumes (seconds, 0 = immediate).
   resume-countdown-seconds: 3
+  # TEMPORARY until kits arrive (Phase 3): items every player receives at round start.
+  # Format: <item id>[:<amount>]
+  placeholder-loadout:
+    - iron_sword
+    - bow
+    - arrow:16
+
+health:
+  # Food is locked at this level so it never drains and sprint is never lost (7-20).
+  locked-food-level: 20
+  # Vanilla regeneration is disabled in match worlds; this simulates it.
+  regeneration:
+    enabled: true
+    # Health per pulse (1.0 = half a heart, vanilla's full-food rate).
+    amount: 1.0
+    # Ticks between pulses (80 = every 4 seconds, like vanilla).
+    interval-ticks: 80
+    # Pause regeneration this many ticks after taking damage (0 = vanilla-like, no pause).
+    combat-delay-ticks: 0
+
+resource-pack:
+  enabled: true
+  # The plugin serves the generated pack over HTTP on this port.
+  port: 25601
+  # Address players download the pack from, e.g. http://play.example.com:25601
+  # Leave empty to use http://<server-ip>:<port> (server-ip from server.properties, else localhost).
+  public-url: ""
+  # Required packs kick players who decline.
+  required: true
+  prompt: "<gold>This server needs its resource pack for the HUD, items and maps."
 
 debug:
   # Logs every match state transition to the server console.
   log-state-changes: true
+  # Logs which input events arrive from dead players while spectating (to choose the spectator controls).
+  log-spectator-input: true

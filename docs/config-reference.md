@@ -17,7 +17,19 @@ General rules:
 | `recording.flush-interval-ms` | `1000` | Maximum time buffered lines wait before reaching disk. Round and match results are fsynced immediately. |
 | `matches.rejoin-window-seconds` | `180` | How long a disconnected participant may rejoin. After that, or once the match ends, the association is cleared. |
 | `matches.resume-countdown-seconds` | `3` | Countdown between `/game resume` and play continuing. The match stays frozen during it. |
+| `matches.placeholder-loadout` | iron_sword, bow, arrow:16 | **Temporary** (until kits in Phase 3): items given at round start, `<item>[:<amount>]`. |
+| `health.locked-food-level` | `20` | Food is locked at this level (7–20), so it never drains and sprint is never lost. |
+| `health.regeneration.enabled` | `true` | Simulated regeneration (vanilla regeneration is off in match worlds). |
+| `health.regeneration.amount` | `1.0` | Health per pulse (1.0 = half a heart). |
+| `health.regeneration.interval-ticks` | `80` | Ticks between pulses (80 = vanilla full-food rate). |
+| `health.regeneration.combat-delay-ticks` | `0` | Pause regeneration after taking damage. |
+| `resource-pack.enabled` | `true` | Build, host and send the pack. |
+| `resource-pack.port` | `25601` | HTTP port the pack is served on. |
+| `resource-pack.public-url` | `""` | Address players download from, e.g. `http://play.example.com:25601`. |
+| `resource-pack.required` | `true` | Players who decline are disconnected by their client. |
+| `resource-pack.prompt` | (text) | MiniMessage prompt shown with the pack request. |
 | `debug.log-state-changes` | `true` | Log every match state transition to the console. |
+| `debug.log-spectator-input` | `true` | Log which inputs dead spectators send (to choose the spectator controls). |
 
 ## `modes/<id>.yml`
 `id` must match the file name.
@@ -42,7 +54,21 @@ General rules:
 | `timers.sudden-death-kit-select` | 20 | 20 | Kit choice before sudden death. |
 | `timers.postgame` | 15 | 15 | Results screen. |
 
+### `bomb:` section
+| Key | Default | Meaning |
+|---|---|---|
+| `defuse-radius` | 3.5 | Defuse range; the particle ring is drawn at exactly this radius. |
+| `pickup-radius` | 1.5 | Distance at which attackers pick up a dropped bomb. |
+| `interrupt-defuse-on-damage` | false | Whether taking damage interrupts a defuse. |
+| `detonation-kill-radius` | 0 | Players within this radius die on detonation (0 = no damage). |
+
 `modes/test.yml` is a very fast, unranked mode for administrator test matches.
+
+## `maps/<id>.yml`, `map-pools/<id>.yml`, `blocks/*.yml`
+Normally edited in-game; see `MAPS.md` and `RESOURCEPACK.md` for every key.
+
+## `lobby/lobby.yml`
+Lobby spawn (`world` key, `x y z yaw pitch`), written by `/game lobby setspawn`.
 
 ## `kits/<id>.yml` (placeholder until Phase 3)
 | Key | Meaning |

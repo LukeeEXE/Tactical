@@ -26,6 +26,8 @@ import dev.tactical.paper.record.RecordingInfo;
 import dev.tactical.paper.audit.AuditService;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
+import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
@@ -53,9 +55,14 @@ public final class GameCommand {
     private final Messages messages;
     private final Tasks tasks;
     private final String version;
+    private final dev.tactical.paper.map.MapService maps;
+    private final List<java.util.function.Consumer<LiteralArgumentBuilder<CommandSourceStack>>> extensions;
 
     public GameCommand(ConfigService config, MatchService matches, RecorderService recorders, AuditService audit,
-                       Messages messages, Tasks tasks, String version) {
+                       Messages messages, Tasks tasks, String version, dev.tactical.paper.map.MapService maps,
+                       List<java.util.function.Consumer<LiteralArgumentBuilder<CommandSourceStack>>> extensions) {
+        this.maps = maps;
+        this.extensions = extensions;
         this.config = config;
         this.matches = matches;
         this.recorders = recorders;
@@ -76,9 +83,14 @@ public final class GameCommand {
         root.then(Commands.literal("match").requires(perm(PERM_MATCH))
                 .then(Commands.literal("test")
                         .then(Commands.argument("mode", StringArgumentType.word()).suggests(modeSuggestions())
-                                .executes(ctx -> createTest(ctx, 4))
-                                .then(Commands.argument("virtual", IntegerArgumentType.integer(0, 5))
-                                        .executes(ctx -> createTest(ctx, IntegerArgumentType.getInteger(ctx, "virtual"))))))
+                                .then(Commands.argument("map", StringArgumentType.word()).suggests(mapSuggestions())
+                                        .executes(ctx -> createTest(ctx, 4, null))
+                                        .then(Commands.argument("virtual", IntegerArgumentType.integer(0, 5))
+                                                .executes(ctx -> createTest(ctx, IntegerArgumentType.getInteger(ctx, "virtual"), null))
+                                                .then(Commands.argument("players", ArgumentTypes.players())
+                                                        .executes(ctx -> createTest(ctx, IntegerArgumentType.getInteger(ctx, "virtual"),
+                                                                ctx.getArgument("players", PlayerSelectorArgumentResolver.class)
+                                                                        .resolve(ctx.getSource()))))))))
                 .then(Commands.literal("list").executes(this::list))
                 .then(Commands.literal("info").then(matchArg().executes(ctx -> withMatch(ctx, m -> info(ctx, m)))))
                 .then(Commands.literal("end").then(matchArg()
@@ -131,23 +143,34 @@ public final class GameCommand {
                 .then(Commands.literal("errors").executes(this::logsErrors))
                 .then(Commands.literal("info").then(Commands.argument("id", StringArgumentType.word())
                         .executes(ctx -> logsInfo(ctx, StringArgumentType.getString(ctx, "id"))))));
+        extensions.forEach(e -> e.accept(root));
         return root.build();
     }
 
     // ===================================================================== handlers
 
-    private int createTest(CommandContext<CommandSourceStack> ctx, int virtual) {
+    /**
+     * Test match. Real players (listed, or the sender if none listed) are split A/B alternately; each team is then
+     * topped up with up to {@code virtual} engine-only players. Map "none" runs the engine without a world.
+     */
+    private int createTest(CommandContext<CommandSourceStack> ctx, int virtual, List<Player> listed)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         CommandSender sender = ctx.getSource().getSender();
         if (!sender.hasPermission(PERM_MATCH)) return deny(ctx);
         String mode = StringArgumentType.getString(ctx, "mode");
-        List<Player> teamA = sender instanceof Player p ? List.of(p) : List.of();
+        String mapArg = StringArgumentType.getString(ctx, "map");
+        String mapId = mapArg.equalsIgnoreCase("none") ? null : mapArg;
         ModeRules rules = config.mode(mode).orElse(null);
         if (rules == null) {
             reply(ctx, "Unknown mode '" + mode + "'. Known: " + String.join(", ", config.modes().keySet()), NamedTextColor.RED);
             return 0;
         }
-        int perTeamVirtual = Math.min(virtual, rules.teamSize() - teamA.size());
-        matches.create(new MatchService.MatchRequest(mode, teamA, List.of(), perTeamVirtual, true), sender)
+        List<Player> players = listed != null ? listed : sender instanceof Player p ? List.of(p) : List.of();
+        List<Player> teamA = new java.util.ArrayList<>();
+        List<Player> teamB = new java.util.ArrayList<>();
+        for (int i = 0; i < players.size(); i++) (i % 2 == 0 ? teamA : teamB).add(players.get(i));
+        int perTeamVirtual = Math.max(0, Math.min(virtual, rules.teamSize() - Math.max(teamA.size(), teamB.size())));
+        matches.create(new MatchService.MatchRequest(mode, mapId, teamA, teamB, perTeamVirtual, true), sender)
                 .whenCompleteAsync((m, t) -> {
                     if (t != null) {
                         Throwable cause = t.getCause() != null ? t.getCause() : t;
@@ -296,10 +319,11 @@ public final class GameCommand {
         if (!sender.hasPermission(PERM_RELOAD)) return deny(ctx);
         Optional<ConfigService.Target> target = ConfigService.Target.parse(targetName);
         if (target.isEmpty()) {
-            reply(ctx, "Unknown target. Use: config, modes, kits, messages, all", NamedTextColor.RED);
+            reply(ctx, "Unknown target. Use: config, modes, kits, messages, maps, all", NamedTextColor.RED);
             return 0;
         }
         ConfigReport report = config.reload(target.get());
+        if (target.get() == ConfigService.Target.MAPS || target.get() == ConfigService.Target.ALL) report.addAll(maps.reload());
         audit.record(sender, "RELOAD", target.get().name(), report.errors().size() + " error(s)");
         if (report.issues().isEmpty()) {
             reply(ctx, "Reloaded " + targetName + " without problems. Running matches keep their current settings.", NamedTextColor.GREEN);
@@ -307,7 +331,11 @@ public final class GameCommand {
             for (ConfigIssue i : report.issues()) {
                 reply(ctx, i.toString(), i.severity() == ConfigIssue.Severity.ERROR ? NamedTextColor.RED : NamedTextColor.YELLOW);
             }
-            reply(ctx, "Invalid files were NOT applied; their previous version stays active.", NamedTextColor.GOLD);
+            if (report.hasErrors()) {
+                reply(ctx, "Invalid files were NOT applied; their previous version stays active.", NamedTextColor.GOLD);
+            } else {
+                reply(ctx, "Reloaded with warnings (applied).", NamedTextColor.GREEN);
+            }
         }
         return ok();
     }
@@ -364,6 +392,14 @@ public final class GameCommand {
     private SuggestionProvider<CommandSourceStack> matchSuggestions() {
         return (c, b) -> {
             matches.matches().forEach(m -> b.suggest(m.id().value()));
+            return b.buildFuture();
+        };
+    }
+
+    private SuggestionProvider<CommandSourceStack> mapSuggestions() {
+        return (c, b) -> {
+            b.suggest("none");
+            maps.maps().keySet().forEach(b::suggest);
             return b.buildFuture();
         };
     }
