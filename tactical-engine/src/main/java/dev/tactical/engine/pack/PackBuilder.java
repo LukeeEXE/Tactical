@@ -79,6 +79,7 @@ public final class PackBuilder {
         files.put("pack.mcmeta", json(packMeta()));
         byte[] clear = transparentPng(9, 9);
         for (String p : PROTECTED) files.put(p, clear);
+        generateConstructionBlock(files);
         Map<String, byte[]> user = new TreeMap<>();
         readTree(sourceRoot.resolve("assets"), "assets/", user);
         generateBlocks(blocks, knownBlocks, user, files, issues);
@@ -96,7 +97,7 @@ public final class PackBuilder {
                             + "your file was ignored"));
                     continue;
                 }
-                if (files.containsKey(path) && !path.equals("pack.mcmeta")) {
+                if (files.containsKey(path) && !path.equals("pack.mcmeta") && !path.equals(CONSTRUCTION_TEXTURE)) {
                     replaced++;
                     issues.add(new PackIssue(false, path, "your file replaces a generated file"));
                 }
@@ -110,6 +111,46 @@ public final class PackBuilder {
 
         byte[] zip = zip(files);
         return new Result(zip, sha1(zip), issues, stats);
+    }
+
+    // ------------------------------------------------------------------ construction block
+
+    /** Texture admins replace to restyle construction blocks (resourcepack/assets/tactical/textures/block/construction_block.png). */
+    public static final String CONSTRUCTION_TEXTURE = "assets/tactical/textures/block/construction_block.png";
+
+    /**
+     * Construction blocks are vanilla infested stone (used for nothing else in this game). Overriding its block model
+     * retextures both the placed block and the item, since the item definition points at the same model.
+     * A placeholder texture is generated; an admin texture at {@link #CONSTRUCTION_TEXTURE} replaces it.
+     */
+    private static void generateConstructionBlock(Map<String, byte[]> files) {
+        JsonObject model = new JsonObject();
+        model.addProperty("parent", "minecraft:block/cube_all");
+        JsonObject textures = new JsonObject();
+        textures.addProperty("all", "tactical:block/construction_block");
+        model.add("textures", textures);
+        files.put("assets/minecraft/models/block/infested_stone.json", json(model));
+        files.put(CONSTRUCTION_TEXTURE, placeholderConstructionTexture());
+    }
+
+    /** 16x16 diagonal hazard stripes, so placeholder construction blocks are obviously not map geometry. */
+    static byte[] placeholderConstructionTexture() {
+        try {
+            BufferedImage img = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+            for (int x = 0; x < 16; x++) {
+                for (int y = 0; y < 16; y++) {
+                    boolean stripe = ((x + y) / 4) % 2 == 0;
+                    boolean edge = x == 0 || y == 0 || x == 15 || y == 15;
+                    int rgb = edge ? 0x3A3A3A : stripe ? 0xE0A020 : 0x5A5A5A;
+                    img.setRGB(x, y, 0xFF000000 | rgb);
+                }
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ImageIO.write(img, "png", out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     // ------------------------------------------------------------------ custom blocks

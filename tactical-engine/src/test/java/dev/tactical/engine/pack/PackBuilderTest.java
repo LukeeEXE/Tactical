@@ -85,6 +85,21 @@ class PackBuilderTest {
     }
 
     @Test
+    void constructionBlockIsRetexturedInfestedStone(@TempDir Path root) throws Exception {
+        PackBuilder.Result res = new PackBuilder(97, 1, "t").build(root, List.of(), KNOWN);
+        Map<String, String> files = unzip(res.zip());
+        JsonObject model = JsonParser.parseString(files.get("assets/minecraft/models/block/infested_stone.json")).getAsJsonObject();
+        assertEquals("tactical:block/construction_block", model.getAsJsonObject("textures").get("all").getAsString());
+        assertTrue(files.containsKey(PackBuilder.CONSTRUCTION_TEXTURE), "placeholder texture generated");
+        assertFalse(res.hasErrors(), res.issues().toString());
+
+        png(root, "block/construction_block.png", 16, 16); // admin texture replaces the placeholder silently
+        PackBuilder.Result custom = new PackBuilder(97, 1, "t").build(root, List.of(), KNOWN);
+        assertNotEquals(res.sha1(), custom.sha1());
+        assertTrue(custom.issues().isEmpty(), custom.issues().toString());
+    }
+
+    @Test
     void deterministicOutput(@TempDir Path root) throws Exception {
         png(root, "block/panel.png", 16, 16);
         ConfigReport r = new ConfigReport();

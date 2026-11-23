@@ -654,6 +654,13 @@ Order note: the GUI framework moves to the start of Phase 4 because the map edit
 
 ---
 
+## 9b. Construction blocks (decided after Phase 2)
+- **Block:** construction blocks are vanilla **infested stone** (`minecraft:infested_stone`), which the game uses for nothing else.
+- **Retexture:** the pack overrides `assets/minecraft/models/block/infested_stone.json`. Both the placed block and the item use the texture `resourcepack/assets/tactical/textures/block/construction_block.png`. A hazard-stripe placeholder is generated until you add your own.
+- **Name:** the item is renamed (default "Construction Block", configurable in the Phase 3 item YAML) and marked as a custom item.
+- **No silverfish:** silverfish spawns from infested blocks (`SpawnReason.SILVERFISH_BLOCK`) are cancelled server-wide. In matches the plugin also removes broken construction blocks itself, so vanilla break behaviour never runs.
+- **Phase 3:** placement only in allowed construction zones; any player's pickaxe breaks them (adventure-mode `can_break` / `can_place_on`); never map geometry; all removed at round reset through the block journal.
+
 ## 10. Resolved decisions (rev 2)
 | # | Question | Decision |
 |---|---|---|

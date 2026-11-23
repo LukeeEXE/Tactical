@@ -27,6 +27,11 @@ Commands need `tactical.admin.pack`.
 - Textures must be PNG and square. Animated textures need a `.png.mcmeta`.
 - The Hunger-variant food sprites are generated (they hide the hunger bar) and cannot be replaced; the rebuild tells you if you try.
 
+## Construction block texture
+- Construction blocks are retextured **infested stone**. Drop your texture at `resourcepack/assets/tactical/textures/block/construction_block.png`, then run `/game pack rebuild`.
+- Until then a hazard-stripe placeholder is used.
+- Breaking or exploding infested stone never spawns silverfish on this server.
+
 ## Custom blocks (`plugins/Tactical/blocks/*.yml`)
 ```yaml
 schema-version: 1

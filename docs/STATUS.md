@@ -97,6 +97,7 @@ These will be tested on your client when the HUD and resource pack are built.
 | Position snapshots (`SNAPSHOT_POSITIONS`), `DAMAGE`, `PLAYER_KILL`, bomb events, `BLOCK_CHANGE` | ✅ | |
 | Resource pack builder: vanilla overrides, overrides folder, double slab + glazed terracotta blocks, validation, deterministic zip | ✅ | Unit-tested and live-built |
 | Pack hosting (built-in HTTP), auto-send on join and rebuild, pack format detected from the server | ✅ | HTTP tested with curl; client download untested |
+| Construction block = retextured infested stone (pack model override + placeholder texture), silverfish spawns cancelled server-wide | 🟡 | Texture and no-silverfish done; silverfish block live-tested with a TNT control run. The item, placement and breaking come in Phase 3 |
 | `/game blocks list` and `give` (exact-state placement) | 🟡 | Implemented; the palette GUI comes in Phase 4 |
 | Test matches with real players and a map | 🟡 | Implemented; only virtual players tested |
 

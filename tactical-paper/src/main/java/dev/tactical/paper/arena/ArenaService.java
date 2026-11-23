@@ -267,6 +267,15 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
         });
     }
 
+    /**
+     * Construction blocks are infested stone; vanilla spawns a silverfish when one breaks (or explodes).
+     * Silverfish never belong in this game, so those spawns are cancelled everywhere on the server.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onSilverfish(org.bukkit.event.entity.CreatureSpawnEvent e) {
+        if (e.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SILVERFISH_BLOCK) e.setCancelled(true);
+    }
+
     /** Map geometry is protected in match instances (construction blocks come in Phase 3). */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent e) {
