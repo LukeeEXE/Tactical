@@ -33,7 +33,7 @@ vec4 cornerTexel(int vertexID, vec2 coords) {
 void main() {
     texCoord0 = UV0;
     vertexColor = Color;
-    vec4 c = cornerTexel(gl_VertexID, UV0);
+    vec4 c = cornerTexel(gl_VertexIndex, UV0);
     ivec3 rgb = ivec3(round(c.rgb * 255.0));
     vec3 offset = vec3(0.0);
     if (rgb == ivec3(38, 26, 28) || rgb == ivec3(37, 40, 30)) offset = vec3(-5.0, 0.0, 0.0);
