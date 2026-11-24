@@ -25,6 +25,7 @@ public record HudConfig(
         int headSlot,
         int stripPadding,
         int actionPanelAscent,
+        int actionHintWidth,
         boolean moneyEnabled,
         int moneyOffsetY,
         int moneyLeft
@@ -32,7 +33,7 @@ public record HudConfig(
     public static final int SCHEMA_VERSION = 1;
 
     public static HudConfig defaults() {
-        return new HudConfig("pinch", 0, 8, 9, 9, 1, 6, 4, 19, 9, 3, 0, 10, 2, 9, true, 33, 10);
+        return new HudConfig("pinch", 0, 8, 9, 9, 1, 6, 4, 19, 9, 3, 0, 10, 2, 9, 160, true, 33, 10);
     }
 
     public HudLayout layout() {
@@ -47,7 +48,7 @@ public record HudConfig(
                 "section-gap", "panel-padding", "row-spacing", "score-ascent", "score-offset-y", "timer-width", "head-slot",
                 "strip-padding"));
         ConfigNode ab = root.child("actionbar");
-        ab.warnUnknownKeys(List.of("panel-ascent"));
+        ab.warnUnknownKeys(List.of("panel-ascent", "hint-width"));
         ConfigNode m = root.child("money");
         m.warnUnknownKeys(List.of("enabled", "offset-y", "left"));
         return new HudConfig(
@@ -66,6 +67,7 @@ public record HudConfig(
                 b.integer("head-slot", d.headSlot(), 8, 16),
                 b.integer("strip-padding", d.stripPadding(), 0, 16),
                 ab.integer("panel-ascent", d.actionPanelAscent(), -64, 22),
+                ab.integer("hint-width", d.actionHintWidth(), 0, 256),
                 m.bool("enabled", d.moneyEnabled()),
                 m.integer("offset-y", d.moneyOffsetY(), 1, 128),
                 m.integer("left", d.moneyLeft(), -200, 200));

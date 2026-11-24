@@ -14,19 +14,17 @@ public final class HudShapes {
     }
 
     /**
-     * A rectangle exactly {@code width} px wide (advance = width) built from power-of-two pieces of {@code set},
+     * A rectangle exactly {@code width} px wide (advance = width) drawn as a single glyph of {@code set},
      * tinted with {@code color} (black for panels, red/blue for team strips). No shadow.
      */
     public static Component rect(HudGlyphs.RectSet set, int width, String font, TextColor color) {
         Key key = Key.key("tactical", font);
         TextComponent.Builder b = Component.text();
         int left = Math.max(0, width);
-        for (int i = 7; i >= 0; i--) {
-            int piece = 1 << i;
-            while (left >= piece) {
-                b.append(Component.text(String.valueOf(set.piece(i))).font(key)).append(TextOffsets.space(-1)); // bitmap advance = w + 1
-                left -= piece;
-            }
+        while (left > 0) { // one glyph per rectangle (two only beyond RECT_MAX px)
+            int w = Math.min(left, HudGlyphs.RECT_MAX);
+            b.append(Component.text(String.valueOf(set.glyph(w))).font(key)).append(TextOffsets.space(-1)); // bitmap advance = w + 1
+            left -= w;
         }
         return b.build().color(color).shadowColor(ShadowColor.none());
     }

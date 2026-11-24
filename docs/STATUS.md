@@ -196,3 +196,11 @@ All positions are estimates and need a client check; every value is adjustable i
 | Team colours | Red `#b03232`, blue `#204eab` everywhere (boss bar strips, scores, names, chat, results) |
 | Kill messages show the method | `chat.kill.<method>`: melee "was slain by", bow "was shot by", trident "was impaled by", other projectiles "was hit by", TNT/explosions "was blown up by", fire, magic, fall, void, thorns. TNT now credits the player who lit it (and teammates' TNT no longer hurts you; your own still does). Custom utility names its own method with `KillMethods.tag(entity, "flashbang", owner)` or `KillMethods.pending(victim, "flashbang", attacker)` and gets a `chat.kill.flashbang` message; unknown methods fall back to `chat.kill`. Deaths without a killer can get `chat.died.<method>` lines (default: "was eliminated.") |
 
+### Round 8
+| Report | Change |
+|---|---|
+| Head backgrounds not one piece | Every background (team strip, timer panel, score boxes, hint box) was 1-8 translucent power-of-two pieces side by side; they are now ONE glyph of the exact width (the pack has every width 1-256 px per background), so there are no seams |
+| Action bar width moves | The hint box has a fixed width (`hud.yml → actionbar.hint-width`, default 160) and only grows if a text does not fit |
+| Shadows on the boss bar | Verified the server sends `shadow_color: 0` (`/game debug json`) and that the 26.3 client multiplies the shadow alpha by it (no shadow drawn). Still to be confirmed in game |
+| Supplied position_tex_color shader | Ported to the 26.3 shader interface (its uniform block layout was from an older version) and shipped in the pack. Note: in 26.3 GUI text and its shadows use the `text` shader, not `position_tex_color`, so this shader only affects GUI sprites containing its two marker colours |
+

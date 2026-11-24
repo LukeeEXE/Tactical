@@ -24,12 +24,18 @@ public final class HudGlyphs {
     public record Glyph(String name, char ch, Slot slot, int width, int height, BufferedImage image) {
     }
 
-    /** A family of rectangle pieces: {@code base + i} is 2^i px wide (i = 0..7). */
+    /**
+     * A solid rectangle available in every width from 1 to {@link #RECT_MAX} px as ONE glyph each (codepoint
+     * {@code base + width - 1}), so a background is a single quad: no seams between pieces at any GUI scale.
+     */
     public record RectSet(String name, char base, Slot slot, int height, int alpha) {
-        public char piece(int i) {
-            return (char) (base + i);
+        public char glyph(int width) {
+            if (width < 1 || width > RECT_MAX) throw new IllegalArgumentException("rect width 1.." + RECT_MAX + ": " + width);
+            return (char) (base + width - 1);
         }
     }
+
+    public static final int RECT_MAX = 256;
 
     // ---- private-use characters (stable: the plugin and the pack agree on these)
     public static final char CHAT_KILL = '\uE200', CHAT_ROUND = '\uE201', CHAT_WIN = '\uE202', CHAT_LOSS = '\uE203',
@@ -42,13 +48,13 @@ public final class HudGlyphs {
     public static final char MONEY_PANEL = '\uE240', MONEY_COIN = '\uE241';
 
     /** Team strip behind the heads (soft; tinted red/blue). */
-    public static final RectSet BAR_STRIP = new RectSet("bar_strip", '\uE250', Slot.BAR_STRIP, 10, 0x66);
+    public static final RectSet BAR_STRIP = new RectSet("bar_strip", '\uE400', Slot.BAR_STRIP, 10, 0x66);
     /** Timer panel (tinted black). */
-    public static final RectSet BAR_PANEL = new RectSet("bar_panel", '\uE230', Slot.BAR_PANEL, 11, 0x8C);
+    public static final RectSet BAR_PANEL = new RectSet("bar_panel", '\uE300', Slot.BAR_PANEL, 11, 0x8C);
     /** Score box (tinted black). */
-    public static final RectSet BAR_SCORE = new RectSet("bar_score", '\uE260', Slot.BAR_SCORE, 16, 0x8C);
+    public static final RectSet BAR_SCORE = new RectSet("bar_score", '\uE500', Slot.BAR_SCORE, 16, 0x8C);
     /** Two-line action-bar hint box (tinted black). */
-    public static final RectSet ACTION_PANEL = new RectSet("action_panel", '\uE270', Slot.ACTION_PANEL, 22, 0x8C);
+    public static final RectSet ACTION_PANEL = new RectSet("action_panel", '\uE600', Slot.ACTION_PANEL, 22, 0x8C);
     public static final List<RectSet> RECT_SETS = List.of(BAR_STRIP, BAR_PANEL, BAR_SCORE, ACTION_PANEL);
 
     public static final int MONEY_PANEL_WIDTH = 81, MONEY_PANEL_HEIGHT = 11;
@@ -114,9 +120,8 @@ public final class HudGlyphs {
                 art("money_coin", MONEY_COIN, Slot.MONEY_ICON,
                         "..kkkk..", ".kyyyyk.", "kyywyyok", "kywyyyok", "kyyyyyok", "kyyyyook", ".kooook.", "..kkkk..")));
         for (RectSet set : RECT_SETS) {
-            for (int i = 0; i < 8; i++) {
-                int w = 1 << i;
-                out.add(rect(set.name() + "_" + w, set.piece(i), set.slot(), w, set.height(), (set.alpha() << 24) | 0xFFFFFF));
+            for (int w = 1; w <= RECT_MAX; w++) {
+                out.add(rect(set.name() + "_" + w, set.glyph(w), set.slot(), w, set.height(), (set.alpha() << 24) | 0xFFFFFF));
             }
         }
         return out;

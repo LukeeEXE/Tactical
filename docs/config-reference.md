@@ -129,6 +129,7 @@ To preview, run `/game match test quickplay none 4`: you plus 4 virtual players 
 | `bossbar.section-gap` / `panel-padding` | 6 / 4 | Gaps between strip, score box and timer panel, and the timer's inner margin. |
 | `bossbar.timer-width` | 0 | Fixed timer panel width in pixels. 0 = wide enough for the longest label, so the row never changes width. |
 | `actionbar.panel-ascent` (pack) | 9 | Vertical position of the two-line hint box ("Right-click to select a kit"). |
+| `actionbar.hint-width` | 160 | Fixed width of the hint box in pixels; it only grows when a text does not fit. 0 = always fit the text. |
 | `money.enabled` | true | Show the money widget during matches. |
 | `money.offset-y` (pack) | 33 | Pixels from the action-bar line down to the hunger-bar row. |
 | `money.left` | 10 | Pixels right of the screen centre where the widget starts (the hunger bar starts at 10). |

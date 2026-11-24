@@ -90,6 +90,7 @@ public final class PackBuilder {
         generateVerticalOffsetFonts(files);
         generateTrueTypeFonts(sourceRoot.resolve("fonts"), files, issues);
         generateHud(files);
+        addBundledShaders(files);
         Map<String, byte[]> user = new TreeMap<>();
         readTree(sourceRoot.resolve("assets"), "assets/", user);
         generateBlocks(blocks, knownBlocks, user, files, issues);
@@ -338,6 +339,18 @@ public final class PackBuilder {
     }
 
     // ------------------------------------------------------------------ construction block
+
+    /** Core shader overrides shipped with the plugin (ported to the current client's shader interface). */
+    static final List<String> BUNDLED_SHADERS = List.of("position_tex_color.vsh", "position_tex_color.fsh");
+
+    private static void addBundledShaders(Map<String, byte[]> files) throws IOException {
+        for (String name : BUNDLED_SHADERS) {
+            try (var in = PackBuilder.class.getClassLoader().getResourceAsStream("pack/shaders/core/" + name)) {
+                if (in == null) throw new IOException("bundled shader missing: " + name);
+                files.put("assets/minecraft/shaders/core/" + name, in.readAllBytes());
+            }
+        }
+    }
 
     /** Texture admins replace to restyle construction blocks (resourcepack/assets/tactical/textures/block/construction_block.png). */
     public static final String CONSTRUCTION_TEXTURE = "assets/tactical/textures/block/construction_block.png";

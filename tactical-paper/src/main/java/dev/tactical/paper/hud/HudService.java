@@ -144,7 +144,7 @@ public final class HudService implements Service {
             w2 = HudText.vanillaWidth(hint.detail());
         }
         line2 = line2.font(Key.key("tactical", "offset_down_" + LINE_TWO_OFFSET));
-        int boxWidth = Math.max(w1, w2) + 2 * HINT_PADDING;
+        int boxWidth = Math.max(config.hud().actionHintWidth(), Math.max(w1, w2) + 2 * HINT_PADDING); // fixed: never resizes with its text
         return Component.text()
                 .append(HudShapes.centred(HudShapes.rect(HudGlyphs.ACTION_PANEL, boxWidth, "hud_actionbar", NamedTextColor.BLACK), boxWidth))
                 .append(HudShapes.centred(line1, w1))

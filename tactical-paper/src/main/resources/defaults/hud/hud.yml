@@ -18,6 +18,7 @@ bossbar:
                          # invisible boss bar and moved up by this much so the client centres it exactly
 actionbar:
   panel-ascent: 9        # (pack) two-line hint box ("Right-click to ...") vertical position
+  hint-width: 160        # fixed width of the hint box in px (wider only if a text does not fit); 0 = fit the text
 money:
   enabled: true
   offset-y: 33           # (pack) pixels from the action-bar line down to the hunger-bar row

@@ -130,6 +130,25 @@ public final class GameCommand {
                     }
                     return ok();
                 }))
+                .then(Commands.literal("json").executes(ctx -> {
+                    // What actually goes over the wire for HUD text: Adventure JSON and the server's own (vanilla) codec.
+                    net.kyori.adventure.text.Component c = net.kyori.adventure.text.Component.text("x", NamedTextColor.WHITE)
+                            .shadowColor(net.kyori.adventure.text.format.ShadowColor.none())
+                            .append(net.kyori.adventure.text.Component.text("y"));
+                    reply(ctx, "adventure: " + net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().serialize(c), NamedTextColor.GRAY);
+                    try {
+                        Object vanilla = Class.forName("io.papermc.paper.adventure.PaperAdventure")
+                                .getMethod("asVanilla", net.kyori.adventure.text.Component.class).invoke(null, c);
+                        Object codec = Class.forName("net.minecraft.network.chat.ComponentSerialization").getField("CODEC").get(null);
+                        Object ops = Class.forName("com.mojang.serialization.JsonOps").getField("INSTANCE").get(null);
+                        Object result = codec.getClass().getMethod("encodeStart", Class.forName("com.mojang.serialization.DynamicOps"), Object.class)
+                                .invoke(codec, ops, vanilla);
+                        reply(ctx, "vanilla: " + result, NamedTextColor.GRAY);
+                    } catch (ReflectiveOperationException | RuntimeException ex) {
+                        reply(ctx, "vanilla: n/a (" + ex + ")", NamedTextColor.RED);
+                    }
+                    return ok();
+                }))
                 .then(Commands.literal("skip").then(matchArg()
                         .executes(ctx -> withTestMatch(ctx, m -> skip(ctx, m))))));
 
