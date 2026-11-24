@@ -1,0 +1,7 @@
+# Pinch is a 7 px pixel font (one design pixel = 585 of 4096 units), so size 7 maps it 1:1 to GUI pixels.
+# Integer oversampling keeps it sharp. Use fonts tactical:pinch, tactical:pinch_down_<n>, tactical:pinch_up_<n>.
+size: 7
+oversample: 4
+shift-x: 0
+shift-y: 0
+max-offset: 128

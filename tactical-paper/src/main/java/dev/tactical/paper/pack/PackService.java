@@ -96,6 +96,8 @@ public final class PackService implements Service, Listener {
         Files.createDirectories(root.resolve("overrides"));
         copyDefault("resourcepack/README.txt");
         copyDefault("blocks/example.yml");
+        Files.createDirectories(root.resolve("fonts"));
+        for (String f : List.of("pinch.ttf", "pinch.yml", "pinch.LICENSE.txt")) copyDefault("resourcepack/fonts/" + f);
         detectPackFormat();
         Set<String> known = new HashSet<>();
         for (var b : Registry.BLOCK) {

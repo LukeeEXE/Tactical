@@ -32,6 +32,13 @@ matches:
     - iron_sword
     - bow
     - arrow:16
+  # Invisible box around each buyer during the buy phase: any right-click inside it opens the shop.
+  # Bigger = more forgiving while sprinting/jumping. Height must keep the eyes inside (>= 2.2).
+  shop-hitbox:
+    width: 2.5
+    height: 4.0
+  # true = arrows/projectiles fly through teammates instead of stopping on them.
+  projectiles-pass-through-teammates: false
 
 health:
   # Food is locked at this level so it never drains and sprint is never lost (7-20).

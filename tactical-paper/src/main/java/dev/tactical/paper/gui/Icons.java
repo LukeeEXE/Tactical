@@ -102,7 +102,7 @@ public final class Icons {
         if (!real) return icon("ui.player_unknown", name, lore);
         ItemStack item = build(Material.PLAYER_HEAD, name, lore, List.of("tactical:icon/player_head"), false);
         item.setData(DataComponentTypes.PROFILE, ResolvableProfile.resolvableProfile().uuid(player).name(playerName)
-                .addProperties(dev.tactical.paper.hud.Heads.textures(player)).build());
+                .addProperties(dev.tactical.paper.hud.Heads.textures(player, playerName)).build());
         return item;
     }
 

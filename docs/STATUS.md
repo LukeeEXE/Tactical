@@ -146,3 +146,12 @@ See `docs/PLAYTEST-PHASE2.md` for the client checklist.
 | 10 | Arrows blocked by teammates | Projectiles pass through teammates and dead players |
 | 11 | Team names | Messages and HUD say Attackers/Defenders, coloured by team identity (red = started attacking, blue = started defending) |
 | 12 | Space after the head | Tab-list names in matches get a space after the head and the team colour |
+
+### Playtest feedback round 3
+| Report | Change |
+|---|---|
+| F (swap hands) opened the shop | Removed: F swaps hands normally before the round, so bows and items can go in the off hand |
+| Arrows passing through teammates made enemy hits feel odd | Off by default (vanilla: arrows stop on teammates and deal no damage). Optional: `matches.projectiles-pass-through-teammates: true` |
+| Shop box too small | 2.5 × 4.0 blocks, centred on the eyes (configurable: `matches.shop-hitbox`) |
+| Heads in the kit menu not the real player | Heads use the login skin. If the login profile has none (offline mode, or a proxy not forwarding skins), the skin is looked up from Mojang by UUID, then by name, in the background. `/game debug heads` shows where each online player's skin came from |
+| Add the Pinch font with vertical offsets | TTF fonts in `resourcepack/fonts/` generate `tactical:<name>` plus `_down_<n>` / `_up_<n>` variants; Pinch is shipped with attribution |

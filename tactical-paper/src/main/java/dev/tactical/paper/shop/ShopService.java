@@ -122,7 +122,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                 if (!f.participant(p.getUniqueId()).map(Participant::active).orElse(false)) continue;
                 // Temporary money display until the custom HUD (Phase 5) owns the action bar.
                 p.sendActionBar(Component.text("$" + String.format("%,d", shop.economy().balance(p.getUniqueId())), NamedTextColor.GOLD)
-                        .append(Component.text("   Right-click (or press F) to open the shop", NamedTextColor.GRAY)));
+                        .append(Component.text("   Right-click to open the shop", NamedTextColor.GRAY)));
             }
             menus.refreshWhere(m -> m instanceof ShopMenu s && s.shop() == shop);
         });
@@ -205,8 +205,6 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
      */
     private final Map<UUID, org.bukkit.entity.Interaction> hitboxes = new HashMap<>();
     private final Set<UUID> hitboxHidden = new HashSet<>();
-    private static final float HITBOX_WIDTH = 1.6f;
-    private static final float HITBOX_HEIGHT = 2.6f;
 
     private void spawnHitboxes(GameMatch match) {
         if (match.state() != MatchState.BUY_PHASE) return;
@@ -215,8 +213,8 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
             removeHitbox(p.getUniqueId());
             org.bukkit.Location at = hitboxLocation(p);
             org.bukkit.entity.Interaction box = p.getWorld().spawn(at, org.bukkit.entity.Interaction.class, i -> {
-                i.setInteractionWidth(HITBOX_WIDTH);
-                i.setInteractionHeight(HITBOX_HEIGHT);
+                i.setInteractionWidth((float) config.general().shopHitboxWidth());
+                i.setInteractionHeight((float) config.general().shopHitboxHeight());
                 i.setResponsive(false);
                 i.setPersistent(false);
                 i.setVisibleByDefault(false);
@@ -249,10 +247,10 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         }
     }
 
-    /** Centred on the player's feet so the eyes are always inside, with margin for movement between ticks. */
-    private static org.bukkit.Location hitboxLocation(Player p) {
+    /** Centred on the player so the eyes stay inside, with margin above and below for jumping and movement. */
+    private org.bukkit.Location hitboxLocation(Player p) {
         org.bukkit.Location l = p.getLocation();
-        l.setY(l.getY() - 0.3);
+        l.setY(l.getY() + p.getEyeHeight() - config.general().shopHitboxHeight() / 2);
         l.setYaw(0);
         l.setPitch(0);
         return l;
@@ -374,13 +372,5 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         openShop(e.getPlayer(), shop);
     }
 
-    /** F (swap hands) also opens the shop: an empty-hand right-click into the air never reaches the server. */
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onSwap(org.bukkit.event.player.PlayerSwapHandItemsEvent e) {
-        MatchShop shop = buyingShop(e.getPlayer());
-        if (shop == null) return;
-        e.setCancelled(true);
-        openShop(e.getPlayer(), shop);
-    }
 
 }

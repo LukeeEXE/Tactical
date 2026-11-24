@@ -33,6 +33,15 @@ public final class TextOffsets {
     }
 
     /**
+     * Renders {@code content} in a TrueType font from {@code resourcepack/fonts/} (e.g. {@code "pinch"}), shifted
+     * {@code px} pixels down (negative = up). TTF fonts can move both ways, up to their configured max-offset.
+     */
+    public static Component ttf(String font, int px, Component content) {
+        String id = px == 0 ? font : px > 0 ? font + "_down_" + px : font + "_up_" + (-px);
+        return content.font(Key.key("tactical", id));
+    }
+
+    /**
      * Shifts printable-ASCII text down by {@code px} pixels (1..128), or up by 1 with {@code px = -1}.
      * Applies to text only; inline heads/sprites are not affected by fonts.
      */

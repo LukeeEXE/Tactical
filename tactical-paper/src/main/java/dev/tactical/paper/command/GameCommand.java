@@ -122,6 +122,14 @@ public final class GameCommand {
                         .executes(ctx -> withTestMatch(ctx, m -> plant(ctx, m)))))
                 .then(Commands.literal("defuse").then(matchArg()
                         .executes(ctx -> withTestMatch(ctx, m -> defuse(ctx, m)))))
+                .then(Commands.literal("heads").executes(ctx -> {
+                    for (Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
+                        dev.tactical.paper.hud.Heads.textures(p.getUniqueId(), p.getName());
+                        reply(ctx, p.getName() + ": " + dev.tactical.paper.hud.Heads.describe(p.getUniqueId())
+                                + (org.bukkit.Bukkit.getOnlineMode() ? "" : " (server is in offline mode)"), NamedTextColor.YELLOW);
+                    }
+                    return ok();
+                }))
                 .then(Commands.literal("skip").then(matchArg()
                         .executes(ctx -> withTestMatch(ctx, m -> skip(ctx, m))))));
 

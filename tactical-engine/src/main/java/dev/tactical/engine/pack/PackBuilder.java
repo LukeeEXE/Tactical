@@ -82,6 +82,7 @@ public final class PackBuilder {
         generateConstructionBlock(files);
         addNegativeSpaceFont(files, issues);
         generateVerticalOffsetFonts(files);
+        generateTrueTypeFonts(sourceRoot.resolve("fonts"), files, issues);
         Map<String, byte[]> user = new TreeMap<>();
         readTree(sourceRoot.resolve("assets"), "assets/", user);
         generateBlocks(blocks, knownBlocks, user, files, issues);
@@ -179,6 +180,81 @@ public final class PackBuilder {
             String name = n < 0 ? "offset_up_" + (-n) : "offset_down_" + n;
             files.put("assets/tactical/font/" + name + ".json", json(font));
         }
+    }
+
+    /**
+     * TrueType/OpenType fonts dropped into {@code resourcepack/fonts/} become pack fonts:
+     * {@code tactical:<name>} plus vertical variants {@code tactical:<name>_down_<n>} and {@code tactical:<name>_up_<n>}
+     * (n = 1..max-offset, default 128). Unlike bitmap fonts, TTF glyphs can be shifted UP as well as down.
+     * Optional {@code <name>.yml}: {@code size}, {@code oversample}, {@code shift-x}, {@code shift-y}, {@code max-offset}.
+     * A {@code <name>.LICENSE.txt} next to the font is shipped under {@code credits/fonts/}.
+     */
+    private static void generateTrueTypeFonts(Path dir, Map<String, byte[]> files, List<PackIssue> issues) throws IOException {
+        if (!Files.isDirectory(dir)) return;
+        List<Path> fonts;
+        try (Stream<Path> s = Files.list(dir)) {
+            fonts = s.filter(p -> {
+                String n = p.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+                return n.endsWith(".ttf") || n.endsWith(".otf");
+            }).sorted().toList();
+        }
+        for (Path f : fonts) {
+            String fileName = f.getFileName().toString();
+            String base = fileName.substring(0, fileName.lastIndexOf('.'));
+            String name = base.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9_]", "_");
+            String where = "resourcepack/fonts/" + fileName;
+            byte[] data = Files.readAllBytes(f);
+            if (data.length < 12 || !(startsWith(data, 0x00, 0x01, 0x00, 0x00) || startsWith(data, 'O', 'T', 'T', 'O')
+                    || startsWith(data, 't', 'r', 'u', 'e'))) {
+                issues.add(new PackIssue(true, where, "not a TrueType/OpenType font file"));
+                continue;
+            }
+            double size = 11, oversample = 2, shiftX = 0, shiftY = 0;
+            int maxOffset = MAX_DOWN_OFFSET;
+            Path opts = dir.resolve(base + ".yml");
+            if (Files.exists(opts)) {
+                dev.tactical.engine.config.ConfigReport r = new dev.tactical.engine.config.ConfigReport();
+                var node = dev.tactical.engine.config.YamlLoader.load(opts, "resourcepack/fonts/" + base + ".yml", r);
+                if (node.isPresent()) {
+                    var n = node.get();
+                    n.warnUnknownKeys(List.of("size", "oversample", "shift-x", "shift-y", "max-offset"));
+                    size = n.number("size", size, 1, 256);
+                    oversample = n.number("oversample", oversample, 0.25, 16);
+                    shiftX = n.number("shift-x", shiftX, -512, 512);
+                    shiftY = n.number("shift-y", shiftY, -512, 512);
+                    maxOffset = n.integer("max-offset", maxOffset, 0, 512);
+                }
+                for (var i : r.issues()) issues.add(new PackIssue(i.severity() == dev.tactical.engine.config.ConfigIssue.Severity.ERROR, i.file(), i.message()));
+            }
+            files.put("assets/tactical/font/" + name + ".ttf", data);
+            for (int n = -maxOffset; n <= maxOffset; n++) {
+                JsonObject ttf = new JsonObject();
+                ttf.addProperty("type", "ttf");
+                ttf.addProperty("file", "tactical:" + name + ".ttf");
+                ttf.addProperty("size", size);
+                ttf.addProperty("oversample", oversample);
+                com.google.gson.JsonArray shift = new com.google.gson.JsonArray();
+                shift.add(shiftX);
+                shift.add(shiftY + n); // positive = down
+                ttf.add("shift", shift);
+                ttf.addProperty("skip", "");
+                com.google.gson.JsonArray providers = new com.google.gson.JsonArray();
+                providers.add(ttf);
+                JsonObject font = new JsonObject();
+                font.add("providers", providers);
+                String id = n == 0 ? name : n > 0 ? name + "_down_" + n : name + "_up_" + (-n);
+                files.put("assets/tactical/font/" + id + ".json", json(font));
+            }
+            for (String credit : List.of(base + ".LICENSE.txt", base + ".txt")) {
+                Path c = dir.resolve(credit);
+                if (Files.exists(c)) files.put("credits/fonts/" + credit, Files.readAllBytes(c));
+            }
+        }
+    }
+
+    private static boolean startsWith(byte[] d, int... prefix) {
+        for (int i = 0; i < prefix.length; i++) if ((d[i] & 0xFF) != prefix[i]) return false;
+        return true;
     }
 
     // ------------------------------------------------------------------ construction block

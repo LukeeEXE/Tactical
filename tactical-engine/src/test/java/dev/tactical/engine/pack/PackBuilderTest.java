@@ -120,6 +120,31 @@ class PackBuilderTest {
     }
 
     @Test
+    void trueTypeFontsGetVerticalVariants(@TempDir Path root) throws Exception {
+        Path fonts = root.resolve("fonts");
+        Files.createDirectories(fonts);
+        byte[] fake = new byte[64];
+        fake[1] = 1; // 00 01 00 00 = TrueType signature
+        Files.write(fonts.resolve("Pinch.ttf"), fake);
+        Files.writeString(fonts.resolve("Pinch.yml"), "size: 7\noversample: 4\nmax-offset: 3\n");
+        Files.writeString(fonts.resolve("Pinch.LICENSE.txt"), "CC BY-SA 3.0");
+        Files.write(fonts.resolve("broken.ttf"), new byte[]{1, 2, 3});
+        PackBuilder.Result res = new PackBuilder(97, 1, "t").build(root, List.of(), KNOWN);
+        Map<String, String> files = unzip(res.zip());
+        assertTrue(files.containsKey("assets/tactical/font/pinch.ttf"));
+        JsonObject ttf = JsonParser.parseString(files.get("assets/tactical/font/pinch_up_2.json")).getAsJsonObject()
+                .getAsJsonArray("providers").get(0).getAsJsonObject();
+        assertEquals("tactical:pinch.ttf", ttf.get("file").getAsString());
+        assertEquals(7.0, ttf.get("size").getAsDouble());
+        assertEquals(-2.0, ttf.getAsJsonArray("shift").get(1).getAsDouble());
+        assertTrue(files.containsKey("assets/tactical/font/pinch.json"));
+        assertTrue(files.containsKey("assets/tactical/font/pinch_down_3.json"));
+        assertFalse(files.containsKey("assets/tactical/font/pinch_down_4.json"));
+        assertTrue(files.containsKey("credits/fonts/Pinch.LICENSE.txt"));
+        assertTrue(res.issues().toString().contains("not a TrueType"), res.issues().toString());
+    }
+
+    @Test
     void deterministicOutput(@TempDir Path root) throws Exception {
         png(root, "block/panel.png", 16, 16);
         ConfigReport r = new ConfigReport();

@@ -278,7 +278,7 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onProjectileHit(org.bukkit.event.entity.ProjectileHitEvent e) {
         if (!(e.getHitEntity() instanceof Player hit) || !(e.getEntity().getShooter() instanceof Player shooter)) return;
-        if (hit == shooter) return;
+        if (hit == shooter || !config.general().projectilesPassTeammates()) return;
         GameMatch m = matches.matchOf(shooter.getUniqueId()).orElse(null);
         if (m == null || !m.isMember(hit.getUniqueId())) return;
         MatchMember a = m.member(shooter.getUniqueId()).orElse(null);

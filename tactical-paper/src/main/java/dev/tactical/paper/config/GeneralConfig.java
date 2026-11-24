@@ -15,6 +15,9 @@ public record GeneralConfig(
         int rejoinWindowSeconds,
         int resumeCountdownSeconds,
         List<String> placeholderLoadout,
+        double shopHitboxWidth,
+        double shopHitboxHeight,
+        boolean projectilesPassTeammates,
         boolean logStateChanges,
         boolean logSpectatorInput,
         int lockedFoodLevel,
@@ -34,7 +37,7 @@ public record GeneralConfig(
 
     public static GeneralConfig defaults() {
         return new GeneralConfig("sqlite", "data/tactical.db", "logs/matches", 4, 50_000, 1000, 180, 3,
-                List.of("iron_sword", "bow", "arrow:16"), true, false, 20, true, 1.0, 80, 0,
+                List.of("iron_sword", "bow", "arrow:16"), 2.5, 4.0, false, true, false, 20, true, 1.0, 80, 0,
                 true, "builtin", "", 25601, "", true, "<gold>This server needs its resource pack for the HUD, items and maps.");
     }
 
@@ -51,7 +54,10 @@ public record GeneralConfig(
         ConfigNode rec = root.child("recording");
         rec.warnUnknownKeys(List.of("folder", "position-interval-ticks", "queue-soft-limit", "flush-interval-ms"));
         ConfigNode m = root.child("matches");
-        m.warnUnknownKeys(List.of("rejoin-window-seconds", "resume-countdown-seconds", "placeholder-loadout"));
+        m.warnUnknownKeys(List.of("rejoin-window-seconds", "resume-countdown-seconds", "placeholder-loadout", "shop-hitbox",
+                "projectiles-pass-through-teammates"));
+        ConfigNode hb = m.child("shop-hitbox");
+        hb.warnUnknownKeys(List.of("width", "height"));
         ConfigNode h = root.child("health");
         h.warnUnknownKeys(List.of("locked-food-level", "regeneration"));
         ConfigNode regen = h.child("regeneration");
@@ -80,6 +86,9 @@ public record GeneralConfig(
                 m.integer("rejoin-window-seconds", d.rejoinWindowSeconds(), 0, 3600),
                 m.integer("resume-countdown-seconds", d.resumeCountdownSeconds(), 0, 60),
                 loadout,
+                hb.number("width", d.shopHitboxWidth(), 0.5, 8),
+                hb.number("height", d.shopHitboxHeight(), 2.2, 8),
+                m.bool("projectiles-pass-through-teammates", d.projectilesPassTeammates()),
                 dbg.bool("log-state-changes", d.logStateChanges()),
                 dbg.bool("log-spectator-input", d.logSpectatorInput()),
                 h.integer("locked-food-level", d.lockedFoodLevel(), 7, 20),
