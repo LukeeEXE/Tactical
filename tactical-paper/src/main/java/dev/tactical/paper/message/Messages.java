@@ -20,6 +20,10 @@ public final class Messages {
         this.config = config;
     }
 
+    public boolean has(String key) {
+        return config.messages().containsKey(key);
+    }
+
     /** @param placeholders alternating name, value pairs; values are escaped (unparsed) */
     public Component render(String key, Object... placeholders) {
         String template = config.messages().getOrDefault(key, key);

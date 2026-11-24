@@ -186,12 +186,14 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
         MatchArena arena = m == null ? null : arenas.get(m.id());
         if (arena == null || !isActive(victim)) return;
         arena.bomb().markDamaged(victim.getUniqueId());
-        Player attacker = e instanceof EntityDamageByEntityEvent ed ? resolvePlayer(ed.getDamager()) : null;
+        Player attacker = KillMethods.attacker(e);
+        String method = KillMethods.method(e);
         UUID attackerId = attacker != null && m.isMember(attacker.getUniqueId()) ? attacker.getUniqueId() : null;
         Map<String, Object> d = new LinkedHashMap<>();
         d.put("victim", victim.getUniqueId());
         if (attackerId != null) d.put("attacker", attackerId);
         d.put("cause", e.getCause().name());
+        d.put("method", method);
         d.put("amount", Math.round(e.getFinalDamage() * 100) / 100.0);
         d.put("health_before", Math.round(victim.getHealth() * 100) / 100.0);
         boolean lethal = e.getFinalDamage() >= victim.getHealth();
@@ -207,12 +209,14 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
             k.put("killer", attackerId);
             k.put("victim", victim.getUniqueId());
             k.put("weapon", attacker.getInventory().getItemInMainHand().getType().getKey().asString());
+            k.put("method", method);
             k.put("projectile", e instanceof EntityDamageByEntityEvent ed && ed.getDamager() instanceof Projectile);
             k.put("location", BombController.loc(victim.getLocation()));
             m.recorder().record(EventTypes.PLAYER_KILL, List.of(attackerId, victim.getUniqueId()),
                     m.member(attackerId).map(MatchMember::team).orElse(null), k);
             attacker.playSound(attacker.getLocation(), org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.2f);
         }
+        m.setKillMethod(victim.getUniqueId(), method);
         m.flow().eliminate(victim.getUniqueId(), attackerId, cause);
     }
 
@@ -432,9 +436,4 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
         if (config.general().logSpectatorInput()) log.info("[spectator-input] " + p.getName() + " " + what);
     }
 
-    private static Player resolvePlayer(Entity damager) {
-        if (damager instanceof Player p) return p;
-        if (damager instanceof Projectile proj && proj.getShooter() instanceof Player p) return p;
-        return null;
-    }
 }

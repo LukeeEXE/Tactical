@@ -190,3 +190,9 @@ All positions are estimates and need a client check; every value is adjustable i
 | Remove kill/round reasons | "(fell out of bounds)", "(bomb defused)" etc. are gone from chat |
 | Breakdown lines | Light gray instead of red |
 
+### Round 7
+| Request | Change |
+|---|---|
+| Team colours | Red `#b03232`, blue `#204eab` everywhere (boss bar strips, scores, names, chat, results) |
+| Kill messages show the method | `chat.kill.<method>`: melee "was slain by", bow "was shot by", trident "was impaled by", other projectiles "was hit by", TNT/explosions "was blown up by", fire, magic, fall, void, thorns. TNT now credits the player who lit it (and teammates' TNT no longer hurts you; your own still does). Custom utility names its own method with `KillMethods.tag(entity, "flashbang", owner)` or `KillMethods.pending(victim, "flashbang", attacker)` and gets a `chat.kill.flashbang` message; unknown methods fall back to `chat.kill`. Deaths without a killer can get `chat.died.<method>` lines (default: "was eliminated.") |
+

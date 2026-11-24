@@ -37,6 +37,18 @@ import java.util.logging.Logger;
  */
 public final class GameMatch {
 
+    /** How each player was last eliminated ({@link dev.tactical.paper.arena.KillMethods} id), for kill messages. */
+    private final java.util.Map<java.util.UUID, String> killMethods = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public void setKillMethod(java.util.UUID victim, String method) {
+        killMethods.put(victim, method);
+    }
+
+    /** Consumes the stored method (so a later elimination without one does not reuse it). */
+    public java.util.Optional<String> takeKillMethod(java.util.UUID victim) {
+        return java.util.Optional.ofNullable(killMethods.remove(victim));
+    }
+
     private final MatchId id;
     private final ModeRules rules;
     private final boolean test;

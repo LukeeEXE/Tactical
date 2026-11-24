@@ -65,8 +65,8 @@ public final class MatchListener implements Service, Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onDamageByEntity(EntityDamageByEntityEvent event) {
-        Player attacker = resolvePlayer(event.getDamager());
-        if (attacker == null) return;
+        Player attacker = dev.tactical.paper.arena.KillMethods.attacker(event.getDamager());
+        if (attacker == null || attacker == event.getEntity()) return; // own TNT/utility may hurt yourself
         if (!allowedToHurt(attacker, event.getEntity())) {
             event.setCancelled(true);
         }
@@ -109,12 +109,4 @@ public final class MatchListener implements Service, Listener {
         return a.isPresent() && b.isPresent() && a.get().id().equals(b.get().id());
     }
 
-    private static Player resolvePlayer(Entity damager) {
-        if (damager instanceof Player p) return p;
-        if (damager instanceof Projectile proj) {
-            ProjectileSource src = proj.getShooter();
-            if (src instanceof Player p) return p;
-        }
-        return null;
-    }
 }

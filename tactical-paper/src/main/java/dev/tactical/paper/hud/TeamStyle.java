@@ -13,11 +13,14 @@ import net.kyori.adventure.text.format.TextColor;
  */
 public final class TeamStyle {
 
+    public static final TextColor RED = TextColor.color(0xB03232);
+    public static final TextColor BLUE = TextColor.color(0x204EAB);
+
     private TeamStyle() {
     }
 
     public static TextColor color(TeamId team) {
-        return team == TeamId.A ? NamedTextColor.RED : NamedTextColor.BLUE;
+        return team == TeamId.A ? RED : BLUE;
     }
 
     public static String roleName(Side side) {

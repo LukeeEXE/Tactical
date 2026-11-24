@@ -110,7 +110,7 @@ public final class StatsTracker implements Service, Listener, MatchLifecycleHook
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDamage(EntityDamageByEntityEvent e) {
         if (!(e.getEntity() instanceof Player victim)) return;
-        Player attacker = resolve(e.getDamager());
+        Player attacker = dev.tactical.paper.arena.KillMethods.attacker(e.getDamager());
         if (attacker == null || attacker == victim) return;
         Optional<GameMatch> m = matches.matchOf(victim.getUniqueId());
         if (m.isEmpty() || !m.get().isMember(attacker.getUniqueId())) return;
@@ -118,9 +118,4 @@ public final class StatsTracker implements Service, Listener, MatchLifecycleHook
         of(m.get().id(), attacker.getUniqueId()).damage += Math.min(e.getFinalDamage(), victim.getHealth());
     }
 
-    private static Player resolve(Entity d) {
-        if (d instanceof Player p) return p;
-        if (d instanceof Projectile pr && pr.getShooter() instanceof Player p) return p;
-        return null;
-    }
 }

@@ -58,11 +58,15 @@ final class MatchAnnouncer {
             }
             case MatchFlowEvent.RoundLive e -> all(match, HudGlyphs.CHAT_WARNING, "chat.round-live", "round", e.round());
             case MatchFlowEvent.PlayerEliminated e -> {
+                String method = match.takeKillMethod(e.victim()).orElse(
+                        e.cause() == EliminationCause.OUT_OF_BOUNDS ? "void" : "generic");
                 if (e.cause() == EliminationCause.KILLED && e.killer() != null) {
-                    all(match, HudGlyphs.CHAT_KILL, "chat.kill", "victim", ChatStyle.player(match, e.victim()),
+                    String key = messages.has("chat.kill." + method) ? "chat.kill." + method : "chat.kill";
+                    all(match, HudGlyphs.CHAT_KILL, key, "victim", ChatStyle.player(match, e.victim()),
                             "killer", ChatStyle.player(match, e.killer()));
                 } else {
-                    all(match, HudGlyphs.CHAT_KILL, "chat.died", "victim", ChatStyle.player(match, e.victim()),
+                    String key = messages.has("chat.died." + method) ? "chat.died." + method : "chat.died";
+                    all(match, HudGlyphs.CHAT_KILL, key, "victim", ChatStyle.player(match, e.victim()),
                             "cause", e.cause().name().toLowerCase(Locale.ROOT).replace('_', ' '));
                 }
             }
