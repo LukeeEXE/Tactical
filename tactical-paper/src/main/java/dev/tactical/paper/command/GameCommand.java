@@ -26,8 +26,6 @@ import dev.tactical.paper.record.RecordingInfo;
 import dev.tactical.paper.audit.AuditService;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
-import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
@@ -87,10 +85,10 @@ public final class GameCommand {
                                         .executes(ctx -> createTest(ctx, 4, null))
                                         .then(Commands.argument("virtual", IntegerArgumentType.integer(0, 5))
                                                 .executes(ctx -> createTest(ctx, IntegerArgumentType.getInteger(ctx, "virtual"), null))
-                                                .then(Commands.argument("players", ArgumentTypes.players())
+                                                .then(Commands.argument("players", StringArgumentType.greedyString())
+                                                        .suggests(this::suggestPlayers)
                                                         .executes(ctx -> createTest(ctx, IntegerArgumentType.getInteger(ctx, "virtual"),
-                                                                ctx.getArgument("players", PlayerSelectorArgumentResolver.class)
-                                                                        .resolve(ctx.getSource()))))))))
+                                                                StringArgumentType.getString(ctx, "players"))))))))
                 .then(Commands.literal("list").executes(this::list))
                 .then(Commands.literal("info").then(matchArg().executes(ctx -> withMatch(ctx, m -> info(ctx, m)))))
                 .then(Commands.literal("end").then(matchArg()
@@ -153,8 +151,7 @@ public final class GameCommand {
      * Test match. Real players (listed, or the sender if none listed) are split A/B alternately; each team is then
      * topped up with up to {@code virtual} engine-only players. Map "none" runs the engine without a world.
      */
-    private int createTest(CommandContext<CommandSourceStack> ctx, int virtual, List<Player> listed)
-            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private int createTest(CommandContext<CommandSourceStack> ctx, int virtual, String playerSpec) {
         CommandSender sender = ctx.getSource().getSender();
         if (!sender.hasPermission(PERM_MATCH)) return deny(ctx);
         String mode = StringArgumentType.getString(ctx, "mode");
@@ -165,10 +162,13 @@ public final class GameCommand {
             reply(ctx, "Unknown mode '" + mode + "'. Known: " + String.join(", ", config.modes().keySet()), NamedTextColor.RED);
             return 0;
         }
-        List<Player> players = listed != null ? listed : sender instanceof Player p ? List.of(p) : List.of();
         List<Player> teamA = new java.util.ArrayList<>();
         List<Player> teamB = new java.util.ArrayList<>();
-        for (int i = 0; i < players.size(); i++) (i % 2 == 0 ? teamA : teamB).add(players.get(i));
+        if (playerSpec == null) {
+            if (sender instanceof Player p) teamA.add(p);
+        } else if (!parseTeams(sender, playerSpec, teamA, teamB)) {
+            return 0;
+        }
         int perTeamVirtual = Math.max(0, Math.min(virtual, rules.teamSize() - Math.max(teamA.size(), teamB.size())));
         matches.create(new MatchService.MatchRequest(mode, mapId, teamA, teamB, perTeamVirtual, true), sender)
                 .whenCompleteAsync((m, t) -> {
@@ -181,6 +181,63 @@ public final class GameCommand {
                     }
                 }, tasks.main());
         return ok();
+    }
+
+    /**
+     * Player list for test matches: names separated by spaces or commas, selectors such as {@code @a} allowed.
+     * {@code vs} splits the list into explicit teams (left = team A / first attackers); without it players alternate.
+     */
+    private boolean parseTeams(CommandSender sender, String spec, List<Player> teamA, List<Player> teamB) {
+        List<Player> left = new java.util.ArrayList<>();
+        List<Player> right = new java.util.ArrayList<>();
+        boolean explicit = false;
+        java.util.Set<java.util.UUID> seen = new java.util.HashSet<>();
+        List<String> unknown = new java.util.ArrayList<>();
+        for (String token : spec.trim().split("[\\s,]+")) {
+            if (token.isEmpty()) continue;
+            if (token.equalsIgnoreCase("vs")) {
+                explicit = true;
+                continue;
+            }
+            List<Player> found = new java.util.ArrayList<>();
+            if (token.startsWith("@")) {
+                try {
+                    for (org.bukkit.entity.Entity e : org.bukkit.Bukkit.selectEntities(sender, token)) if (e instanceof Player p) found.add(p);
+                } catch (IllegalArgumentException e) {
+                    unknown.add(token);
+                }
+            } else {
+                Player p = org.bukkit.Bukkit.getPlayerExact(token);
+                if (p == null) unknown.add(token);
+                else found.add(p);
+            }
+            for (Player p : found) if (seen.add(p.getUniqueId())) (explicit ? right : left).add(p);
+        }
+        if (!unknown.isEmpty()) {
+            sender.sendMessage(Component.text("Not online / invalid: " + String.join(", ", unknown), NamedTextColor.RED));
+            return false;
+        }
+        if (explicit) {
+            teamA.addAll(left);
+            teamB.addAll(right);
+        } else {
+            for (int i = 0; i < left.size(); i++) (i % 2 == 0 ? teamA : teamB).add(left.get(i));
+        }
+        return true;
+    }
+
+    private java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestPlayers(
+            CommandContext<CommandSourceStack> ctx, com.mojang.brigadier.suggestion.SuggestionsBuilder b) {
+        String remaining = b.getRemaining();
+        int cut = Math.max(remaining.lastIndexOf(' '), remaining.lastIndexOf(',')) + 1;
+        String prefix = remaining.substring(cut).toLowerCase(Locale.ROOT);
+        com.mojang.brigadier.suggestion.SuggestionsBuilder o = b.createOffset(b.getStart() + cut);
+        for (Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
+            if (p.getName().toLowerCase(Locale.ROOT).startsWith(prefix)) o.suggest(p.getName());
+        }
+        if ("vs".startsWith(prefix) && cut > 0) o.suggest("vs");
+        if ("@a".startsWith(prefix)) o.suggest("@a");
+        return o.buildFuture();
     }
 
     private int list(CommandContext<CommandSourceStack> ctx) {

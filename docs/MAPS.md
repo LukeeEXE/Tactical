@@ -51,8 +51,10 @@ Matches copy the **snapshot**, never the live template. You can keep editing a p
 
 ## 4. Test
 ```
-/game match test quickplay ascent 4                 # you + 4 virtual players per team
-/game match test test ascent 0 Alice,Bob,Carol      # real players split A/B, fast 'test' mode
+/game match test quickplay ascent 4                      # you + 4 virtual players per team
+/game match test test ascent 0 Alice Bob Carol Dave      # real players, alternately split A/B (commas also work)
+/game match test test ascent 0 Alice Bob vs Carol Dave   # choose the teams: left of 'vs' = team A (attacks first)
+/game match test test ascent 0 @a                        # everyone online
 ```
 - Test matches never count for stats.
 - Virtual players have no body. They exist so you can play a round alone, and they can be eliminated with `/game debug eliminate <match> <A|B> <n>`.
