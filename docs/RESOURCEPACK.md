@@ -10,11 +10,24 @@ Commands need `tactical.admin.pack`.
 ```
 
 ## Hosting (`config.yml → resource-pack`)
-- The pack is served over HTTP on `port` (default **25601**). This port must be reachable by players.
-- Set `public-url` to the address players use, e.g. `http://play.example.com:25601`.
-- If left empty, the server's `server-ip` (or 127.0.0.1) is used. That only works when testing on the same machine.
-- If your host can't open a port, an external URL setting can be added later.
-- The pack is deterministic: if nothing changed, the SHA-1 stays the same and players don't re-download.
+There are two ways to deliver the pack. Changing `hosting` or `port` needs a server restart.
+
+### `hosting: builtin` (default)
+- The plugin serves the pack over HTTP on `port` (default 25601). **Any port works**, as long as your host lets players reach it. On Pterodactyl-style panels, add an extra port allocation and use that number.
+- Set `public-url` to `http://<your server address>:<port>`.
+
+### `hosting: external` (no extra port needed)
+1. Run `/game pack rebuild`. The pack is saved as `plugins/Tactical/resourcepack/build/tactical-pack.zip`.
+2. Upload that file to any site that gives a **direct download link** to the .zip. mc-packs.net and GitHub release assets work. Dropbox and Google Drive "share" pages do not, because they aren't direct downloads.
+3. Set `external-url: "https://..."` to that link and restart (or reload).
+4. `/game pack check` downloads the uploaded file and compares it with the current build. `/game pack status` shows the result:
+   - **up to date**: everything matches.
+   - **OUTDATED**: you rebuilt but haven't uploaded the new zip. Players still get the old upload, so nothing breaks, but upload the new file.
+   - **cannot download / not a .zip**: the link is wrong or not a direct link. The pack isn't sent until this is fixed.
+
+After every rebuild, re-upload the zip and run `/game pack check`.
+
+The pack is deterministic: if nothing changed, the SHA-1 stays the same and players don't re-download.
 
 ## Where your files go (`plugins/Tactical/resourcepack/`)
 | Path | Purpose |

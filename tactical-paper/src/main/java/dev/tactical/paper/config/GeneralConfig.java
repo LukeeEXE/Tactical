@@ -23,6 +23,8 @@ public record GeneralConfig(
         int regenIntervalTicks,
         int regenCombatDelayTicks,
         boolean packEnabled,
+        String packHosting,
+        String packExternalUrl,
         int packPort,
         String packPublicUrl,
         boolean packRequired,
@@ -33,7 +35,7 @@ public record GeneralConfig(
     public static GeneralConfig defaults() {
         return new GeneralConfig("sqlite", "data/tactical.db", "logs/matches", 4, 50_000, 1000, 180, 3,
                 List.of("iron_sword", "bow", "arrow:16"), true, false, 20, true, 1.0, 80, 0,
-                true, 25601, "", true, "<gold>This server needs its resource pack for the HUD, items and maps.");
+                true, "builtin", "", 25601, "", true, "<gold>This server needs its resource pack for the HUD, items and maps.");
     }
 
     public static GeneralConfig parse(ConfigNode root) {
@@ -55,7 +57,16 @@ public record GeneralConfig(
         ConfigNode regen = h.child("regeneration");
         regen.warnUnknownKeys(List.of("enabled", "amount", "interval-ticks", "combat-delay-ticks"));
         ConfigNode pack = root.child("resource-pack");
-        pack.warnUnknownKeys(List.of("enabled", "port", "public-url", "required", "prompt"));
+        pack.warnUnknownKeys(List.of("enabled", "hosting", "external-url", "port", "public-url", "required", "prompt"));
+        String hosting = pack.string("hosting", d.packHosting()).toLowerCase(java.util.Locale.ROOT);
+        if (!hosting.equals("builtin") && !hosting.equals("external")) {
+            pack.child("hosting").error("must be builtin or external");
+            hosting = d.packHosting();
+        }
+        String externalUrl = pack.string("external-url", d.packExternalUrl());
+        if (hosting.equals("external") && !externalUrl.isBlank() && !externalUrl.startsWith("http")) {
+            pack.child("external-url").error("must be a direct http(s) download link to the .zip");
+        }
         ConfigNode dbg = root.child("debug");
         dbg.warnUnknownKeys(List.of("log-state-changes", "log-spectator-input"));
         List<String> loadout = m.has("placeholder-loadout") ? m.stringList("placeholder-loadout") : d.placeholderLoadout();
@@ -77,6 +88,8 @@ public record GeneralConfig(
                 regen.integer("interval-ticks", d.regenIntervalTicks(), 1, 20 * 60),
                 regen.integer("combat-delay-ticks", d.regenCombatDelayTicks(), 0, 20 * 60),
                 pack.bool("enabled", d.packEnabled()),
+                hosting,
+                externalUrl,
                 pack.integer("port", d.packPort(), 1, 65535),
                 pack.string("public-url", d.packPublicUrl()),
                 pack.bool("required", d.packRequired()),

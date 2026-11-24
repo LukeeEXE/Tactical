@@ -104,7 +104,7 @@ public final class PackService implements Service, Listener {
         }
         knownBlocks = Set.copyOf(known);
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        if (config.general().packEnabled()) startHttp();
+        if (config.general().packEnabled() && isBuiltin()) startHttp();
         rebuild();
     }
 
@@ -156,12 +156,92 @@ public final class PackService implements Service, Listener {
                 else log.warning("[pack] " + i);
             }
             current = result;
+            writeZip(result);
             log.info("[pack] built " + result.stats().get("files") + " files, " + result.zip().length / 1024 + " KiB, sha1 "
                     + result.sha1().substring(0, 12) + (result.hasErrors() ? " (WITH ERRORS, see above)" : ""));
-            if (!result.sha1().equals(old) && config.general().packEnabled()) {
+            if (config.general().packEnabled() && !isBuiltin()) {
+                checkExternal(result);
+            } else if (!result.sha1().equals(old) && config.general().packEnabled()) {
                 for (Player p : Bukkit.getOnlinePlayers()) send(p);
             }
             return result;
+        }, tasks.main());
+    }
+
+    public boolean isBuiltin() {
+        return config.general().packHosting().equals("builtin");
+    }
+
+    /** The built pack as a file, for external hosting (and backups). */
+    public Path zipFile() {
+        return sourceRoot().resolve("build/tactical-pack.zip");
+    }
+
+    private void writeZip(PackBuilder.Result r) {
+        try {
+            Path f = zipFile();
+            Files.createDirectories(f.getParent());
+            Path tmp = f.resolveSibling("tactical-pack.zip.tmp");
+            Files.write(tmp, r.zip());
+            Files.move(tmp, f, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            Files.writeString(f.resolveSibling("tactical-pack.sha1"), r.sha1() + "\n");
+        } catch (IOException e) {
+            log.warning("[pack] could not write " + zipFile() + ": " + e.getMessage());
+        }
+    }
+
+    // ------------------------------------------------------------------ external hosting
+
+    /** SHA-1 of the file actually downloadable at external-url (what clients will receive), or null if unknown. */
+    private volatile String externalSha1;
+    private volatile String externalStatus = "not checked";
+
+    public String externalStatus() {
+        return externalStatus;
+    }
+
+    /**
+     * Downloads the uploaded pack once (off the main thread) and compares it with the freshly built one. Players are
+     * sent the hash of what is really online, so an outdated upload still works (old content) instead of failing.
+     */
+    public CompletableFuture<Void> checkExternal(PackBuilder.Result built) {
+        String url = config.general().packExternalUrl();
+        if (url == null || url.isBlank()) {
+            externalStatus = "external-url is empty: upload " + zipFile() + " and set resource-pack.external-url";
+            log.warning("[pack] " + externalStatus);
+            return CompletableFuture.completedFuture(null);
+        }
+        String before = externalSha1;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                        .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+                        .connectTimeout(java.time.Duration.ofSeconds(10)).build();
+                java.net.http.HttpResponse<byte[]> resp = client.send(java.net.http.HttpRequest.newBuilder(URI.create(url))
+                        .timeout(java.time.Duration.ofSeconds(60)).GET().build(), java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+                if (resp.statusCode() != 200) return "HTTP " + resp.statusCode();
+                byte[] body = resp.body();
+                if (body.length < 4 || body[0] != 'P' || body[1] != 'K') return "NOT_ZIP";
+                return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-1").digest(body));
+            } catch (Exception e) {
+                return "ERROR " + e.getMessage();
+            }
+        }).thenAcceptAsync(res -> {
+            if (res.startsWith("HTTP") || res.startsWith("ERROR") || res.equals("NOT_ZIP")) {
+                externalStatus = res.equals("NOT_ZIP") ? "external-url does not return a .zip file (is it a direct download link?)"
+                        : "cannot download external-url (" + res + ")";
+                log.warning("[pack] " + externalStatus);
+                return;
+            }
+            externalSha1 = res;
+            if (res.equals(built.sha1())) {
+                externalStatus = "up to date";
+                log.info("[pack] external pack is up to date");
+            } else {
+                externalStatus = "OUTDATED: upload the new " + zipFile().getFileName() + " (players still get the old upload)";
+                log.warning("[pack] " + externalStatus);
+            }
+            if (!res.equals(before)) for (Player p : Bukkit.getOnlinePlayers()) send(p);
         }, tasks.main());
     }
 
@@ -178,6 +258,7 @@ public final class PackService implements Service, Listener {
     }
 
     public String packUrl() {
+        if (!isBuiltin()) return config.general().packExternalUrl();
         String base = config.general().packPublicUrl();
         if (base == null || base.isBlank()) {
             String ip = Bukkit.getIp();
@@ -190,7 +271,12 @@ public final class PackService implements Service, Listener {
     public void send(Player p) {
         PackBuilder.Result r = current;
         if (r == null || !config.general().packEnabled()) return;
-        ResourcePackInfo info = ResourcePackInfo.resourcePackInfo(PACK_ID, URI.create(packUrl()), r.sha1());
+        String hash = r.sha1();
+        if (!isBuiltin()) {
+            if (externalSha1 == null) return; // not uploaded or not reachable yet: sending would only fail
+            hash = externalSha1;
+        }
+        ResourcePackInfo info = ResourcePackInfo.resourcePackInfo(PACK_ID, URI.create(packUrl()), hash);
         p.sendResourcePacks(ResourcePackRequest.resourcePackRequest()
                 .packs(info)
                 .required(config.general().packRequired())

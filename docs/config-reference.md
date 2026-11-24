@@ -24,7 +24,9 @@ General rules:
 | `health.regeneration.interval-ticks` | `80` | Ticks between pulses (80 = vanilla full-food rate). |
 | `health.regeneration.combat-delay-ticks` | `0` | Pause regeneration after taking damage. |
 | `resource-pack.enabled` | `true` | Build, host and send the pack. |
-| `resource-pack.port` | `25601` | HTTP port the pack is served on. |
+| `resource-pack.hosting` | `builtin` | `builtin` = the plugin serves the pack on `port`; `external` = you upload `resourcepack/build/tactical-pack.zip` and set `external-url` (no extra port needed). |
+| `resource-pack.external-url` | `""` | (external) Direct download link to the uploaded .zip. |
+| `resource-pack.port` | `25601` | (builtin) HTTP port the pack is served on; any port your host lets you open. |
 | `resource-pack.public-url` | `""` | Address players download from, e.g. `http://play.example.com:25601`. |
 | `resource-pack.required` | `true` | Players who decline are disconnected by their client. |
 | `resource-pack.prompt` | (text) | MiniMessage prompt shown with the pack request. |

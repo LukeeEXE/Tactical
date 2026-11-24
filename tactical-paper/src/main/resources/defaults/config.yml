@@ -48,9 +48,15 @@ health:
 
 resource-pack:
   enabled: true
-  # The plugin serves the generated pack over HTTP on this port.
+  # builtin:  the plugin serves the pack itself over HTTP on 'port' (needs that port open on your host).
+  # external: no extra port needed. After each /game pack rebuild, upload
+  #           plugins/Tactical/resourcepack/build/tactical-pack.zip to a site that gives a DIRECT download link
+  #           (e.g. mc-packs.net, a GitHub release asset) and put that link in 'external-url'.
+  hosting: builtin
+  external-url: ""
+  # (builtin only) Port the pack is served on. Any free port your host lets you open works.
   port: 25601
-  # Address players download the pack from, e.g. http://play.example.com:25601
+  # (builtin only) Address players download the pack from, e.g. http://play.example.com:25601
   # Leave empty to use http://<server-ip>:<port> (server-ip from server.properties, else localhost).
   public-url: ""
   # Required packs kick players who decline.

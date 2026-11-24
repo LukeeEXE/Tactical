@@ -36,6 +36,11 @@ public final class PackCommands {
         root.then(Commands.literal("pack").requires(src -> src.getSender().hasPermission(PERM))
                 .then(Commands.literal("rebuild").executes(this::rebuild))
                 .then(Commands.literal("status").executes(this::status))
+                .then(Commands.literal("check").executes(ctx -> {
+                    pack.current().ifPresent(pack::checkExternal);
+                    ctx.getSource().getSender().sendMessage(Component.text("Checking the uploaded pack...", NamedTextColor.GRAY));
+                    return 1;
+                }))
                 .then(Commands.literal("send").executes(ctx -> {
                     if (ctx.getSource().getExecutor() instanceof Player p) pack.send(p);
                     return 1;
@@ -74,7 +79,9 @@ public final class PackCommands {
         CommandSender s = ctx.getSource().getSender();
         pack.current().ifPresentOrElse(r -> {
             s.sendMessage(Component.text("Pack sha1 " + r.sha1() + ", " + r.zip().length / 1024 + " KiB, " + r.stats(), NamedTextColor.YELLOW));
-            s.sendMessage(Component.text("URL: " + pack.packUrl(), NamedTextColor.GRAY));
+            s.sendMessage(Component.text("Hosting: " + (pack.isBuiltin() ? "builtin" : "external (" + pack.externalStatus() + ")")
+                    + ", URL: " + pack.packUrl(), NamedTextColor.GRAY));
+            s.sendMessage(Component.text("Pack file: " + pack.zipFile(), NamedTextColor.GRAY));
             long errors = r.issues().stream().filter(PackIssue::error).count();
             s.sendMessage(Component.text(errors + " error(s), " + (r.issues().size() - errors) + " warning(s) in the last build",
                     errors > 0 ? NamedTextColor.RED : NamedTextColor.GREEN));
