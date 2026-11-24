@@ -156,8 +156,19 @@ public final class ConfigService implements Service {
                     (node) -> KitDefinition.parse(node, baseName(node.file())), report);
         }
         if (target == Target.MESSAGES || target == Target.ALL) {
+            // Built-in English first, then the admin's file on top: keys added in plugin updates always have text.
+            Map<String, String> bundled = new LinkedHashMap<>();
+            try (InputStream in = plugin.getResource("defaults/messages/en_US.yml")) {
+                if (in != null) {
+                    YamlLoader.parse(new String(in.readAllBytes(), StandardCharsets.UTF_8), "(built-in messages)", new ConfigReport())
+                            .ifPresent(n -> n.keys().forEach(k -> n.child(k).scalar().ifPresent(v -> bundled.put(k, v))));
+                }
+            } catch (IOException ignored) {
+                // file-only messages
+            }
+            messages = Collections.unmodifiableMap(bundled);
             loadFile(root.resolve("messages/en_US.yml"), "messages", 1, report).ifPresent(node -> {
-                Map<String, String> m = new LinkedHashMap<>();
+                Map<String, String> m = new LinkedHashMap<>(bundled);
                 for (String k : node.keys()) {
                     if (!k.equals("schema-version")) node.child(k).scalar().ifPresent(v -> m.put(k, v));
                 }

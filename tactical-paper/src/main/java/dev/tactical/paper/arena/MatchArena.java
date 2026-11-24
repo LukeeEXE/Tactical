@@ -217,7 +217,7 @@ public final class MatchArena {
         p.getInventory().clear();
         for (String spec : loadout) {
             ItemStack item = parseItem(spec);
-            if (item != null) p.getInventory().addItem(item);
+            if (item != null) p.getInventory().addItem(dev.tactical.paper.shop.MatchShop.prepare(item));
         }
     }
 
@@ -239,7 +239,7 @@ public final class MatchArena {
         return new Location(world, s.x(), s.y(), s.z(), s.yaw(), s.pitch());
     }
 
-    private static ItemStack parseItem(String spec) {
+    public static ItemStack parseItem(String spec) {
         String[] parts = spec.split(":");
         String id = parts[0].toLowerCase(Locale.ROOT);
         NamespacedKey key = id.contains("/") ? null : NamespacedKey.minecraft(id);

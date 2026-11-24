@@ -130,3 +130,19 @@ See `docs/PLAYTEST-PHASE2.md` for the client checklist.
 | Purchase ledger: retention (round N → usable through N+2), used items disappear, death loses all purchases, halftime clears, all-or-nothing purchase with refund | ✅ | |
 | Temporary money display on the action bar during the buy phase | 🟡 | Replaced by the custom HUD in Phase 5 |
 | Kits with equipment and abilities, custom items (orbs, sparks, traps, construction blocks, heavy crossbow, claymore), kit editor, shop/price editor GUIs | ⬜ | Rest of Phase 3 |
+
+### Playtest feedback round 1 (fixed)
+| # | Report | Fix |
+|---|---|---|
+| 1 | No proper game ending | VICTORY/DEFEAT title, chat results (per team K/D/A, damage, provisional MVP), countdown back to the lobby |
+| 2 | No bossbar | Boss bar for each team: score, alive heads (a skull for the dead), alive count, phase timer (BUY / live / BOMB / HALFTIME / SUDDEN DEATH / PAUSED); the bar shows remaining time. The custom-font HUD comes in Phase 5 |
+| 3 | Bought arrows don't stack | Purchases are plain items that stack. The ledger counts materials (minus the loadout) instead of tagging items |
+| 4 | Armor invisible after winning a round | Equipment is re-sent to every viewer 2 ticks after the round-start refill |
+| 5 | Protection lost on death, couldn't buy it again | Enchantments are limited by the item, not by past purchases. Dying loses them; new armor can be enchanted again |
+| 6 | Durability loss | Match items are unbreakable, and durability damage is cancelled in matches |
+| 7 | Couldn't drop the bomb | Drop now runs after the cancelled vanilla drop. The bomb is thrown 1.5 blocks forward, and the dropper can't pick it back up for 2 s |
+| 8 | Shop opening | Right-click with any item (bows/crossbows excluded so they can charge), right-click a block or player, or press F. An empty-hand right-click into the air sends nothing to the server, so F is the empty-hand alternative |
+| 9 | Shooting before the round | Bow and crossbow shots and all thrown projectiles are blocked outside live rounds. Drawing and charging still work |
+| 10 | Arrows blocked by teammates | Projectiles pass through teammates and dead players |
+| 11 | Team names | Messages and HUD say Attackers/Defenders, coloured by team identity (red = started attacking, blue = started defending) |
+| 12 | Space after the head | Tab-list names in matches get a space after the head and the team colour |

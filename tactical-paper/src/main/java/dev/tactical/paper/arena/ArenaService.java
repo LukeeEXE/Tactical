@@ -245,8 +245,46 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
         if (a == null) return;
         e.setCancelled(true); // items never leave a participant (Phase 3 defines tradeable items)
         if (a.bomb().isBombItem(e.getItemDrop().getItemStack())) {
-            if (!a.bomb().onManualDrop(e.getPlayer())) return;
+            // A cancelled drop puts the item back into the inventory AFTER this handler, so drop on the next tick.
+            Player p = e.getPlayer();
+            Bukkit.getScheduler().runTask(plugin, () -> a.bomb().onManualDrop(p));
         }
+    }
+
+    // ------------------------------------------------------------------ projectiles
+
+    /** No shooting or throwing outside a live round. Bows and crossbows can still be drawn/charged. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onShootBow(org.bukkit.event.entity.EntityShootBowEvent e) {
+        if (!(e.getEntity() instanceof Player p)) return;
+        GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
+        if (m != null && (!m.state().isRoundActive() || m.flow().isPaused())) {
+            e.setCancelled(true);
+            p.updateInventory();
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onLaunch(org.bukkit.event.entity.ProjectileLaunchEvent e) {
+        if (!(e.getEntity().getShooter() instanceof Player p)) return;
+        GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
+        if (m != null && (!m.state().isRoundActive() || m.flow().isPaused())) {
+            e.setCancelled(true);
+            p.updateInventory();
+        }
+    }
+
+    /** Projectiles pass straight through teammates (and dead players) instead of stopping on them. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onProjectileHit(org.bukkit.event.entity.ProjectileHitEvent e) {
+        if (!(e.getHitEntity() instanceof Player hit) || !(e.getEntity().getShooter() instanceof Player shooter)) return;
+        if (hit == shooter) return;
+        GameMatch m = matches.matchOf(shooter.getUniqueId()).orElse(null);
+        if (m == null || !m.isMember(hit.getUniqueId())) return;
+        MatchMember a = m.member(shooter.getUniqueId()).orElse(null);
+        MatchMember b = m.member(hit.getUniqueId()).orElse(null);
+        boolean hitAlive = m.flow().participant(hit.getUniqueId()).map(Participant::active).orElse(false);
+        if (a != null && b != null && (a.team() == b.team() || !hitAlive)) e.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -274,6 +312,12 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onSilverfish(org.bukkit.event.entity.CreatureSpawnEvent e) {
         if (e.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SILVERFISH_BLOCK) e.setCancelled(true);
+    }
+
+    /** Items and armor never lose durability in matches. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onItemDamage(org.bukkit.event.player.PlayerItemDamageEvent e) {
+        if (matches.matchOf(e.getPlayer().getUniqueId()).isPresent()) e.setCancelled(true);
     }
 
     /** Map geometry is protected in match instances (construction blocks come in Phase 3). */

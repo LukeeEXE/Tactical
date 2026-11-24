@@ -41,17 +41,17 @@ final class MatchAnnouncer {
             case MatchFlowEvent.RoundStarted e -> messages.send(to, "match.round-start", "round", e.round(),
                     "sudden", e.suddenDeath() ? " (sudden death)" : "");
             case MatchFlowEvent.RoundLive e -> messages.send(to, "match.round-live", "round", e.round());
-            case MatchFlowEvent.RoundEnded e -> messages.send(to, "match.round-end",
-                    "team", e.winnerTeam().name(), "round", e.round(),
+            case MatchFlowEvent.RoundEnded e -> messages.send(to, "match.round-won",
+                    "team", net.kyori.adventure.text.Component.text(dev.tactical.paper.hud.TeamStyle.roleName(e.winnerSide()),
+                            dev.tactical.paper.hud.TeamStyle.color(e.winnerTeam())),
+                    "round", e.round(),
                     "reason", e.reason().name().toLowerCase(Locale.ROOT).replace('_', ' '),
-                    "score_a", e.scoreA(), "score_b", e.scoreB());
+                    "score_a", net.kyori.adventure.text.Component.text(e.scoreA(), dev.tactical.paper.hud.TeamStyle.color(dev.tactical.engine.team.TeamId.A)),
+                    "score_b", net.kyori.adventure.text.Component.text(e.scoreB(), dev.tactical.paper.hud.TeamStyle.color(dev.tactical.engine.team.TeamId.B)));
             case MatchFlowEvent.HalftimeStarted e -> messages.send(to, "match.halftime");
             case MatchFlowEvent.SuddenDeathStarted e -> messages.send(to, "match.sudden-death");
             case MatchFlowEvent.MatchEnded e -> {
-                if (e.winner() != null) {
-                    messages.send(to, "match.end", "winner", "Team " + e.winner() + " wins",
-                            "score_a", e.scoreA(), "score_b", e.scoreB());
-                } else {
+                if (e.winner() == null) {
                     messages.send(to, "match.aborted", "reason", e.reason().name().toLowerCase(Locale.ROOT)
                             + (e.detail().isEmpty() ? "" : " — " + e.detail()));
                 }

@@ -114,6 +114,7 @@ final class ShopMenu extends Menu {
             case MAX_CARRY -> "You already carry the maximum";
             case NOTHING_TO_ENCHANT -> "You have no item this enchantment applies to";
             case ALREADY_ENCHANTED -> "Already enchanted";
+            case INVENTORY_FULL -> "Your inventory is full";
         };
     }
 }

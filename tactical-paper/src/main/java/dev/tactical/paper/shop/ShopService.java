@@ -55,8 +55,6 @@ import java.util.logging.Logger;
  */
 public final class ShopService implements Service, Listener, MatchLifecycleHook {
 
-    public static final int OPENER_SLOT = 8;
-    private static final long ASSIST_WINDOW_TICKS = 200; // damage within the last 10 s counts as an assist
 
     private final Plugin plugin;
     private final ConfigService config;
@@ -66,10 +64,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
     private final Icons icons;
     private final HotbarItems hotbar;
     private final Logger log;
-    private final NamespacedKey instanceKey;
     private final Map<MatchId, MatchShop> shops = new HashMap<>();
-    /** victim -> (attacker -> match tick of last damage) for assists, per round. */
-    private final Map<UUID, Map<UUID, Long>> damagers = new HashMap<>();
 
     public ShopService(Plugin plugin, ConfigService config, MapService maps, MatchService matches, MenuService menus,
                        Icons icons, HotbarItems hotbar, Logger log) {
@@ -81,7 +76,6 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         this.icons = icons;
         this.hotbar = hotbar;
         this.log = log;
-        this.instanceKey = new NamespacedKey(plugin, "purchase");
     }
 
     @Override
@@ -109,9 +103,16 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         }
         Map<UUID, TeamId> teams = new LinkedHashMap<>();
         for (MatchMember m : match.members()) teams.put(m.uuid(), m.team());
-        MatchShop shop = new MatchShop(match, new MatchEconomy(config.economy(), teams), def, instanceKey);
+        Map<org.bukkit.Material, Integer> base = new HashMap<>();
+        for (String spec : config.general().placeholderLoadout()) {
+            org.bukkit.inventory.ItemStack i = dev.tactical.paper.arena.MatchArena.parseItem(spec);
+            if (i != null) base.merge(i.getType(), i.getAmount(), Integer::sum);
+        }
+        MatchShop shop = new MatchShop(match, new MatchEconomy(config.economy(), teams), def, m -> base.getOrDefault(m, 0));
         shops.put(match.id(), shop);
         match.bus().subscribe(MatchFlowEvent.class, e -> onEvent(shop, e));
+        match.bus().subscribe(dev.tactical.paper.match.MatchEvents.AssistAwarded.class,
+                a -> shop.recordChanges(shop.economy().onAssist(a.assister())));
         int[] ticks = {0};
         match.flow().addTickable(f -> {
             if (++ticks[0] % 20 != 0 || f.state() != MatchState.BUY_PHASE) return;
@@ -119,7 +120,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                 if (!f.participant(p.getUniqueId()).map(Participant::active).orElse(false)) continue;
                 // Temporary money display until the custom HUD (Phase 5) owns the action bar.
                 p.sendActionBar(Component.text("$" + String.format("%,d", shop.economy().balance(p.getUniqueId())), NamedTextColor.GOLD)
-                        .append(Component.text("   Shop: right-click the emerald (slot 9)", NamedTextColor.GRAY)));
+                        .append(Component.text("   Right-click (or press F) to open the shop", NamedTextColor.GRAY)));
             }
             menus.refreshWhere(m -> m instanceof ShopMenu s && s.shop() == shop);
         });
@@ -130,7 +131,6 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
     public void teardown(GameMatch match) {
         shops.remove(match.id());
         menus.closeWhere(m -> m instanceof ShopMenu s && s.shop().match() == match);
-        for (MatchMember mm : match.members()) damagers.remove(mm.uuid());
     }
 
     private void onEvent(MatchShop shop, MatchFlowEvent e) {
@@ -138,34 +138,21 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         MatchEconomy eco = shop.economy();
         switch (e) {
             case MatchFlowEvent.RoundStarted rs -> {
-                damagers.keySet().removeIf(match::isMember);
                 for (Player p : match.onlinePlayers()) {
                     if (!match.flow().participant(p.getUniqueId()).map(Participant::active).orElse(false)) continue;
                     shop.onRoundStart(p);
-                    hotbar.give(p, HotbarItems.SHOP, OPENER_SLOT);
                 }
+                // Inventory was cleared and refilled in the same tick as the teleport: resend equipment so no
+                // client keeps showing a stale (invisible) armor state.
+                Bukkit.getScheduler().runTaskLater(plugin, () -> resendEquipment(match), 2L);
             }
             case MatchFlowEvent.RoundLive rl -> {
                 menus.closeWhere(m -> m instanceof ShopMenu s && s.shop() == shop);
                 for (Player p : match.onlinePlayers()) hotbar.remove(p, HotbarItems.SHOP);
             }
             case MatchFlowEvent.PlayerEliminated pe -> {
-                Player victim = Bukkit.getPlayer(pe.victim());
-                shop.onDeath(pe.victim(), victim);
-                if (victim != null) hotbar.remove(victim, HotbarItems.SHOP);
-                if (pe.killer() != null && pe.cause() == EliminationCause.KILLED) {
-                    shop.recordChanges(eco.onKill(pe.killer()));
-                    Map<UUID, Long> hits = damagers.getOrDefault(pe.victim(), Map.of());
-                    TeamId killerTeam = match.member(pe.killer()).map(MatchMember::team).orElse(null);
-                    for (Map.Entry<UUID, Long> h : hits.entrySet()) {
-                        if (h.getKey().equals(pe.killer()) || match.flow().currentTick() - h.getValue() > ASSIST_WINDOW_TICKS) continue;
-                        if (match.member(h.getKey()).map(MatchMember::team).orElse(null) != killerTeam) continue;
-                        shop.recordChanges(eco.onAssist(h.getKey()));
-                        match.recorder().record(dev.tactical.engine.record.EventTypes.ASSIST, List.of(h.getKey(), pe.victim()),
-                                killerTeam, Map.of("assister", h.getKey(), "victim", pe.victim(), "killer", pe.killer()));
-                    }
-                }
-                damagers.remove(pe.victim());
+                shop.onDeath(pe.victim());
+                if (pe.killer() != null && pe.cause() == EliminationCause.KILLED) shop.recordChanges(eco.onKill(pe.killer()));
             }
             case MatchFlowEvent.BombPlanted bp -> shop.recordChanges(eco.onPlant(match.flow().teamOn(Side.ATTACKERS)));
             case MatchFlowEvent.BombDefused bd -> shop.recordChanges(eco.onDefuse(bd.defuser()));
@@ -190,37 +177,65 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         }
     }
 
-    // ------------------------------------------------------------------ input
+    private void resendEquipment(GameMatch match) {
+        EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET,
+                EquipmentSlot.HAND, EquipmentSlot.OFF_HAND};
+        for (Player p : match.onlinePlayers()) {
+            Map<EquipmentSlot, org.bukkit.inventory.ItemStack> eq = new java.util.EnumMap<>(EquipmentSlot.class);
+            for (EquipmentSlot s : slots) eq.put(s, p.getInventory().getItem(s));
+            for (Player viewer : p.getWorld().getPlayers()) if (viewer != p) viewer.sendEquipmentChange(p, eq);
+            p.updateInventory();
+        }
+    }
+
+    // ------------------------------------------------------------------ input: right-click (or F) opens the shop
+
+    /** The shop for a participant who may buy right now, or null. */
+    private MatchShop buyingShop(Player p) {
+        GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
+        if (m == null || m.state() != MatchState.BUY_PHASE) return null;
+        if (!m.flow().participant(p.getUniqueId()).map(Participant::active).orElse(false)) return null;
+        return shops.get(m.id());
+    }
+
+    private void openShop(Player p, MatchShop shop) {
+        menus.open(p, new ShopMenu(shop, icons));
+    }
+
+    /** Bows and crossbows keep their right-click so they can be charged during the buy phase. */
+    private static boolean keepsRightClick(org.bukkit.inventory.ItemStack item) {
+        if (item == null) return false;
+        org.bukkit.Material t = item.getType();
+        return t == org.bukkit.Material.BOW || t == org.bukkit.Material.CROSSBOW;
+    }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onUse(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;
         if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        if (!HotbarItems.SHOP.equals(hotbar.typeOf(e.getItem()))) return;
+        if (HotbarItems.KIT.equals(hotbar.typeOf(e.getItem())) || keepsRightClick(e.getItem())) return;
+        MatchShop shop = buyingShop(e.getPlayer());
+        if (shop == null) return;
         e.setCancelled(true);
-        Player p = e.getPlayer();
-        GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
-        MatchShop shop = m == null ? null : shops.get(m.id());
-        if (shop == null || m.state() != MatchState.BUY_PHASE) {
-            hotbar.remove(p, HotbarItems.SHOP);
-            return;
-        }
-        menus.open(p, new ShopMenu(shop, icons));
+        openShop(e.getPlayer(), shop);
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onDamage(EntityDamageByEntityEvent e) {
-        if (!(e.getEntity() instanceof Player victim)) return;
-        Player attacker = resolve(e.getDamager());
-        if (attacker == null || attacker == victim) return;
-        GameMatch m = matches.matchOf(victim.getUniqueId()).orElse(null);
-        if (m == null || !m.isMember(attacker.getUniqueId())) return;
-        damagers.computeIfAbsent(victim.getUniqueId(), k -> new HashMap<>()).put(attacker.getUniqueId(), m.flow().currentTick());
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onUseEntity(org.bukkit.event.player.PlayerInteractEntityEvent e) {
+        if (e.getHand() != EquipmentSlot.HAND || keepsRightClick(e.getPlayer().getInventory().getItemInMainHand())) return;
+        MatchShop shop = buyingShop(e.getPlayer());
+        if (shop == null) return;
+        e.setCancelled(true);
+        openShop(e.getPlayer(), shop);
     }
 
-    private static Player resolve(Entity d) {
-        if (d instanceof Player p) return p;
-        if (d instanceof Projectile pr && pr.getShooter() instanceof Player p) return p;
-        return null;
+    /** F (swap hands) also opens the shop: an empty-hand right-click into the air never reaches the server. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onSwap(org.bukkit.event.player.PlayerSwapHandItemsEvent e) {
+        MatchShop shop = buyingShop(e.getPlayer());
+        if (shop == null) return;
+        e.setCancelled(true);
+        openShop(e.getPlayer(), shop);
     }
+
 }

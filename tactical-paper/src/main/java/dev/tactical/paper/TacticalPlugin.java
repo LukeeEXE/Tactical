@@ -11,6 +11,8 @@ import dev.tactical.paper.gui.MenuService;
 import dev.tactical.paper.kit.HotbarItems;
 import dev.tactical.paper.kit.KitSelectService;
 import dev.tactical.paper.shop.ShopService;
+import dev.tactical.paper.stats.StatsTracker;
+import dev.tactical.paper.hud.MatchHud;
 import dev.tactical.paper.lobby.LobbyService;
 import dev.tactical.paper.map.MapEditorService;
 import dev.tactical.paper.map.MapService;
@@ -61,6 +63,8 @@ public final class TacticalPlugin extends JavaPlugin {
         Icons icons = new Icons(this, config.root().resolve("gui/icons.yml"), getLogger());
         HotbarItems hotbar = new HotbarItems(this, icons);
         // Order matters: these hooks run after ArenaService's, so they act on the freshly placed players.
+        StatsTracker statsTracker = services.register(StatsTracker.class, new StatsTracker(this, matches));
+        services.register(MatchHud.class, new MatchHud(this, matches, statsTracker));
         services.register(KitSelectService.class, new KitSelectService(this, config, matches, menus, icons, hotbar));
         services.register(ShopService.class, new ShopService(this, config, maps, matches, menus, icons, hotbar, getLogger()));
         services.register(VitalsService.class, new VitalsService(this, config, p -> matches.matchOf(p.getUniqueId())

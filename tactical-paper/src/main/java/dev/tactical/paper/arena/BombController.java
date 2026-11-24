@@ -187,7 +187,30 @@ public final class BombController {
         carrier = null;
         if (plant != null) plant.interrupt();
         if (at == null) return; // virtual carrier: the bomb simply leaves play with them
+        if (reason.equals("dropped") && p != null) {
+            // Thrown a short way forward, and the dropper cannot pick it straight back up.
+            at = throwTarget(p);
+            noPickupUntil.put(id, ticks + DROP_PICKUP_DELAY_TICKS);
+        }
         dropAt(at, id, reason);
+    }
+
+    private static final long DROP_PICKUP_DELAY_TICKS = 40;
+    private final Map<UUID, Long> noPickupUntil = new HashMap<>();
+
+    /** Up to 1.5 blocks ahead of the player (horizontally), stopping before walls. */
+    private Location throwTarget(Player p) {
+        Location eye = p.getLocation();
+        org.bukkit.util.Vector dir = eye.getDirection().setY(0);
+        if (dir.lengthSquared() < 1e-6) return eye;
+        dir.normalize();
+        Location best = eye.clone();
+        for (double d = 0.25; d <= 1.5; d += 0.25) {
+            Location t = eye.clone().add(dir.clone().multiply(d));
+            if (!world.getBlockAt(t).isPassable() || !world.getBlockAt(t.clone().add(0, 1, 0)).isPassable()) break;
+            best = t;
+        }
+        return best;
     }
 
     private void dropAt(Location at, UUID by, String reason) {
@@ -294,6 +317,8 @@ public final class BombController {
             if (!part.active() || flow.sideOf(part.team()) != Side.ATTACKERS) continue;
             Player p = Bukkit.getPlayer(part.id());
             if (p == null || !p.getWorld().equals(world)) continue;
+            Long blocked = noPickupUntil.get(p.getUniqueId());
+            if (blocked != null && ticks < blocked) continue;
             double dx = p.getX() - dropped.getX(), dz = p.getZ() - dropped.getZ();
             double d = dx * dx + dz * dz;
             if (d <= bestD && Math.abs(p.getY() - dropped.getY()) <= 1.5) {

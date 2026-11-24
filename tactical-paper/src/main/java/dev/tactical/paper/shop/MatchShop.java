@@ -2,17 +2,15 @@ package dev.tactical.paper.shop;
 
 import dev.tactical.engine.economy.EconomyChange;
 import dev.tactical.engine.economy.MatchEconomy;
+import dev.tactical.engine.match.Participant;
 import dev.tactical.engine.record.EventTypes;
 import dev.tactical.engine.record.RecordingSink;
 import dev.tactical.engine.state.MatchState;
-import dev.tactical.engine.match.Participant;
 import dev.tactical.paper.match.GameMatch;
 import dev.tactical.paper.match.MatchMember;
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
@@ -20,7 +18,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,35 +25,41 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.ToIntFunction;
 
 /**
- * Economy and purchases of ONE match. The purchase LEDGER is authoritative (never the items): items are re-created
- * from it every round, so a purchase cannot be duplicated by moving items around, and expiry/death loss are exact.
+ * Economy and purchases of ONE match. The purchase LEDGER is authoritative, never the items: every round the items
+ * are re-created from it, so moving items around can never duplicate a purchase, and expiry/death loss are exact.
+ *
+ * <p>Purchased items are plain items (no per-purchase tag) so they STACK with each other and with the loadout
+ * (e.g. arrows). What a player still owns is derived at round end by counting that material in the inventory and
+ * subtracting what the loadout gave (used items are consumed oldest-purchase-first).
  * <ul>
- *   <li>Bought in round N: usable in rounds N..N+retention while unused; removed at the start of the round after.</li>
- *   <li>Dying loses every purchase; surviving keeps what is still in the inventory (used-up items disappear).</li>
+ *   <li>Bought in round N: usable in rounds N..N+retention while unused; dropped at the start of the round after.</li>
+ *   <li>Dying loses every purchase, including enchantments (the enchanted item is gone, so it can be bought again).</li>
  *   <li>Halftime clears purchases if configured.</li>
  * </ul>
  */
 public final class MatchShop {
 
-    /** One purchase. {@code amount} is what the player still has (reconciled at round end). */
-    public record Purchase(UUID instance, String entryId, int round, int amount) {
+    /** One purchase. {@code amount} is what the player still has of it (reconciled at round end). */
+    public record Purchase(String entryId, int round, int amount) {
     }
 
-    public enum BuyResult { OK, NOT_BUY_PHASE, DEAD, DISABLED, UNKNOWN, TOO_POOR, MAX_CARRY, NOTHING_TO_ENCHANT, ALREADY_ENCHANTED }
+    public enum BuyResult { OK, NOT_BUY_PHASE, DEAD, DISABLED, UNKNOWN, TOO_POOR, MAX_CARRY, NOTHING_TO_ENCHANT, ALREADY_ENCHANTED, INVENTORY_FULL }
 
     private final GameMatch match;
     private final MatchEconomy economy;
     private final ShopDefinition shop;
-    private final NamespacedKey instanceKey;
+    private final ToIntFunction<Material> baseCount;
     private final Map<UUID, List<Purchase>> ledger = new HashMap<>();
 
-    MatchShop(GameMatch match, MatchEconomy economy, ShopDefinition shop, NamespacedKey instanceKey) {
+    /** @param baseCount how many of a material the round-start loadout gives (not purchases) */
+    MatchShop(GameMatch match, MatchEconomy economy, ShopDefinition shop, ToIntFunction<Material> baseCount) {
         this.match = match;
         this.economy = economy;
         this.shop = shop;
-        this.instanceKey = instanceKey;
+        this.baseCount = baseCount;
     }
 
     public GameMatch match() {
@@ -71,13 +74,10 @@ public final class MatchShop {
         return shop;
     }
 
-    public List<Purchase> purchases(UUID player) {
-        return List.copyOf(ledger.getOrDefault(player, List.of()));
-    }
-
+    /** Number of purchases of this entry the player still holds (for the max-carry limit). */
     public int carried(UUID player, String entryId) {
         int n = 0;
-        for (Purchase p : ledger.getOrDefault(player, List.of())) if (p.entryId().equals(entryId)) n++;
+        for (Purchase p : ledger.getOrDefault(player, List.of())) if (p.entryId().equals(entryId) && p.amount() > 0) n++;
         return n;
     }
 
@@ -87,14 +87,16 @@ public final class MatchShop {
         if (match.state() != MatchState.BUY_PHASE || match.flow().isPaused()) return BuyResult.NOT_BUY_PHASE;
         if (!match.flow().participant(p.getUniqueId()).map(Participant::active).orElse(false)) return BuyResult.DEAD;
         if (!e.enabled()) return BuyResult.DISABLED;
-        if (carried(p.getUniqueId(), e.id()) >= e.maxCarry()) return BuyResult.MAX_CARRY;
-        if (economy.balance(p.getUniqueId()) < e.price()) return BuyResult.TOO_POOR;
         if (e.kind() == ShopEntry.Kind.ENCHANT) {
-            ItemStack target = enchantTarget(p.getInventory(), e);
-            if (target == null) return BuyResult.NOTHING_TO_ENCHANT;
-            Enchantment ench = enchantment(e);
-            if (ench != null && target.getEnchantmentLevel(ench) >= e.level()) return BuyResult.ALREADY_ENCHANTED;
+            // Limited by the ITEM, not by past purchases: a new item can always be enchanted again.
+            ItemStack target = enchantTarget(p.getInventory(), e, true);
+            if (target == null) {
+                return enchantTarget(p.getInventory(), e, false) == null ? BuyResult.NOTHING_TO_ENCHANT : BuyResult.ALREADY_ENCHANTED;
+            }
+        } else if (carried(p.getUniqueId(), e.id()) >= e.maxCarry()) {
+            return BuyResult.MAX_CARRY;
         }
+        if (economy.balance(p.getUniqueId()) < e.price()) return BuyResult.TOO_POOR;
         return BuyResult.OK;
     }
 
@@ -105,39 +107,41 @@ public final class MatchShop {
         if (r != BuyResult.OK) return fail(p, entryId, r);
         List<EconomyChange> changes = new ArrayList<>();
         if (!economy.trySpend(p.getUniqueId(), e.price(), changes, "purchase:" + e.id())) return fail(p, entryId, BuyResult.TOO_POOR);
-        Purchase purchase = new Purchase(UUID.randomUUID(), e.id(), match.flow().round(), e.amount());
-        if (!apply(p, e, purchase)) {
-            // Could not deliver (e.g. inventory problem): refund so the purchase is all-or-nothing.
-            economy.credit(p.getUniqueId(), e.price(), "refund:" + e.id());
-            return fail(p, entryId, BuyResult.NOTHING_TO_ENCHANT);
+        Purchase purchase = new Purchase(e.id(), match.flow().round(), e.amount());
+        if (!apply(p, e, purchase.amount())) {
+            economy.credit(p.getUniqueId(), e.price(), "refund:" + e.id()); // all-or-nothing
+            return fail(p, entryId, e.kind() == ShopEntry.Kind.ENCHANT ? BuyResult.NOTHING_TO_ENCHANT : BuyResult.INVENTORY_FULL);
         }
         ledger.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>()).add(purchase);
         Map<String, Object> d = new LinkedHashMap<>();
         d.put("entry", e.id());
         d.put("price", e.price());
-        d.put("instance", purchase.instance());
         d.put("balance", economy.balance(p.getUniqueId()));
         match.recorder().record(EventTypes.PURCHASE, List.of(p.getUniqueId()), team(p.getUniqueId()), d);
         recordChanges(changes);
         return BuyResult.OK;
     }
 
-    /** Sells back a purchase made THIS round that is still fully in the inventory. */
+    /** Sells back a purchase made THIS round that is still fully owned. */
     public boolean sellBack(Player p, String entryId) {
         if (!economy.rules().sellBackSameRound() || match.state() != MatchState.BUY_PHASE || match.flow().isPaused()) return false;
-        List<Purchase> list = ledger.getOrDefault(p.getUniqueId(), new ArrayList<>());
         ShopEntry e = shop.entries().get(entryId);
-        if (e == null) return false;
+        List<Purchase> list = ledger.get(p.getUniqueId());
+        if (e == null || list == null) return false;
         for (int i = list.size() - 1; i >= 0; i--) {
             Purchase pu = list.get(i);
             if (!pu.entryId().equals(entryId) || pu.round() != match.flow().round()) continue;
-            if (e.kind() == ShopEntry.Kind.ITEM && countInstance(p.getInventory(), pu.instance()) < pu.amount()) continue;
-            if (e.kind() == ShopEntry.Kind.ITEM) removeInstance(p.getInventory(), pu.instance());
-            else removeEnchant(p, e);
+            if (e.kind() == ShopEntry.Kind.ITEM) {
+                Material m = material(e);
+                if (m == null || count(p.getInventory(), m) - baseCount.applyAsInt(m) < pu.amount()) continue;
+                remove(p.getInventory(), m, pu.amount());
+            } else {
+                removeEnchant(p, e);
+            }
             list.remove(i);
             EconomyChange c = economy.credit(p.getUniqueId(), e.price(), "sell_back:" + e.id());
             match.recorder().record(EventTypes.PURCHASE, List.of(p.getUniqueId()), team(p.getUniqueId()),
-                    Map.of("entry", e.id(), "sold_back", true, "refund", c.delta(), "instance", pu.instance()));
+                    Map.of("entry", e.id(), "sold_back", true, "refund", c.delta()));
             recordChanges(List.of(c));
             return true;
         }
@@ -152,49 +156,62 @@ public final class MatchShop {
 
     // ------------------------------------------------------------------ round lifecycle
 
-    /** Round start (after the arena reset the inventory): drop expired purchases, re-deliver the rest. */
+    /** Round start (after the arena gave the loadout): drop expired purchases, re-deliver the rest. */
     void onRoundStart(Player p) {
         List<Purchase> list = ledger.get(p.getUniqueId());
         if (list == null) return;
         int round = match.flow().round();
         int keep = economy.rules().retentionRounds();
         List<Purchase> kept = new ArrayList<>();
+        List<Purchase> enchants = new ArrayList<>();
         for (Purchase pu : list) {
+            ShopEntry e = shop.entries().get(pu.entryId());
+            if (e == null || pu.amount() <= 0) continue;
             if (round - pu.round() > keep) {
                 match.recorder().record(EventTypes.ITEM_EXPIRED, List.of(p.getUniqueId()), team(p.getUniqueId()),
-                        Map.of("entry", pu.entryId(), "instance", pu.instance(), "bought_round", pu.round()));
+                        Map.of("entry", pu.entryId(), "bought_round", pu.round()));
                 continue;
             }
-            ShopEntry e = shop.entries().get(pu.entryId());
-            if (e != null && apply(p, e, pu)) kept.add(pu);
+            if (e.kind() == ShopEntry.Kind.ENCHANT) enchants.add(pu);
+            else if (apply(p, e, pu.amount())) kept.add(pu);
+        }
+        // Enchantments after items, so they land on the re-delivered armor/weapons.
+        for (Purchase pu : enchants) {
+            if (apply(p, shop.entries().get(pu.entryId()), 1)) kept.add(pu);
         }
         ledger.put(p.getUniqueId(), kept);
     }
 
-    /** Round end: survivors keep what is still in their inventory (used-up items are gone). */
+    /** Round end, survivors only: keep what is still in the inventory; used items are consumed oldest-first. */
     void reconcile(Player p) {
         List<Purchase> list = ledger.get(p.getUniqueId());
         if (list == null) return;
-        List<Purchase> out = new ArrayList<>();
-        for (Purchase pu : list) {
+        Map<Material, Integer> remaining = new HashMap<>();
+        List<Purchase> out = new ArrayList<>(list);
+        for (int i = out.size() - 1; i >= 0; i--) { // newest first keep their amounts
+            Purchase pu = out.get(i);
             ShopEntry e = shop.entries().get(pu.entryId());
-            if (e == null) continue;
-            if (e.kind() == ShopEntry.Kind.ENCHANT) {
-                out.add(pu);
+            if (e == null) {
+                out.remove(i);
                 continue;
             }
-            int have = countInstance(p.getInventory(), pu.instance());
-            if (have > 0) out.add(new Purchase(pu.instance(), pu.entryId(), pu.round(), Math.min(have, pu.amount())));
+            if (e.kind() == ShopEntry.Kind.ENCHANT) {
+                if (enchantTarget(p.getInventory(), e, false) == null) out.remove(i); // the enchanted item is gone
+                continue;
+            }
+            Material m = material(e);
+            int left = remaining.computeIfAbsent(m, k -> Math.max(0, count(p.getInventory(), k) - baseCount.applyAsInt(k)));
+            int have = Math.min(left, pu.amount());
+            remaining.put(m, left - have);
+            out.set(i, new Purchase(pu.entryId(), pu.round(), have));
         }
+        out.removeIf(pu -> pu.amount() <= 0);
         ledger.put(p.getUniqueId(), out);
     }
 
-    /** Death: every purchase is lost (also removed from the inventory). */
-    void onDeath(UUID player, Player online) {
-        List<Purchase> lost = ledger.remove(player);
-        if (online != null && lost != null) {
-            for (Purchase pu : lost) removeInstance(online.getInventory(), pu.instance());
-        }
+    /** Death: every purchase is lost. (The spectator's inventory is reset at the next round start.) */
+    void onDeath(UUID player) {
+        ledger.remove(player);
     }
 
     void clearAll() {
@@ -203,28 +220,22 @@ public final class MatchShop {
 
     // ------------------------------------------------------------------ item helpers
 
-    private boolean apply(Player p, ShopEntry e, Purchase pu) {
+    private boolean apply(Player p, ShopEntry e, int amount) {
         PlayerInventory inv = p.getInventory();
         if (e.kind() == ShopEntry.Kind.ENCHANT) {
-            ItemStack target = enchantTarget(inv, e);
+            ItemStack target = enchantTarget(inv, e, true);
             Enchantment ench = enchantment(e);
             if (target == null || ench == null) return false;
             target.addUnsafeEnchantment(ench, e.level());
             return true;
         }
-        Material m = Material.matchMaterial(e.material());
+        Material m = material(e);
         if (m == null) return false;
-        ItemStack item = new ItemStack(m, Math.max(1, pu.amount()));
-        item.editMeta(meta -> {
-            meta.getPersistentDataContainer().set(instanceKey, PersistentDataType.STRING, pu.instance().toString());
-            meta.lore(List.of(Component.text("Purchased (round " + pu.round() + ")", NamedTextColor.DARK_GRAY)
-                    .decoration(TextDecoration.ITALIC, false)));
-        });
+        ItemStack item = prepare(new ItemStack(m, Math.max(1, amount)));
         EquipmentSlot armorSlot = m.getEquipmentSlot();
         if (armorSlot.isArmor()) {
             ItemStack current = inv.getItem(armorSlot);
-            if (current == null || current.getType().isAir() || !isPurchase(current)) {
-                if (current != null && !current.getType().isAir()) inv.addItem(current);
+            if (current == null || current.getType().isAir()) {
                 inv.setItem(armorSlot, item);
                 return true;
             }
@@ -232,17 +243,35 @@ public final class MatchShop {
         return inv.addItem(item).isEmpty();
     }
 
-    private ItemStack enchantTarget(PlayerInventory inv, ShopEntry e) {
+    /** Match items never break and show no durability bar. */
+    public static ItemStack prepare(ItemStack item) {
+        if (item.getType().getMaxDurability() > 0) item.setData(DataComponentTypes.UNBREAKABLE);
+        return item;
+    }
+
+    private static Material material(ShopEntry e) {
+        return e.material() == null ? null : Material.matchMaterial(e.material());
+    }
+
+    /** First item the enchantment applies to; with {@code needsUpgrade} only items below the purchased level. */
+    private ItemStack enchantTarget(PlayerInventory inv, ShopEntry e, boolean needsUpgrade) {
+        Enchantment ench = enchantment(e);
         for (ItemStack i : inv.getContents()) {
-            if (i != null && e.appliesTo().contains(i.getType().getKey().asString())) return i;
+            if (i == null || !e.appliesTo().contains(i.getType().getKey().asString())) continue;
+            if (!needsUpgrade || ench == null || i.getEnchantmentLevel(ench) < e.level()) return i;
         }
         return null;
     }
 
     private void removeEnchant(Player p, ShopEntry e) {
-        ItemStack t = enchantTarget(p.getInventory(), e);
         Enchantment ench = enchantment(e);
-        if (t != null && ench != null) t.removeEnchantment(ench);
+        if (ench == null) return;
+        for (ItemStack i : p.getInventory().getContents()) {
+            if (i != null && e.appliesTo().contains(i.getType().getKey().asString()) && i.getEnchantmentLevel(ench) >= e.level()) {
+                i.removeEnchantment(ench);
+                return;
+            }
+        }
     }
 
     static Enchantment enchantment(ShopEntry e) {
@@ -250,27 +279,23 @@ public final class MatchShop {
         return k == null ? null : RegistryAccess.registryAccess().getRegistry(RegistryKey.ENCHANTMENT).get(k);
     }
 
-    private boolean isPurchase(ItemStack i) {
-        return i != null && i.hasItemMeta() && i.getItemMeta().getPersistentDataContainer().has(instanceKey, PersistentDataType.STRING);
-    }
-
-    private int countInstance(PlayerInventory inv, UUID instance) {
+    static int count(PlayerInventory inv, Material m) {
         int n = 0;
-        String id = instance.toString();
-        for (ItemStack i : inv.getContents()) {
-            if (i != null && i.hasItemMeta() && id.equals(i.getItemMeta().getPersistentDataContainer().get(instanceKey, PersistentDataType.STRING))) {
-                n += i.getAmount();
-            }
-        }
+        for (ItemStack i : inv.getContents()) if (i != null && i.getType() == m) n += i.getAmount();
         return n;
     }
 
-    private void removeInstance(PlayerInventory inv, UUID instance) {
-        String id = instance.toString();
+    /** Removes up to {@code amount} of a material, taking from the main inventory before armor slots. */
+    private static void remove(PlayerInventory inv, Material m, int amount) {
         ItemStack[] c = inv.getContents();
-        for (int i = 0; i < c.length; i++) {
-            if (c[i] != null && c[i].hasItemMeta() && id.equals(c[i].getItemMeta().getPersistentDataContainer().get(instanceKey, PersistentDataType.STRING))) {
-                inv.setItem(i, null);
+        for (int pass = 0; pass < 2 && amount > 0; pass++) {
+            for (int i = 0; i < c.length && amount > 0; i++) {
+                boolean armorSlot = i >= 36 && i <= 39;
+                if (c[i] == null || c[i].getType() != m || (pass == 0) == armorSlot) continue;
+                int take = Math.min(amount, c[i].getAmount());
+                amount -= take;
+                if (take == c[i].getAmount()) inv.setItem(i, null);
+                else c[i].setAmount(c[i].getAmount() - take);
             }
         }
     }
