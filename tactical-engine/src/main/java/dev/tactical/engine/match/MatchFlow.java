@@ -364,6 +364,15 @@ public final class MatchFlow {
         return true;
     }
 
+    public boolean hasVotedSkip(UUID player) {
+        return skipVotes.contains(player);
+    }
+
+    /** Whether the current phase offers a skip vote (halftime and the sudden-death kit selection). */
+    public boolean skipVoteAvailable() {
+        return state() == MatchState.HALFTIME || state() == MatchState.SUDDEN_DEATH_KIT_SELECT;
+    }
+
     public boolean teamAgreesToSkip(TeamId team) {
         int votes = 0;
         int connected = 0;

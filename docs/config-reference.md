@@ -82,3 +82,31 @@ Lobby spawn (`world` key, `x y z yaw pitch`), written by `/game lobby setspawn`.
 
 ## `messages/en_US.yml`
 These are player-facing MiniMessage strings. Placeholder values such as `<round>` are inserted as plain text, so player names can never inject formatting.
+
+## `economy/economy.yml`
+| Key | Default | Meaning |
+|---|---|---|
+| `start-money` | 800 | Money at round 1 and after halftime. |
+| `max-money` | 9000 | Cap. |
+| `round-win` | 3000 | Every member of the winning team. |
+| `round-loss` | [1900, 2400, 2900] | 1st, 2nd and 3rd+ consecutive loss. **Each must be below `round-win`** (validated). A win lowers the streak by one. |
+| `kill` / `assist` | 200 / 50 | Assist = a teammate of the killer damaged the victim in the last 10 s. |
+| `plant-team` | 300 | Every attacker, when the bomb is planted. |
+| `defuse` | 300 | The defuser. |
+| `survived-loss-factor` | 0.5 | Attackers who lose alive without planting get this share of the loss payout (anti-saving). |
+| `halftime.reset-money` / `halftime.clear-purchases` | true / true | Second pistol round. |
+| `sudden-death-floor` | 5000 | Everyone is topped up to at least this before sudden death; nobody loses money. |
+| `item-retention-rounds` | 2 | Unused purchases last this many extra rounds. |
+| `sell-back-same-round` | true | Right-click in the shop refunds a purchase made this round. |
+
+## `shops/<id>.yml`
+- `categories: {key: "Display name"}`: one menu row each, in this order.
+- `items: {entry: {...}}`: each entry has `category`, `name`, `price`, `max` (carry limit), `enabled`, and **either**:
+  - `give: {material, amount}`: armor is equipped directly; or
+  - `enchant: {enchantment, level, applies-to: [items]}`.
+- A map picks its shop with `shop:` in `maps/<id>.yml` (default `default`).
+- Changes apply to matches started after `/game reload shops`. Running matches keep their snapshot.
+
+## `gui/icons.yml`
+`icons: {key: {material: <item>}}`: the placeholder item for each menu icon. Every icon also carries `custom_model_data` `tactical:icon/<key>` for resource-pack textures.
+Kit icons use `icon.material` in `kits/<id>.yml`, plus `tactical:kit/<id>` and `state:<available|selected|locked|taken|unavailable>`.

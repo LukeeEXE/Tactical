@@ -5,3 +5,6 @@ id: warden
 name: "Warden"
 description: "Builds cover with construction blocks."
 enabled: true
+# Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/warden" for a resource-pack logo.
+icon:
+  material: iron_pickaxe

@@ -1,0 +1,18 @@
+# Economy (all values are money). Design: losing never pays more than winning; loss streaks escalate the payout
+# (comeback) and a win only lowers the streak by one; sudden death keeps funds and tops everyone up to a floor.
+schema-version: 1
+start-money: 800          # pistol rounds (round 1 and the first round after halftime)
+max-money: 9000
+round-win: 3000
+round-loss: [1900, 2400, 2900]   # 1st, 2nd, 3rd+ consecutive loss; every value must be below round-win
+kill: 200
+assist: 50
+plant-team: 300           # every attacker when the bomb is planted (even if the round is lost)
+defuse: 300               # the defuser
+survived-loss-factor: 0.5 # attackers who lose a round alive WITHOUT planting get this share of the loss payout
+halftime:
+  reset-money: true
+  clear-purchases: true
+sudden-death-floor: 5000
+item-retention-rounds: 2  # unused purchases last this many extra rounds (bought in round N: usable N..N+2)
+sell-back-same-round: true

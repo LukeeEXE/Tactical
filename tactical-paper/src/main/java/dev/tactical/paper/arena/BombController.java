@@ -56,6 +56,8 @@ public final class BombController {
     /** Squared per-tick movement (blocks²) still counted as "stationary" (absorbs float noise). */
     private static final double STATIONARY_EPSILON_SQ = 0.0004;
     private static final double SITE_VERTICAL_TOLERANCE = 2.5;
+    /** Hotbar slot of the bomb (slot 9 = index 8 is the shop during the buy phase). */
+    public static final int BOMB_SLOT = 7;
 
     enum DefuseStop { RELEASED_SNEAK, MOVED, LEFT_RADIUS, DIED, DISCONNECTED, DAMAGED, NOT_ON_GROUND }
 
@@ -162,9 +164,9 @@ public final class BombController {
         Player p = Bukkit.getPlayer(id);
         if (p != null) {
             removeBombItems(p);
-            ItemStack existing = p.getInventory().getItem(8);
+            ItemStack existing = p.getInventory().getItem(BOMB_SLOT);
             if (existing != null && !existing.getType().isAir()) p.getInventory().addItem(existing);
-            p.getInventory().setItem(8, createItem());
+            p.getInventory().setItem(BOMB_SLOT, createItem());
             carrierLast = p.getLocation();
             p.playSound(p.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 0.8f);
         }

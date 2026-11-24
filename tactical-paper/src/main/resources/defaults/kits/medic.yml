@@ -5,3 +5,6 @@ id: medic
 name: "Medic"
 description: "Supports teammates with sparks."
 enabled: true
+# Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/medic" for a resource-pack logo.
+icon:
+  material: golden_apple

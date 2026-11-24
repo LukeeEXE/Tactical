@@ -1,0 +1,72 @@
+# The default shop. Maps choose a shop with 'shop: <id>' in maps/<id>.yml.
+# Prices apply to the NEXT purchase after /game reload shops (running matches see new prices immediately).
+# Entries either GIVE items or ENCHANT an item the player holds. 'max' = how many a player may carry.
+# PLACEHOLDER CONTENT until custom items (orbs, sparks, traps, construction blocks...) arrive later in Phase 3.
+schema-version: 1
+id: default
+categories:
+  weapons: "Weapons"
+  armor: "Armor"
+  utility: "Utility"
+  upgrades: "Enchantments"
+items:
+  arrows:
+    category: weapons
+    name: "Arrows x8"
+    price: 100
+    max: 3
+    give: { material: arrow, amount: 8 }
+  crossbow:
+    category: weapons
+    name: "Crossbow"
+    price: 600
+    max: 1
+    give: { material: crossbow }
+  chestplate:
+    category: armor
+    name: "Iron Chestplate"
+    price: 1000
+    max: 1
+    give: { material: iron_chestplate }
+  helmet:
+    category: armor
+    name: "Iron Helmet"
+    price: 400
+    max: 1
+    give: { material: iron_helmet }
+  leggings:
+    category: armor
+    name: "Iron Leggings"
+    price: 700
+    max: 1
+    give: { material: iron_leggings }
+  boots:
+    category: armor
+    name: "Iron Boots"
+    price: 300
+    max: 1
+    give: { material: iron_boots }
+  snowballs:
+    category: utility
+    name: "Snowballs x4 (placeholder utility)"
+    price: 150
+    max: 2
+    give: { material: snowball, amount: 4 }
+  sharpness:
+    category: upgrades
+    name: "Sharpness I"
+    price: 800
+    max: 1
+    enchant: { enchantment: sharpness, level: 1, applies-to: [iron_sword, stone_sword, wooden_sword] }
+  power:
+    category: upgrades
+    name: "Power I"
+    price: 600
+    max: 1
+    enchant: { enchantment: power, level: 1, applies-to: [bow] }
+  protection:
+    category: upgrades
+    name: "Protection I (chestplate)"
+    price: 700
+    max: 1
+    enchant: { enchantment: protection, level: 1, applies-to: [iron_chestplate] }

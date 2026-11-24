@@ -50,14 +50,14 @@ public final class ConfigService implements Service {
             "modes/quickplay.yml", "modes/competitive.yml", "modes/test.yml",
             "kits/vanguard.yml", "kits/sentinel.yml", "kits/phantom.yml",
             "kits/warden.yml", "kits/striker.yml", "kits/medic.yml",
-            "messages/en_US.yml");
+            "messages/en_US.yml", "shops/default.yml", "economy/economy.yml", "gui/icons.yml");
 
     /** Folders created on first start, even if empty, so admins see the layout. */
     static final List<String> FOLDERS = List.of("maps", "map-pools", "kits", "items", "shops", "economy",
-            "sounds", "npc", "modes", "messages", "logs/matches", "backups", "data", "resourcepack", "lobby", "blocks");
+            "sounds", "npc", "modes", "messages", "logs/matches", "backups", "data", "resourcepack", "lobby", "blocks", "gui");
 
     public enum Target {
-        CONFIG, MODES, KITS, MESSAGES, MAPS, ALL;
+        CONFIG, MODES, KITS, MESSAGES, MAPS, SHOPS, ECONOMY, ALL;
 
         public static Optional<Target> parse(String s) {
             try {
@@ -76,6 +76,8 @@ public final class ConfigService implements Service {
     private volatile Map<String, ModeRules> modes = Map.of();
     private volatile Map<String, KitDefinition> kits = Map.of();
     private volatile Map<String, String> messages = Map.of();
+    private volatile Map<String, dev.tactical.paper.shop.ShopDefinition> shops = Map.of();
+    private volatile dev.tactical.engine.economy.EconomyRules economy = dev.tactical.engine.economy.EconomyRules.defaults();
 
     public ConfigService(Plugin plugin) {
         this.plugin = plugin;
@@ -127,6 +129,14 @@ public final class ConfigService implements Service {
         return messages;
     }
 
+    public Map<String, dev.tactical.paper.shop.ShopDefinition> shops() {
+        return shops;
+    }
+
+    public dev.tactical.engine.economy.EconomyRules economy() {
+        return economy;
+    }
+
     // ------------------------------------------------------------------ loading
 
     public synchronized ConfigReport reload(Target target) {
@@ -154,11 +164,24 @@ public final class ConfigService implements Service {
                 messages = Collections.unmodifiableMap(m);
             });
         }
+        if (target == Target.SHOPS || target == Target.ALL) {
+            shops = loadDirectory("shops", "shop", dev.tactical.paper.shop.ShopDefinition.SCHEMA_VERSION, shops,
+                    (node) -> dev.tactical.paper.shop.ShopDefinition.parse(node, baseName(node.file())), report);
+            if (!shops.containsKey("default")) report.error("shops/default.yml", 0, "", "the default shop is missing or invalid");
+        }
+        if (target == Target.ECONOMY || target == Target.ALL) {
+            ConfigReport er = new ConfigReport();
+            loadFile(root.resolve("economy/economy.yml"), "economy", dev.tactical.engine.economy.EconomyRules.SCHEMA_VERSION, er)
+                    .flatMap(dev.tactical.engine.economy.EconomyRules::parse).ifPresent(e -> {
+                        if (!er.hasErrors()) economy = e;
+                    });
+            report.addAll(er);
+        }
         for (ConfigIssue issue : report.issues()) {
             if (issue.severity() == ConfigIssue.Severity.ERROR) log.severe(issue.toString());
             else log.warning(issue.toString());
         }
-        log.info("Loaded configuration (" + target + "): " + modes.size() + " modes, " + kits.size() + " kits"
+        log.info("Loaded configuration (" + target + "): " + modes.size() + " modes, " + kits.size() + " kits, " + shops.size() + " shops"
                 + (report.hasErrors() ? ", " + report.errors().size() + " error(s)" : ""));
         return report;
     }

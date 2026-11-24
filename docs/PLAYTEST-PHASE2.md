@@ -26,3 +26,12 @@ These parts can't be tested without a real client. Please check them and tell me
 | 11 | Boundaries | Walking or falling outside the bounds eliminates you. |
 | 12 | Pause | `/game pause` freezes the timers and bomb. Player movement is not frozen yet (Phase 6). |
 | 13 | Disconnect | Leaving mid-round counts as dead. Rejoining within 3 minutes puts you back as a spectator, and you respawn next round. |
+
+## Added: kit selection and shop
+| # | Check | Expected |
+|---|---|---|
+| 14 | Match start | The kit menu opens on its own. Your team's row and the enemy row show live picks. Left-click selects, clicking again (or right-click) locks. Teammates can't lock the same kit. Closing the menu is fine: the nether star in slot 5 reopens it. |
+| 15 | Halftime / sudden death | The menu opens again with a skip button. In sudden death only your two half kits are selectable. |
+| 16 | Buy phase | An emerald in slot 9 opens the shop. Money shows on the action bar. Buying, right-click selling back, and red messages when you can't afford something or are at the limit. |
+| 17 | Retention | Bought items come back next round if you survived and didn't use them, and disappear after 2 extra rounds. Dying loses them. |
+| 18 | Exploits | Try shift-clicking, number keys, dragging and double-clicking in the menus. No item should ever leave a menu. |

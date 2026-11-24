@@ -1,0 +1,21 @@
+# Placeholder items for every GUI icon. Each icon also carries custom_model_data string "tactical:icon/<key>",
+# so a resource pack can retexture it without changing this file. Change 'material' to pick another placeholder.
+schema-version: 1
+icons:
+  ui.filler: { material: gray_stained_glass_pane }
+  ui.close: { material: barrier }
+  ui.back: { material: arrow }
+  ui.next_page: { material: arrow }
+  ui.previous_page: { material: arrow }
+  ui.info: { material: book }
+  ui.timer: { material: clock }
+  ui.money: { material: gold_nugget }
+  ui.player_unknown: { material: skeleton_skull }
+  kit.lock: { material: lime_concrete }
+  kit.lock_disabled: { material: gray_concrete }
+  kit.skip: { material: feather }
+  kit.skip_voted: { material: lime_dye }
+  kit.opener: { material: nether_star }
+  shop.opener: { material: emerald }
+  shop.category: { material: chest }
+  shop.sold_out: { material: barrier }

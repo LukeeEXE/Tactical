@@ -115,3 +115,18 @@ These will be tested on your client when the HUD and resource pack are built.
   - a match that failed during loading never reached cleanup.
 
 See `docs/PLAYTEST-PHASE2.md` for the client checklist.
+
+## Phase 3 (in progress): menus, kit selection, economy, shop
+
+| Area | Status | Notes |
+|---|---|---|
+| Own GUI framework: cancel-first click handling (shift-click, number keys, off-hand swap, double-click collect, drag, hopper moves all blocked), permission re-check on click, rate limiting, live refresh, clean close/disconnect | ✅ | Pulled forward from Phase 4. Not client-tested yet |
+| Icon registry: every menu item is a placeholder carrying `custom_model_data` strings (`tactical:icon/<key>`, `tactical:kit/<id>` + `state:<state>`, `tactical:shop/<entry>`), materials in `gui/icons.yml` | ✅ | |
+| Kit selection menu (start, halftime, sudden death): opens automatically, live teammate and enemy picks, kit states (available, selected, locked, taken, unavailable), lock button, skip vote, reopen item | 🟡 | Implemented; **needs a client test** |
+| Economy engine: start money, cap, win/loss payouts with loss streak (win lowers it by one), kill, assist, plant, defuse, reduced payout for saving attackers, halftime reset, sudden-death floor | ✅ | Unit-tested; payouts verified in a live virtual match |
+| Assists (damage in the last 10 s by a teammate of the killer) | ✅ | |
+| Shop (`shops/default.yml`): categories, item and enchantment entries, price, max carry, enabled flag, per-map shop | 🟡 | Placeholder vanilla items until custom items. Kit-specific shops and map price overrides are still to do |
+| Shop menu: buy, sell back (same round), money display, reasons for refusals | 🟡 | Implemented; **needs a client test** |
+| Purchase ledger: retention (round N → usable through N+2), used items disappear, death loses all purchases, halftime clears, all-or-nothing purchase with refund | ✅ | |
+| Temporary money display on the action bar during the buy phase | 🟡 | Replaced by the custom HUD in Phase 5 |
+| Kits with equipment and abilities, custom items (orbs, sparks, traps, construction blocks, heavy crossbow, claymore), kit editor, shop/price editor GUIs | ⬜ | Rest of Phase 3 |

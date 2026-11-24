@@ -5,3 +5,6 @@ id: phantom
 name: "Phantom"
 description: "Flanks with mobility utility."
 enabled: true
+# Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/phantom" for a resource-pack logo.
+icon:
+  material: feather

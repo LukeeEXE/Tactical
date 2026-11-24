@@ -5,3 +5,6 @@ id: striker
 name: "Striker"
 description: "Heavy crossbow specialist."
 enabled: true
+# Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/striker" for a resource-pack logo.
+icon:
+  material: crossbow

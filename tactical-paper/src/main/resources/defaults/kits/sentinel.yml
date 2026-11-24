@@ -5,3 +5,6 @@ id: sentinel
 name: "Sentinel"
 description: "Holds sites with traps."
 enabled: true
+# Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/sentinel" for a resource-pack logo.
+icon:
+  material: tripwire_hook

@@ -6,6 +6,11 @@ import dev.tactical.paper.command.GameCommand;
 import dev.tactical.paper.command.MapCommands;
 import dev.tactical.paper.command.PackCommands;
 import dev.tactical.paper.pack.PackService;
+import dev.tactical.paper.gui.Icons;
+import dev.tactical.paper.gui.MenuService;
+import dev.tactical.paper.kit.HotbarItems;
+import dev.tactical.paper.kit.KitSelectService;
+import dev.tactical.paper.shop.ShopService;
 import dev.tactical.paper.lobby.LobbyService;
 import dev.tactical.paper.map.MapEditorService;
 import dev.tactical.paper.map.MapService;
@@ -52,6 +57,12 @@ public final class TacticalPlugin extends JavaPlugin {
         services.register(MatchListener.class, new MatchListener(this, matches));
         services.register(ArenaService.class, new ArenaService(this, config, maps, matches, lobby, getLogger()));
         PackService pack = services.register(PackService.class, new PackService(this, config, tasks, getLogger()));
+        MenuService menus = services.register(MenuService.class, new MenuService(this, getLogger()));
+        Icons icons = new Icons(this, config.root().resolve("gui/icons.yml"), getLogger());
+        HotbarItems hotbar = new HotbarItems(this, icons);
+        // Order matters: these hooks run after ArenaService's, so they act on the freshly placed players.
+        services.register(KitSelectService.class, new KitSelectService(this, config, matches, menus, icons, hotbar));
+        services.register(ShopService.class, new ShopService(this, config, maps, matches, menus, icons, hotbar, getLogger()));
         services.register(VitalsService.class, new VitalsService(this, config, p -> matches.matchOf(p.getUniqueId())
                 .map(m -> !m.flow().isPaused() && m.flow().participant(p.getUniqueId()).map(x -> x.active()).orElse(false))
                 .orElse(true)));

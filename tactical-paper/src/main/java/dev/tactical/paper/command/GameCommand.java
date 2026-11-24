@@ -319,7 +319,7 @@ public final class GameCommand {
         if (!sender.hasPermission(PERM_RELOAD)) return deny(ctx);
         Optional<ConfigService.Target> target = ConfigService.Target.parse(targetName);
         if (target.isEmpty()) {
-            reply(ctx, "Unknown target. Use: config, modes, kits, messages, maps, all", NamedTextColor.RED);
+            reply(ctx, "Unknown target. Use: config, modes, kits, messages, maps, shops, economy, all", NamedTextColor.RED);
             return 0;
         }
         ConfigReport report = config.reload(target.get());
