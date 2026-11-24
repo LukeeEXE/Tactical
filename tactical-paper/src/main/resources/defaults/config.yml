@@ -69,6 +69,8 @@ resource-pack:
   # Required packs kick players who decline.
   required: true
   prompt: "<gold>This server needs its resource pack for the HUD, items and maps."
+  # Smoother entity glow outlines (bundled "Smoother Glowing" shader). Turn off if the pack fails to load.
+  smooth-glow: true
 
 debug:
   # Logs every match state transition to the server console.

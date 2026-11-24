@@ -147,7 +147,8 @@ public final class PackService implements Service, Listener {
         String old = current == null ? null : current.sha1();
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return new PackBuilder(formatMajor, formatMinor, "Tactical server pack", config.hud().layout()).build(sourceRoot(), list, knownBlocks);
+                return new PackBuilder(formatMajor, formatMinor, "Tactical server pack", config.hud().layout())
+                        .smoothGlow(config.general().packSmoothGlow()).build(sourceRoot(), list, knownBlocks);
             } catch (IOException e) {
                 throw new RuntimeException("Pack build failed: " + e.getMessage(), e);
             }

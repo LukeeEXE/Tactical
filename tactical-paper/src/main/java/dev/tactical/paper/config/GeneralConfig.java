@@ -31,14 +31,15 @@ public record GeneralConfig(
         int packPort,
         String packPublicUrl,
         boolean packRequired,
-        String packPrompt
+        String packPrompt,
+        boolean packSmoothGlow
 ) {
     public static final int SCHEMA_VERSION = 1;
 
     public static GeneralConfig defaults() {
         return new GeneralConfig("sqlite", "data/tactical.db", "logs/matches", 4, 50_000, 1000, 180, 3,
                 List.of("iron_sword", "bow", "arrow:16"), 2.5, 4.0, false, true, false, 20, true, 1.0, 80, 0,
-                true, "builtin", "", 25601, "", true, "<gold>This server needs its resource pack for the HUD, items and maps.");
+                true, "builtin", "", 25601, "", true, "<gold>This server needs its resource pack for the HUD, items and maps.", true);
     }
 
     public static GeneralConfig parse(ConfigNode root) {
@@ -63,7 +64,7 @@ public record GeneralConfig(
         ConfigNode regen = h.child("regeneration");
         regen.warnUnknownKeys(List.of("enabled", "amount", "interval-ticks", "combat-delay-ticks"));
         ConfigNode pack = root.child("resource-pack");
-        pack.warnUnknownKeys(List.of("enabled", "hosting", "external-url", "port", "public-url", "required", "prompt"));
+        pack.warnUnknownKeys(List.of("enabled", "hosting", "external-url", "port", "public-url", "required", "prompt", "smooth-glow"));
         String hosting = pack.string("hosting", d.packHosting()).toLowerCase(java.util.Locale.ROOT);
         if (!hosting.equals("builtin") && !hosting.equals("external")) {
             pack.child("hosting").error("must be builtin or external");
@@ -102,6 +103,7 @@ public record GeneralConfig(
                 pack.integer("port", d.packPort(), 1, 65535),
                 pack.string("public-url", d.packPublicUrl()),
                 pack.bool("required", d.packRequired()),
-                pack.string("prompt", d.packPrompt()));
+                pack.string("prompt", d.packPrompt()),
+                pack.bool("smooth-glow", d.packSmoothGlow()));
     }
 }

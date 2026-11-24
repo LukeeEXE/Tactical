@@ -1,76 +1,70 @@
 #version 330
 #extension GL_ARB_separate_shader_objects : require
 
+// "Smoother Glowing" v1.5.1 (26.3 variant), made strictly GLSL 3.30 conformant for the Tactical pack:
+// globals initialised from uniforms (only accepted by lenient drivers) were moved into main(), and all
+// int/float mixing is explicit.
+
 // radius of the glow
-#define Radius 3
+#define RADIUS 3.0
 
 // the final alpha of the area covering the entity
-#define FinalAlpha 0.1
-
+#define FINAL_ALPHA 0.1
 
 layout(std140) uniform SamplerInfo {
-  vec2 OutSize;
-  vec2 InSize;
+    vec2 OutSize;
+    vec2 InSize;
 };
 
 layout(std140) uniform BlurConfig {
-  vec2 BlurDir;
+    vec2 BlurDir;
 };
 
 uniform sampler2D InSampler;
-// this is originally for fixing iris compat
-// but breaks vanilla compiler at 26.3 and vulkan compiler at 26.2
-// uniform sampler2D Sampler2;
 
 layout(location = 0) in vec2 texCoord;
 
 layout(location = 0) out vec4 fragColor;
 
-vec2 sampleStep = 1 / InSize * BlurDir;
-float gradient = 1.0 / (Radius + 1.0);
-bool isFinal = sampleStep.y != 0;
-float finalAlpha = isFinal ? FinalAlpha : 1.0;
-float additionalAlpha = isFinal ? gradient : 0.0;
-
 void main() {
-  // get the current pixel
-  vec4 center = texture(InSampler, texCoord);
-  if (center.a >= 1.0) {
-    // if the pixel is opaque then
-    fragColor = vec4(center.rgb, finalAlpha);
-  } else {
-    // accumulated RGB colors
-    vec3 blurs;
-    // number of pixels accumulated in blurs variable
-    float totalColor;
-    // the alpha value that should be the output
-    float alpha = center.a;
+    vec2 sampleStep = (1.0 / InSize) * BlurDir;
+    float gradient = 1.0 / (RADIUS + 1.0);
+    bool isFinal = sampleStep.y != 0.0;
+    float finalAlpha = isFinal ? FINAL_ALPHA : 1.0;
+    float additionalAlpha = isFinal ? gradient : 0.0;
 
-    if (alpha > 0.0) {
-      totalColor = 1;
-      blurs = center.rgb;
-    } else {
-      totalColor = 0;
-      blurs = vec3(0.0);
+    vec4 center = texture(InSampler, texCoord);
+    if (center.a >= 1.0) {
+        // opaque pixel: the entity itself
+        fragColor = vec4(center.rgb, finalAlpha);
+        return;
     }
 
-    // iterate from far to close
-    for (float r = Radius; r > 0; r--) {
-      vec2 stepValue = sampleStep * r;
-      vec4 sampleL = texture(InSampler, texCoord - stepValue);
-      vec4 sampleR = texture(InSampler, texCoord + stepValue);
-      if (sampleL.a > 0.0) {
-        totalColor++;
-        blurs += sampleL.rgb;
-        alpha = max(alpha, sampleL.a - r * gradient);
-      }
-      if (sampleR.a > 0.0) {
-        totalColor++;
-        blurs += sampleR.rgb;
-        alpha = max(alpha, sampleR.a - r * gradient);
-      }
+    vec3 blurs = vec3(0.0);   // accumulated colours
+    float totalColor = 0.0;   // number of pixels accumulated
+    float alpha = center.a;   // output alpha
+    if (alpha > 0.0) {
+        totalColor = 1.0;
+        blurs = center.rgb;
+    }
+
+    // from far to close
+    for (int i = 3; i > 0; i--) {
+        float r = float(i);
+        vec2 stepValue = sampleStep * r;
+        vec4 sampleL = texture(InSampler, texCoord - stepValue);
+        vec4 sampleR = texture(InSampler, texCoord + stepValue);
+        if (sampleL.a > 0.0) {
+            totalColor += 1.0;
+            blurs += sampleL.rgb;
+            alpha = max(alpha, sampleL.a - r * gradient);
+        }
+        if (sampleR.a > 0.0) {
+            totalColor += 1.0;
+            blurs += sampleR.rgb;
+            alpha = max(alpha, sampleR.a - r * gradient);
+        }
     }
 
     fragColor = alpha > 0.0 ? vec4(blurs / totalColor, alpha + additionalAlpha) : vec4(0.0);
-  }
 }

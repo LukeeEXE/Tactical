@@ -223,4 +223,5 @@ All positions are estimates and need a client check; every value is adjustable i
 | Bomb planted on the boss bar | No "BOMB PLANTED:" text (only the red time); a third boss bar shows a large bomb icon that flashes with every beep |
 | Team icon | The supplied team_flag.png, tinted per team |
 | Old hud.yml | Layout keys changed meaning: an older `hud/hud.yml` is backed up and replaced with the new defaults automatically |
+| Pack no longer loads after adding the glow shader | The supplied entityglow.fsh initialised globals from uniforms, which strict GLSL compilers (AMD, Intel, macOS) reject, and Minecraft then drops the whole pack. Rewritten to standard GLSL 3.30 (same look). `config.yml → resource-pack.smooth-glow: false` leaves it out if needed |
 

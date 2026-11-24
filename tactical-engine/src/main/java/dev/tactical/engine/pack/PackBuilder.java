@@ -64,6 +64,14 @@ public final class PackBuilder {
         this(formatMajor, formatMinor, description, HudLayout.DEFAULT);
     }
 
+    private boolean smoothGlow = true;
+
+    /** Include the bundled "Smoother Glowing" post shader (default on). */
+    public PackBuilder smoothGlow(boolean on) {
+        this.smoothGlow = on;
+        return this;
+    }
+
     public PackBuilder(int formatMajor, int formatMinor, String description, HudLayout hud) {
         this.formatMajor = formatMajor;
         this.formatMinor = formatMinor;
@@ -90,7 +98,7 @@ public final class PackBuilder {
         generateVerticalOffsetFonts(files);
         generateTrueTypeFonts(sourceRoot.resolve("fonts"), files, issues);
         generateHud(files);
-        addBundledShaders(files);
+        addBundledShaders(files, smoothGlow);
         Map<String, byte[]> user = new TreeMap<>();
         readTree(sourceRoot.resolve("assets"), "assets/", user);
         generateBlocks(blocks, knownBlocks, user, files, issues);
@@ -346,8 +354,9 @@ public final class PackBuilder {
     /** Core shader overrides shipped with the plugin (ported to the current client's shader interface). */
     static final List<String> BUNDLED_SHADERS = List.of("position_tex_color.vsh", "position_tex_color.fsh");
 
-    private static void addBundledShaders(Map<String, byte[]> files) throws IOException {
+    private static void addBundledShaders(Map<String, byte[]> files, boolean smoothGlow) throws IOException {
         for (String name : BUNDLED_SHADERS) files.put("assets/minecraft/shaders/core/" + name, bundled("pack/shaders/core/" + name));
+        if (!smoothGlow) return;
         // "Smoother Glowing" v1.5.1 (the 26.3 variant, supplied by the server owner): smoother entity glow outlines.
         files.put("assets/minecraft/post_effect/entity_outline.json", bundled("pack/glow/entity_outline.json"));
         files.put("assets/minecraft/shaders/post/entityglow.fsh", bundled("pack/glow/entityglow.fsh"));
