@@ -76,6 +76,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         this.icons = icons;
         this.hotbar = hotbar;
         this.log = log;
+        this.itemIdKey = new NamespacedKey(plugin, "item_id");
     }
 
     @Override
@@ -197,10 +198,10 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
 
     /**
      * During the buy phase every buyer gets an invisible Interaction entity around their own body, visible only to
-     * them. The client always targets an entity whose box contains the camera, so EVERY right-click (empty hand,
-     * any item, into the air) reaches the server as an entity interaction and opens the shop. It is not mounted on
-     * the player: the client ignores entities riding the player when picking a target. It is hidden while a bow or
-     * crossbow is held, so those can still be charged.
+     * them. The client always targets an entity whose box contains the camera, so right-clicks (empty hand, plain
+     * items, into the air) reach the server as an entity interaction and open the shop. It is not mounted on the
+     * player: the client ignores entities riding the player when picking a target. It is hidden while either hand
+     * holds an item whose right-click does something itself (see {@link #usesRightClick}), so those keep working.
      */
     private final Map<UUID, org.bukkit.entity.Interaction> hitboxes = new HashMap<>();
     private final Set<UUID> hitboxHidden = new HashSet<>();
@@ -237,7 +238,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
             }
             org.bukkit.Location target = hitboxLocation(p);
             if (box.getLocation().distanceSquared(target) > 0.0004) box.teleport(target);
-            boolean hide = keepsRightClick(p.getInventory().getItemInMainHand());
+            boolean hide = holdsRightClickItem(p);
             if (hide && !hitboxHidden.contains(p.getUniqueId())) {
                 p.hideEntity(plugin, box);
                 hitboxHidden.add(p.getUniqueId());
@@ -302,18 +303,62 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         menus.open(p, new ShopMenu(shop, icons));
     }
 
-    /** Bows and crossbows keep their right-click so they can be charged during the buy phase. */
-    private static boolean keepsRightClick(org.bukkit.inventory.ItemStack item) {
-        if (item == null) return false;
+    /** Items whose right-click does something on its own (vanilla items without a component that says so). */
+    private static final java.util.Set<org.bukkit.Material> RIGHT_CLICK_ITEMS = java.util.EnumSet.of(
+            org.bukkit.Material.BOW, org.bukkit.Material.CROSSBOW, org.bukkit.Material.TRIDENT,
+            org.bukkit.Material.SNOWBALL, org.bukkit.Material.EGG, org.bukkit.Material.BROWN_EGG, org.bukkit.Material.BLUE_EGG,
+            org.bukkit.Material.ENDER_PEARL, org.bukkit.Material.ENDER_EYE, org.bukkit.Material.WIND_CHARGE,
+            org.bukkit.Material.SPLASH_POTION, org.bukkit.Material.LINGERING_POTION, org.bukkit.Material.EXPERIENCE_BOTTLE,
+            org.bukkit.Material.FIRE_CHARGE, org.bukkit.Material.FLINT_AND_STEEL, org.bukkit.Material.FISHING_ROD,
+            org.bukkit.Material.SPYGLASS, org.bukkit.Material.GOAT_HORN, org.bukkit.Material.FIREWORK_ROCKET,
+            org.bukkit.Material.SHIELD, org.bukkit.Material.BRUSH, org.bukkit.Material.REDSTONE, org.bukkit.Material.STRING,
+            org.bukkit.Material.WRITABLE_BOOK, org.bukkit.Material.WRITTEN_BOOK, org.bukkit.Material.CARROT_ON_A_STICK,
+            org.bukkit.Material.WARPED_FUNGUS_ON_A_STICK, org.bukkit.Material.LEAD, org.bukkit.Material.NAME_TAG,
+            org.bukkit.Material.BONE_MEAL, org.bukkit.Material.ARMOR_STAND, org.bukkit.Material.ITEM_FRAME,
+            org.bukkit.Material.GLOW_ITEM_FRAME, org.bukkit.Material.PAINTING, org.bukkit.Material.END_CRYSTAL);
+
+    /** Extra checks registered by other systems (custom utility items in Phase 3). */
+    private final List<java.util.function.Predicate<org.bukkit.inventory.ItemStack>> rightClickUsable = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** Lets e.g. the custom item framework declare items whose right-click must never open the shop. */
+    public void addRightClickUsable(java.util.function.Predicate<org.bukkit.inventory.ItemStack> test) {
+        rightClickUsable.add(test);
+    }
+
+    private final NamespacedKey itemIdKey;
+
+    /**
+     * True if right-clicking with this item does something itself (place, shoot, throw, eat/drink, block, equip...).
+     * Such items never open the shop, so they keep working during the buy phase. The bomb is the exception: it
+     * cannot be planted during the buy phase, so its right-click is free for the shop.
+     */
+    private boolean usesRightClick(org.bukkit.inventory.ItemStack item) {
+        if (item == null || item.getType().isAir()) return false;
+        if (item.hasItemMeta() && "bomb".equals(item.getItemMeta().getPersistentDataContainer().get(itemIdKey,
+                org.bukkit.persistence.PersistentDataType.STRING))) return false;
+        if (HotbarItems.KIT.equals(hotbar.typeOf(item))) return true; // has its own menu
         org.bukkit.Material t = item.getType();
-        return t == org.bukkit.Material.BOW || t == org.bukkit.Material.CROSSBOW;
+        if (t.isBlock() || RIGHT_CLICK_ITEMS.contains(t)) return true;
+        String n = t.name();
+        if (n.endsWith("_SPAWN_EGG") || n.endsWith("_BUCKET") || n.endsWith("_BOAT") || n.endsWith("_RAFT")
+                || n.endsWith("_MINECART") || n.equals("MINECART") || n.endsWith("_BUNDLE") || n.equals("BUNDLE")) return true;
+        if (item.getData(io.papermc.paper.datacomponent.DataComponentTypes.CONSUMABLE) != null) return true; // food, drinks
+        if (item.getData(io.papermc.paper.datacomponent.DataComponentTypes.BLOCKS_ATTACKS) != null) return true; // shields, claymore
+        if (item.getData(io.papermc.paper.datacomponent.DataComponentTypes.EQUIPPABLE) != null) return true; // armor, heads
+        for (java.util.function.Predicate<org.bukkit.inventory.ItemStack> test : rightClickUsable) if (test.test(item)) return true;
+        return false;
+    }
+
+    /** Either hand: an empty main hand with e.g. a shield in the off hand still right-clicks the off-hand item. */
+    private boolean holdsRightClickItem(Player p) {
+        return usesRightClick(p.getInventory().getItemInMainHand()) || usesRightClick(p.getInventory().getItemInOffHand());
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onUse(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;
         if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        if (HotbarItems.KIT.equals(hotbar.typeOf(e.getItem())) || keepsRightClick(e.getItem())) return;
+        if (holdsRightClickItem(e.getPlayer())) return;
         MatchShop shop = buyingShop(e.getPlayer());
         if (shop == null) return;
         e.setCancelled(true);
@@ -322,7 +367,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onUseEntity(org.bukkit.event.player.PlayerInteractEntityEvent e) {
-        if (e.getHand() != EquipmentSlot.HAND || keepsRightClick(e.getPlayer().getInventory().getItemInMainHand())) return;
+        if (e.getHand() != EquipmentSlot.HAND || holdsRightClickItem(e.getPlayer())) return;
         MatchShop shop = buyingShop(e.getPlayer());
         if (shop == null) return;
         e.setCancelled(true);
