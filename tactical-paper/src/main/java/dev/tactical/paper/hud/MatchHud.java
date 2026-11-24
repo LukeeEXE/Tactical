@@ -302,7 +302,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         int headlineWidth;
         if (end.winner() != null) {
             String words = " " + TeamStyle.roleName(f.sideOf(end.winner())) + " won the match!";
-            headline = Component.text().append(ChatStyle.icon(end.winner() == TeamId.A ? HudGlyphs.CHAT_SHIELD_RED : HudGlyphs.CHAT_SHIELD_BLUE))
+            headline = Component.text().append(ChatStyle.teamIcon(end.winner()))
                     .append(Component.text(words, TeamStyle.color(end.winner()))).build();
             headlineWidth = 9 + HudText.vanillaWidth(words);
         } else {
@@ -373,7 +373,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         TextComponent.Builder b = Component.text();
         String name = TeamStyle.roleName(match.flow().sideOf(team));
         b.append(Component.text("[", NamedTextColor.WHITE))
-                .append(ChatStyle.icon(team == TeamId.A ? HudGlyphs.CHAT_SHIELD_RED : HudGlyphs.CHAT_SHIELD_BLUE))
+                .append(ChatStyle.teamIcon(team))
                 .append(Component.text("] ", NamedTextColor.WHITE))
                 .append(Component.text(name, TeamStyle.color(team)).decorate(TextDecoration.BOLD));
         int x = HudText.vanillaWidth("[") + 9 + HudText.vanillaWidth("] ") + HudText.vanillaWidth(name) + name.length(); // bold = +1 px/char

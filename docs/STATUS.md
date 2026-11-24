@@ -163,7 +163,7 @@ See `docs/PLAYTEST-PHASE2.md` for the client checklist.
 | Boss bar without role names | Boss bar: score, a translucent team-coloured tile per player with their head (skull on a dark tile when dead), timer panel, enemy tiles, enemy score. Teams stay red/blue by identity |
 | Money like the gem counter | Action-bar money widget on the hunger-bar row: dark rounded panel, coin, right-aligned amount, positioned with horizontal (Negative Space Font) and vertical (shifted font) offsets. A central action-bar owner keeps status messages (plant/defuse progress, shop errors) from erasing it |
 | Timer like the round-start timer | `ROUND 4 STARTS IN: 00:10` in Pinch, white label and yellow time, on a dark panel sized to the text; the boss bar is a thin yellow progress line underneath |
-| Chat like the reference | `[icon] message` with original icons (kill, round, win/loss, bomb, defuse, timer, warning, coin, kit, info). Players appear as team shield + head + name in the team colour. No crown or rank icons. Adds a kill feed and plant/defuse/disconnect messages; all texts in `messages/en_US.yml` (`chat.*`) |
+| Chat like the reference | `[icon] message` with original icons (kill, round, win/loss, bomb, defuse, timer, warning, coin, kit, info). Players appear as team icon + head + name in the team colour. No crown or rank icons. Adds a kill feed and plant/defuse/disconnect messages; all texts in `messages/en_US.yml` (`chat.*`) |
 
 All positions are estimates and need a client check; every value is adjustable in `hud/hud.yml`.
 
@@ -175,3 +175,4 @@ All positions are estimates and need a client check; every value is adjustable i
 | Text not centred on its background | The panel row is laid out symmetrically (fixed-width tile groups and score cells), so the panel is centred on the screen. The timer text is drawn on a second, invisible boss bar and moved up one row (`hud.yml → bossbar.row-spacing`), so the client centres it exactly too, independent of font measurement |
 | Square corners | All panels and tiles have square corners |
 | Round breakdown | After the winner line, one row per team: `[team icon]` (the provided 16x16 icon, tinted red/blue) then a W/L box per round (placeholders `round_win.png` / `round_loss.png`) with dividers at halftime and before sudden death |
+| Team icon everywhere | The 16x16 grey team icon, tinted red/blue, replaces every team shield: kill feed, player names, team names, winner line, team headers and round history |

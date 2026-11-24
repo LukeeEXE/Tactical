@@ -23,8 +23,8 @@ public final class HudGlyphs {
     // ---- private-use characters (stable: the plugin and the pack agree on these)
     public static final char CHAT_KILL = '', CHAT_ROUND = '', CHAT_WIN = '', CHAT_LOSS = '',
             CHAT_BOMB = '', CHAT_DEFUSE = '', CHAT_TIMER = '', CHAT_WARNING = '',
-            CHAT_COIN = '', CHAT_KIT = '', CHAT_INFO = '', CHAT_SHIELD_RED = '',
-            CHAT_SHIELD_BLUE = '\uE20C', CHAT_ARROW = '\uE20D', STAT_KILLS = '\uE210', STAT_DEATHS = '\uE211',
+            CHAT_COIN = '', CHAT_KIT = '', CHAT_INFO = '',
+            CHAT_ARROW = '\uE20D', STAT_KILLS = '\uE210', STAT_DEATHS = '\uE211',
             STAT_ASSISTS = '\uE212', STAT_DAMAGE = '\uE213', STAT_KDR = '\uE214', CHAT_MVP = '\uE215',
             ROUND_WIN = '\uE216', ROUND_LOSS = '\uE217', ROUND_DIVIDER = '\uE218', CHAT_TEAM = '\uE219';
     public static final char BAR_TILE_RED = '', BAR_TILE_BLUE = '', BAR_TILE_DEAD = '',
@@ -68,10 +68,6 @@ public final class HudGlyphs {
                         "...kk...", "...yy...", "kkyyyykk", ".kyyyyk.", "..kyyk..", ".kyyyyk.", ".ky..yk.", ".k....k."),
                 art("chat_info", CHAT_INFO, Group.CHAT,
                         "...kk...", "...cc...", "........", "..kcck..", "...cc...", "...cc...", "..kcck..", "..kkkk.."),
-                art("chat_shield_red", CHAT_SHIELD_RED, Group.CHAT,
-                        "kkkkkkkk", "krrwrrrk", "krwrrrrk", "krrrrrrk", "kRrrrrRk", ".kRrrRk.", "..kRRk..", "...kk..."),
-                art("chat_shield_blue", CHAT_SHIELD_BLUE, Group.CHAT,
-                        "kkkkkkkk", "kbbwbbbk", "kbwbbbbk", "kbbbbbbk", "kBbbbbBk", ".kBbbBk.", "..kBBk..", "...kk..."),
                 art("chat_arrow", CHAT_ARROW, Group.CHAT,
                         "........", "g.......", "g.......", "g.......", "g....g..", "ggggggg.", ".....g..", "........"),
                 // Stat icons are PLACEHOLDERS: replace resourcepack/assets/tactical/textures/hud/stat_*.png with your own art.

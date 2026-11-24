@@ -11,7 +11,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import java.util.UUID;
 
 /**
- * Chat line format: {@code [icon] message}, with players shown as {@code <team shield> <head> Name} in their team
+ * Chat line format: {@code [icon] message}, with players shown as {@code <team icon> <head> Name} in their team
  * colour. Icons are original pixel art from the resource pack ({@code tactical:hud_chat}); without the pack the
  * brackets simply hold nothing.
  */
@@ -26,6 +26,11 @@ public final class ChatStyle {
         return Component.text(String.valueOf(glyph)).font(FONT).color(NamedTextColor.WHITE);
     }
 
+    /** The team icon (one grey icon, tinted with the team's colour). Used everywhere a team is marked. */
+    public static Component teamIcon(TeamId team) {
+        return icon(HudGlyphs.CHAT_TEAM).color(TeamStyle.color(team));
+    }
+
     /** {@code [icon] body} */
     public static Component line(char glyph, Component body) {
         return Component.text()
@@ -34,19 +39,19 @@ public final class ChatStyle {
                 .build();
     }
 
-    /** Team shield, head and coloured name of a match member. */
+    /** Team icon, head and coloured name of a match member. */
     public static Component player(GameMatch match, UUID id) {
         MatchMember m = match.member(id).orElse(null);
         if (m == null) return Component.text("?", NamedTextColor.GRAY);
-        Component shield = icon(m.team() == TeamId.A ? HudGlyphs.CHAT_SHIELD_RED : HudGlyphs.CHAT_SHIELD_BLUE);
+        Component shield = teamIcon(m.team());
         Component head = m.virtual() ? Component.text("●", TeamStyle.color(m.team())) : Heads.text(m.uuid(), m.name());
         return Component.text().append(shield).append(Component.text(" ")).append(head).append(Component.text(" "))
                 .append(Component.text(m.name(), TeamStyle.color(m.team()))).build();
     }
 
-    /** A team named by its current role, with its shield. */
+    /** A team named by its current role, with its team icon. */
     public static Component team(GameMatch match, TeamId team) {
-        Component shield = icon(team == TeamId.A ? HudGlyphs.CHAT_SHIELD_RED : HudGlyphs.CHAT_SHIELD_BLUE);
+        Component shield = teamIcon(team);
         return Component.text().append(shield).append(Component.text(" ")).append(TeamStyle.name(match.flow(), team)).build();
     }
 }
