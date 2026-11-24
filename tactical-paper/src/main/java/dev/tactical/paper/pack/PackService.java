@@ -159,6 +159,7 @@ public final class PackService implements Service, Listener {
             }
             current = result;
             writeZip(result);
+            exportArt(result);
             log.info("[pack] built " + result.stats().get("files") + " files, " + result.zip().length / 1024 + " KiB, sha1 "
                     + result.sha1().substring(0, 12) + (result.hasErrors() ? " (WITH ERRORS, see above)" : ""));
             if (config.general().packEnabled() && !isBuiltin()) {
@@ -189,6 +190,55 @@ public final class PackService implements Service, Listener {
             Files.writeString(f.resolveSibling("tactical-pack.sha1"), r.sha1() + "\n");
         } catch (IOException e) {
             log.warning("[pack] could not write " + zipFile() + ": " + e.getMessage());
+        }
+    }
+
+    /** Generated rectangle pieces (plain colour, tinted in code): not worth editing, so not exported. */
+    private static final java.util.regex.Pattern RECT_PIECE =
+            java.util.regex.Pattern.compile(".*/(bar_strip|bar_panel|bar_score|action_panel)_\\d+\\.png");
+
+    /**
+     * Copies the art the pack currently uses (HUD and chat icons, construction block) to
+     * {@code resourcepack/generated/}, mirroring pack paths, so admins can see and edit it. That folder is rewritten
+     * on every build and never read: to replace a texture, copy it to the same path under {@code resourcepack/}.
+     */
+    private void exportArt(PackBuilder.Result r) {
+        Path out = sourceRoot().resolve("generated");
+        try {
+            if (Files.exists(out)) {
+                try (Stream<Path> walk = Files.walk(out)) {
+                    for (Path f : walk.sorted(java.util.Comparator.reverseOrder()).toList()) Files.delete(f);
+                }
+            }
+            int n = 0;
+            try (var zip = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(r.zip()))) {
+                for (var e = zip.getNextEntry(); e != null; e = zip.getNextEntry()) {
+                    String name = e.getName();
+                    boolean art = (name.startsWith("assets/tactical/textures/hud/") || name.equals(PackBuilder.CONSTRUCTION_TEXTURE))
+                            && name.endsWith(".png") && !RECT_PIECE.matcher(name).matches();
+                    if (!art) continue;
+                    Path f = out.resolve(name);
+                    Files.createDirectories(f.getParent());
+                    Files.write(f, zip.readAllBytes());
+                    n++;
+                }
+            }
+            Files.writeString(out.resolve("README.txt"), """
+                    These are the textures the resource pack currently uses (generated art, or your replacement if you
+                    made one). This folder is rewritten on every /game pack rebuild and is NOT read by the plugin.
+
+                    To change a texture: copy it to the SAME path under plugins/Tactical/resourcepack/ (i.e. drop the
+                    "generated/" part), edit it there, keep the same size, then run /game pack rebuild.
+                      generated/assets/tactical/textures/hud/chat_kill.png
+                      -> resourcepack/assets/tactical/textures/hud/chat_kill.png
+
+                    The plain backgrounds (team strip, timer panel, score boxes, hint box) are drawn from coloured
+                    pieces and tinted in code, so they are not listed here. Ask for a texture option if you want to
+                    replace them with art.
+                    """);
+            log.fine("[pack] exported " + n + " textures to " + out);
+        } catch (IOException e) {
+            log.warning("[pack] could not export textures to " + out + ": " + e.getMessage());
         }
     }
 
