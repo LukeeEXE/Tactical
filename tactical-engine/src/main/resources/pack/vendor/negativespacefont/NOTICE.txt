@@ -1,0 +1,4 @@
+Negative Space Font v5.2 by AmberW - https://github.com/AmberWat/NegativeSpaceFont
+Licensed under Creative Commons Attribution 4.0 International (see LICENSE.txt).
+Modifications for Tactical: removed the "newlayer" splitter glyph and the infinite-width spaces (their font
+definitions are not valid on current Minecraft versions) and the translation keys that used them; JSON minified.

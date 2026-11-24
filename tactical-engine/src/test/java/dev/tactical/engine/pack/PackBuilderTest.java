@@ -100,6 +100,26 @@ class PackBuilderTest {
     }
 
     @Test
+    void includesHorizontalAndVerticalOffsetFonts(@TempDir Path root) throws Exception {
+        PackBuilder.Result res = new PackBuilder(97, 1, "t").build(root, List.of(), KNOWN);
+        assertFalse(res.hasErrors(), res.issues().toString());
+        Map<String, String> files = unzip(res.zip());
+        assertTrue(files.containsKey("assets/space/font/default.json"));
+        assertTrue(files.containsKey("assets/space/lang/en_us.json"));
+        assertTrue(files.containsKey("credits/negativespacefont/NOTICE.txt"), "attribution is shipped in the pack");
+        String lang = new String(files.get("assets/space/lang/en_us.json").getBytes(java.nio.charset.StandardCharsets.ISO_8859_1),
+                java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(JsonParser.parseString(lang).getAsJsonObject().has("space.-11"));
+        JsonObject down = JsonParser.parseString(files.get("assets/tactical/font/offset_down_10.json")).getAsJsonObject();
+        JsonObject bitmap = down.getAsJsonArray("providers").get(1).getAsJsonObject();
+        assertEquals(-3, bitmap.get("ascent").getAsInt());
+        assertEquals(16, bitmap.getAsJsonArray("chars").size());
+        assertEquals("0123456789:;<=>?", bitmap.getAsJsonArray("chars").get(3).getAsString());
+        assertTrue(files.containsKey("assets/tactical/font/offset_up_1.json"));
+        assertTrue(files.containsKey("assets/tactical/font/offset_down_128.json"));
+    }
+
+    @Test
     void deterministicOutput(@TempDir Path root) throws Exception {
         png(root, "block/panel.png", 16, 16);
         ConfigReport r = new ConfigReport();

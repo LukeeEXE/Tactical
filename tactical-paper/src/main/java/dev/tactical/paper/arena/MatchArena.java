@@ -262,8 +262,14 @@ public final class MatchArena {
     public void evacuate() {
         bomb.removeEntities();
         for (Player p : List.copyOf(world.getPlayers())) {
-            p.setSpectatorTarget(null);
-            lobby.sendToLobby(p);
+            try {
+                // setSpectatorTarget throws for players who are not spectators (i.e. everyone still alive).
+                if (p.getGameMode() == GameMode.SPECTATOR) p.setSpectatorTarget(null);
+                lobby.sendToLobby(p);
+            } catch (RuntimeException e) {
+                log.log(java.util.logging.Level.SEVERE, "[match=" + match.id() + "] could not return " + p.getName() + " to the lobby", e);
+                p.teleport(lobby.spawn()); // never leave anyone in a world that is about to be deleted
+            }
         }
     }
 

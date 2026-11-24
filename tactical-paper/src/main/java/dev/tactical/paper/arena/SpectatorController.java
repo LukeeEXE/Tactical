@@ -82,7 +82,7 @@ public final class SpectatorController {
         List<Player> mates = aliveTeammates(viewer.getUniqueId());
         if (mates.isEmpty()) {
             watching.remove(viewer.getUniqueId());
-            viewer.setSpectatorTarget(null);
+            if (viewer.getGameMode() == GameMode.SPECTATOR) viewer.setSpectatorTarget(null);
             Location a = anchors.get(viewer.getUniqueId());
             if (a != null) viewer.teleport(a);
             return;

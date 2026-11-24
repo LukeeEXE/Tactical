@@ -19,7 +19,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -123,6 +122,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
+        Heads.remember(e.getPlayer());
         matches.matchOf(e.getPlayer().getUniqueId()).ifPresent(m -> attach(m, e.getPlayer()));
     }
 
@@ -158,7 +158,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
             Component icon;
             if (!active) icon = Component.text("☠", NamedTextColor.DARK_GRAY); // skull: dead or disconnected
             else if (m.virtual()) icon = Component.text("●", TeamStyle.color(team));
-            else icon = Component.object(ObjectContents.playerHead().id(m.uuid()).name(m.name()).build());
+            else icon = Heads.text(m.uuid(), m.name());
             heads.append(icon).append(Component.text(" "));
         }
         Component score = Component.text(f.scoreOf(team), TeamStyle.color(team)).decorate(TextDecoration.BOLD);
@@ -228,7 +228,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
                 MatchStats s = st.getOrDefault(m.uuid(), new MatchStats());
                 Component line = Component.text("  ");
                 line = m.virtual() ? line.append(Component.text("●", TeamStyle.color(team)))
-                        : line.append(Component.object(ObjectContents.playerHead().id(m.uuid()).name(m.name()).build()));
+                        : line.append(Heads.text(m.uuid(), m.name()));
                 line = line.append(Component.text(" " + m.name(), TeamStyle.color(team)))
                         .append(Component.text("   " + s.kills + " / " + s.deaths + " / " + s.assists + "   " + Math.round(s.damage), NamedTextColor.WHITE));
                 if (m.uuid().equals(mvp)) line = line.append(Component.text("  MVP", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));

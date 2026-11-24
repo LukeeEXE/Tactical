@@ -80,6 +80,8 @@ public final class PackBuilder {
         byte[] clear = transparentPng(9, 9);
         for (String p : PROTECTED) files.put(p, clear);
         generateConstructionBlock(files);
+        addNegativeSpaceFont(files, issues);
+        generateVerticalOffsetFonts(files);
         Map<String, byte[]> user = new TreeMap<>();
         readTree(sourceRoot.resolve("assets"), "assets/", user);
         generateBlocks(blocks, knownBlocks, user, files, issues);
@@ -111,6 +113,72 @@ public final class PackBuilder {
 
         byte[] zip = zip(files);
         return new Result(zip, sha1(zip), issues, stats);
+    }
+
+    // ------------------------------------------------------------------ text offsets
+
+    /** Bundled third-party pack content (CC BY 4.0, attribution in pack/vendor/negativespacefont/NOTICE.txt). */
+    static final List<String> NEGATIVE_SPACE_FILES = List.of(
+            "assets/minecraft/font/default.json", "assets/space/font/default.json", "assets/space/lang/en_us.json",
+            "LICENSE.txt", "NOTICE.txt");
+
+    /**
+     * Horizontal offsets: Negative Space Font by AmberW (https://github.com/AmberWat/NegativeSpaceFont).
+     * Adds space characters from -8192 to 8192 px (and fractions) to the default font, usable via the
+     * translation keys {@code space.<px>} and {@code offset.<px>}. Fonts merge across packs, so vanilla glyphs stay.
+     */
+    private static void addNegativeSpaceFont(Map<String, byte[]> files, List<PackIssue> issues) {
+        for (String rel : NEGATIVE_SPACE_FILES) {
+            try (var in = PackBuilder.class.getClassLoader().getResourceAsStream("pack/vendor/negativespacefont/" + rel)) {
+                if (in == null) {
+                    issues.add(new PackIssue(true, rel, "bundled Negative Space Font file is missing from the plugin jar"));
+                    continue;
+                }
+                String target = rel.endsWith(".txt") ? "credits/negativespacefont/" + rel : rel;
+                files.put(target, in.readAllBytes());
+            } catch (IOException e) {
+                issues.add(new PackIssue(true, rel, "cannot read bundled font: " + e.getMessage()));
+            }
+        }
+    }
+
+    /** Largest generated downward shift in pixels. */
+    public static final int MAX_DOWN_OFFSET = 128;
+
+    /**
+     * Vertical offsets: fonts {@code tactical:offset_down_<n>} (n = 1..128 px) and {@code tactical:offset_up_1} that
+     * redraw printable ASCII from the vanilla {@code font/ascii.png} with a shifted ascent. Applying one of these
+     * fonts to a text component moves it down by n pixels. Bitmap glyphs cannot be raised more than 1 px
+     * (the ascent may not exceed the glyph height); place elements higher by moving everything else down.
+     */
+    private static void generateVerticalOffsetFonts(Map<String, byte[]> files) {
+        com.google.gson.JsonArray chars = new com.google.gson.JsonArray();
+        String empty = "\u0000".repeat(16);
+        String[] rows = {empty, empty, " !\"#$%&'()*+,-./", "0123456789:;<=>?", "@ABCDEFGHIJKLMNO", "PQRSTUVWXYZ[\\]^_",
+                "`abcdefghijklmno", "pqrstuvwxyz{|}~\u0000"};
+        for (String r : rows) chars.add(r);
+        for (int i = rows.length; i < 16; i++) chars.add(empty);
+        for (int n = -1; n <= MAX_DOWN_OFFSET; n++) {
+            if (n == 0) continue;
+            JsonObject space = new JsonObject();
+            space.addProperty("type", "space");
+            JsonObject adv = new JsonObject();
+            adv.addProperty(" ", 4);
+            space.add("advances", adv);
+            JsonObject bitmap = new JsonObject();
+            bitmap.addProperty("type", "bitmap");
+            bitmap.addProperty("file", "minecraft:font/ascii.png");
+            bitmap.addProperty("ascent", 7 - n);
+            bitmap.addProperty("height", 8);
+            bitmap.add("chars", chars);
+            com.google.gson.JsonArray providers = new com.google.gson.JsonArray();
+            providers.add(space);
+            providers.add(bitmap);
+            JsonObject font = new JsonObject();
+            font.add("providers", providers);
+            String name = n < 0 ? "offset_up_" + (-n) : "offset_down_" + n;
+            files.put("assets/tactical/font/" + name + ".json", json(font));
+        }
     }
 
     // ------------------------------------------------------------------ construction block
