@@ -13,8 +13,8 @@ import net.kyori.adventure.text.format.TextColor;
  */
 public final class TeamStyle {
 
-    public static final TextColor RED = TextColor.color(0xB03232);
-    public static final TextColor BLUE = TextColor.color(0x204EAB);
+    public static final TextColor RED = TextColor.color(0xD73B3B);
+    public static final TextColor BLUE = TextColor.color(0x2D63D9);
 
     private TeamStyle() {
     }

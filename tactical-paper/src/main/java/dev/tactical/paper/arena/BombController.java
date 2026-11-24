@@ -73,6 +73,9 @@ public final class BombController {
     private Location carrierLast;
     private Location dropped;
     private ItemDisplay droppedDisplay;
+    /** Glowing copies, visible only to the attacking team (the plain ones are shown to everyone else). */
+    private ItemDisplay droppedGlow;
+    private ItemDisplay plantedGlow;
     private Location planted;
     private ItemDisplay plantedDisplay;
     private PlantProgress plant;
@@ -148,19 +151,59 @@ public final class BombController {
     }
 
     void removeEntities() {
+        removeDropped();
+        removePlanted();
+    }
+
+    private void removeDropped() {
         if (droppedDisplay != null) droppedDisplay.remove();
-        if (plantedDisplay != null) plantedDisplay.remove();
+        if (droppedGlow != null) droppedGlow.remove();
         droppedDisplay = null;
+        droppedGlow = null;
+    }
+
+    private void removePlanted() {
+        if (plantedDisplay != null) plantedDisplay.remove();
+        if (plantedGlow != null) plantedGlow.remove();
         plantedDisplay = null;
+        plantedGlow = null;
+    }
+
+    /** A bomb model; the glowing one is hidden from everyone by default and shown to attackers by {@link #syncGlow}. */
+    private ItemDisplay bombDisplay(Location at, float scale, boolean glow) {
+        return world.spawn(at, ItemDisplay.class, d -> {
+            d.setItemStack(createItem());
+            d.setPersistent(false);
+            d.setVisibleByDefault(false);
+            if (glow) {
+                d.setGlowing(true);
+                d.setGlowColorOverride(Color.RED);
+            }
+            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(scale), new AxisAngle4f()));
+        });
+    }
+
+    /** Attackers (alive or spectating) see the glowing bomb; defenders and anyone else see the plain one. */
+    private void syncGlow() {
+        if (droppedDisplay == null && plantedDisplay == null) return;
+        org.bukkit.plugin.Plugin plugin = org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(BombController.class);
+        dev.tactical.engine.team.TeamId attackers = flow.teamOn(dev.tactical.engine.team.Side.ATTACKERS);
+        for (Player p : world.getPlayers()) {
+            boolean attacker = match.member(p.getUniqueId()).map(m -> m.team() == attackers).orElse(false);
+            for (ItemDisplay[] pair : new ItemDisplay[][]{{droppedDisplay, droppedGlow}, {plantedDisplay, plantedGlow}}) {
+                if (pair[0] == null || pair[1] == null) continue;
+                ItemDisplay shown = attacker ? pair[1] : pair[0];
+                ItemDisplay hidden = attacker ? pair[0] : pair[1];
+                if (!p.canSee(shown)) p.showEntity(plugin, shown);
+                if (p.canSee(hidden)) p.hideEntity(plugin, hidden);
+            }
+        }
     }
 
     private void giveTo(UUID id, String reason) {
         carrier = id;
         dropped = null;
-        if (droppedDisplay != null) {
-            droppedDisplay.remove();
-            droppedDisplay = null;
-        }
+        removeDropped();
         Player p = Bukkit.getPlayer(id);
         if (p != null) {
             removeBombItems(p);
@@ -216,13 +259,10 @@ public final class BombController {
     private void dropAt(Location at, UUID by, String reason) {
         Location ground = groundBelow(at);
         dropped = ground;
-        droppedDisplay = world.spawn(ground.clone().add(0, 0.25, 0), ItemDisplay.class, d -> {
-            d.setItemStack(createItem());
-            d.setPersistent(false);
-            d.setGlowing(true);
-            d.setGlowColorOverride(Color.RED);
-            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.5f), new AxisAngle4f()));
-        });
+        removeDropped();
+        droppedDisplay = bombDisplay(ground.clone().add(0, 0.25, 0), 0.5f, false);
+        droppedGlow = bombDisplay(ground.clone().add(0, 0.25, 0), 0.5f, true);
+        syncGlow();
         Map<String, Object> data = loc(ground);
         data.put("reason", reason);
         match.recorder().record(EventTypes.BOMB_DROP, List.of(by), match.member(by).map(m -> m.team()).orElse(null), data);
@@ -244,9 +284,13 @@ public final class BombController {
         if (s == MatchState.BOMB_PLANTED && planted != null) {
             tickDefuse();
             if (ticks % 10 == 0) drawRing();
-            if (ticks % beepInterval() == 0) world.playSound(planted, Sound.BLOCK_NOTE_BLOCK_HAT, 1.5f, 1.6f);
+            if (ticks % beepInterval() == 0) {
+                world.playSound(planted, Sound.BLOCK_NOTE_BLOCK_HAT, 1.5f, 1.6f);
+                match.bus().publish(new dev.tactical.paper.match.MatchEvents.BombBeep());
+            }
         }
         for (Player p : world.getPlayers()) lastPositions.put(p.getUniqueId(), p.getLocation());
+        if (ticks % 10 == 0) syncGlow(); // newcomers, reconnects, spectators
     }
 
     private void tickCarrier(MatchState s) {
@@ -298,11 +342,10 @@ public final class BombController {
         carrier = null;
         planted = at.clone().add(0, 0, 0);
         defuse = new DefuseProgress(mode.defuseTicks(), mode.defuseCheckpointTicks());
-        plantedDisplay = world.spawn(at.clone().add(0, 0.2, 0), ItemDisplay.class, d -> {
-            d.setItemStack(createItem());
-            d.setPersistent(false);
-            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.6f), new AxisAngle4f()));
-        });
+        removePlanted();
+        plantedDisplay = bombDisplay(at.clone().add(0, 0.2, 0), 0.6f, false);
+        plantedGlow = bombDisplay(at.clone().add(0, 0.2, 0), 0.6f, true);
+        syncGlow();
         Map<String, Object> d = loc(at);
         d.put("site", site.id());
         match.recorder().record(EventTypes.BOMB_PLANT_LOCATION, List.of(planter), match.member(planter).map(m -> m.team()).orElse(null), d);
@@ -425,8 +468,7 @@ public final class BombController {
                 }
             }
         }
-        if (plantedDisplay != null) plantedDisplay.remove();
-        plantedDisplay = null;
+        removePlanted();
     }
 
     // ------------------------------------------------------------------ helpers

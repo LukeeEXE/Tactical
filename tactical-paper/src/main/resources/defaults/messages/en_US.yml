@@ -38,6 +38,7 @@ chat.kill.void: "<victim> <gray>was knocked into the void by</gray> <killer><gra
 chat.kill.thorns: "<victim> <gray>was killed trying to hurt</gray> <killer><gray>.</gray>"
 # Deaths without a killer can also get their own line: chat.died.<method> (fall, void, fire, explosion, ...).
 chat.bomb-planted: "<player> <red>planted the bomb at <white><site></white>!</red>"
+chat.bomb-planted-enemy: "<red>The bomb has been planted!</red>"
 chat.bomb-defused: "<player> <aqua>defused the bomb!</aqua>"
 chat.bomb-exploded: "<red>The bomb exploded!</red>"
 chat.round-won: "<team> <white>won round <round>!</white> <score_a> <dark_gray>-</dark_gray> <score_b>"

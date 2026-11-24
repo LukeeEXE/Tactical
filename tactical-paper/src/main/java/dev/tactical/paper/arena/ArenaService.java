@@ -284,8 +284,20 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
         if (!(e.getEntity() instanceof Player p)) return;
         GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
         if (m != null && (!m.state().isRoundActive() || m.flow().isPaused())) {
+            e.setConsumeItem(false); // no arrow is fired, so none may be used up
             e.setCancelled(true);
-            p.updateInventory();
+            Bukkit.getScheduler().runTask(plugin, p::updateInventory); // undo the client's predicted arrow use
+        }
+    }
+
+    /** Thrown items (snowballs, pearls...) outside a live round: not thrown and not used up. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onThrow(com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent e) {
+        GameMatch m = matches.matchOf(e.getPlayer().getUniqueId()).orElse(null);
+        if (m != null && (!m.state().isRoundActive() || m.flow().isPaused())) {
+            e.setShouldConsume(false);
+            e.setCancelled(true);
+            Bukkit.getScheduler().runTask(plugin, e.getPlayer()::updateInventory);
         }
     }
 
@@ -295,7 +307,7 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
         GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
         if (m != null && (!m.state().isRoundActive() || m.flow().isPaused())) {
             e.setCancelled(true);
-            p.updateInventory();
+            Bukkit.getScheduler().runTask(plugin, p::updateInventory); // undo the client's predicted arrow use
         }
     }
 

@@ -19,7 +19,7 @@ import java.util.Map;
 public final class HudGlyphs {
 
     /** Where a glyph is drawn; decides its font and vertical placement. */
-    public enum Slot { CHAT, BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, MONEY_PANEL, MONEY_ICON, ACTION_PANEL }
+    public enum Slot { CHAT, BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB, MONEY_PANEL, MONEY_ICON, ACTION_PANEL }
 
     public record Glyph(String name, char ch, Slot slot, int width, int height, BufferedImage image) {
     }
@@ -46,18 +46,23 @@ public final class HudGlyphs {
             ROUND_WIN = '\uE216', ROUND_LOSS = '\uE217', ROUND_DIVIDER = '\uE218', CHAT_TEAM = '\uE219';
     public static final char BAR_SKULL = '\uE223';
     public static final char MONEY_PANEL = '\uE240', MONEY_COIN = '\uE241';
+    /** Timer bar segments: {@code BAR_TIME + n} is a 10 px segment with n px filled (n = 0..10). */
+    public static final char BAR_TIME = '\uE700';
+    public static final int BAR_TIME_SEGMENT = 10;
+    /** Large bomb icon on its own boss bar while the bomb is planted. */
+    public static final char BAR_BOMB = '\uE710';
 
     /** Team strip behind the heads (soft; tinted red/blue). */
-    public static final RectSet BAR_STRIP = new RectSet("bar_strip", '\uE400', Slot.BAR_STRIP, 10, 0x66);
+    public static final RectSet BAR_STRIP = new RectSet("bar_strip", '\uE400', Slot.BAR_STRIP, 12, 0x66);
     /** Timer panel (tinted black). */
-    public static final RectSet BAR_PANEL = new RectSet("bar_panel", '\uE300', Slot.BAR_PANEL, 11, 0x8C);
+    public static final RectSet BAR_PANEL = new RectSet("bar_panel", '\uE300', Slot.BAR_PANEL, 13, 0x8C);
     /** Score box (tinted black). */
-    public static final RectSet BAR_SCORE = new RectSet("bar_score", '\uE500', Slot.BAR_SCORE, 16, 0x8C);
+    public static final RectSet BAR_SCORE = new RectSet("bar_score", '\uE500', Slot.BAR_SCORE, 18, 0x8C);
     /** Two-line action-bar hint box (tinted black). */
-    public static final RectSet ACTION_PANEL = new RectSet("action_panel", '\uE600', Slot.ACTION_PANEL, 22, 0x8C);
+    public static final RectSet ACTION_PANEL = new RectSet("action_panel", '\uE600', Slot.ACTION_PANEL, 21, 0x8C);
     public static final List<RectSet> RECT_SETS = List.of(BAR_STRIP, BAR_PANEL, BAR_SCORE, ACTION_PANEL);
 
-    public static final int MONEY_PANEL_WIDTH = 81, MONEY_PANEL_HEIGHT = 11;
+    public static final int MONEY_PANEL_WIDTH = 46, MONEY_PANEL_HEIGHT = 11;
 
     private static final Map<Character, Integer> PALETTE = Map.ofEntries(
             Map.entry('k', 0xFF1B1B1F), Map.entry('w', 0xFFF4F4F4), Map.entry('g', 0xFFB8B8C0), Map.entry('G', 0xFF5C5C66),
@@ -112,13 +117,21 @@ public final class HudGlyphs {
                         "kkkkkkkk", "krwrrrrk", "krwrrrrk", "krwrrrrk", "krwrrrrk", "krwwwwrk", "krrrrrrk", "kkkkkkkk"),
                 art("round_divider", ROUND_DIVIDER, Slot.CHAT,
                         "..g.....", "..g.....", "..g.....", "..g.....", "..g.....", "..g.....", "..g.....", "..g....."),
-                // 16x16 grey "team" icon (drawn at letter height); text colour tints it red/blue per team.
-                image("chat_team", CHAT_TEAM, Slot.CHAT, "pack/hud/chat_team.png"),
+                // 16x16 light team flag (drawn at letter height); text colour tints it red/blue per team.
+                image("chat_team", CHAT_TEAM, Slot.CHAT, "pack/hud/team_flag.png"),
                 art("bar_skull", BAR_SKULL, Slot.BAR_ICON,
                         "..kkkk..", ".kggggk.", "kggggggk", "kgkggkgk", "kggggggk", ".kgkkgk.", "..kggk..", "...kk..."),
+                art("bar_bomb", BAR_BOMB, Slot.BAR_BOMB,
+                        "..........yy....", ".........y..y...", "........r....y..", ".......rr.......",
+                        "......kRk.......", ".....kkkkk......", "...kkGGGGGkk....", "..kGGgGGGGGGk...",
+                        "..kGgwgGGGGGk...", ".kGGggGGGGGGGk..", ".kGGGGGGGGGGGk..", ".kGGGGGGGGGGGk..",
+                        "..kGGGGGGGGGk...", "..kGGGGGGGGGk...", "...kkGGGGGkk....", ".....kkkkk......"),
                 rect("money_panel", MONEY_PANEL, Slot.MONEY_PANEL, MONEY_PANEL_WIDTH, MONEY_PANEL_HEIGHT, 0x8C000000),
                 art("money_coin", MONEY_COIN, Slot.MONEY_ICON,
                         "..kkkk..", ".kyyyyk.", "kyywyyok", "kywyyyok", "kyyyyyok", "kyyyyook", ".kooook.", "..kkkk..")));
+        for (int n = 0; n <= BAR_TIME_SEGMENT; n++) {
+            out.add(image("bar_time_" + n, (char) (BAR_TIME + n), Slot.BAR_TIME, "pack/hud/time/" + n + ".png"));
+        }
         for (RectSet set : RECT_SETS) {
             for (int w = 1; w <= RECT_MAX; w++) {
                 out.add(rect(set.name() + "_" + w, set.glyph(w), set.slot(), w, set.height(), (set.alpha() << 24) | 0xFFFFFF));
@@ -149,10 +162,15 @@ public final class HudGlyphs {
         }
     }
 
-    /** Solid rectangle with square corners. */
+    /** Solid rectangle with slightly rounded corners (the four corner pixels are left out). */
     private static Glyph rect(String name, char ch, Slot slot, int w, int h, int argb) {
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) img.setRGB(x, y, argb);
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                boolean corner = w > 2 && h > 2 && (x == 0 || x == w - 1) && (y == 0 || y == h - 1);
+                img.setRGB(x, y, corner ? 0 : argb);
+            }
+        }
         return new Glyph(name, ch, slot, w, h, img);
     }
 
@@ -169,14 +187,5 @@ public final class HudGlyphs {
     /** Fully transparent boss bar (the WHITE colour): used by the text-only second boss bar row. */
     static BufferedImage bossBarInvisible() {
         return new BufferedImage(182, 5, BufferedImage.TYPE_INT_ARGB);
-    }
-
-    /** Thin yellow progress line used as the boss bar (replaces the vanilla YELLOW boss bar sprites). */
-    static BufferedImage bossBarLine(boolean progress) {
-        BufferedImage img = new BufferedImage(182, 5, BufferedImage.TYPE_INT_ARGB);
-        for (int x = 0; x < 182; x++) {
-            for (int y = 3; y <= 4; y++) img.setRGB(x, y, progress ? 0xFFFFD23F : 0x66000000);
-        }
-        return img;
     }
 }

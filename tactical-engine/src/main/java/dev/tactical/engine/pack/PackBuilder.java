@@ -298,11 +298,16 @@ public final class PackBuilder {
         for (HudGlyphs.Glyph g : HudGlyphs.all()) {
             files.put("assets/tactical/textures/hud/" + g.name() + ".png", HudGlyphs.png(g.image()));
             // Chat and boss-bar icons render at letter height (8 px) whatever the source size (8x8 or 16x16).
-            int height = g.slot() == HudGlyphs.Slot.CHAT || g.slot() == HudGlyphs.Slot.BAR_ICON || g.slot() == HudGlyphs.Slot.MONEY_ICON
-                    ? 8 : g.height();
+            int height = switch (g.slot()) {
+                case CHAT, BAR_ICON, MONEY_ICON -> 8;
+                case BAR_BOMB -> 2 * g.height(); // 16x16 art drawn at 32 px (crisp 2x)
+                default -> g.height();
+            };
             int ascent = switch (g.slot()) {
                 case CHAT -> 7;
-                case BAR_ICON -> hud.bossbarTileAscent() - 1;
+                case BAR_ICON -> 7;                          // same rows as an inline player head
+                case BAR_TIME -> 7 - hud.bossbarTimeRow();
+                case BAR_BOMB -> 7;
                 case BAR_STRIP -> hud.bossbarTileAscent();
                 case BAR_PANEL -> hud.bossbarPanelAscent();
                 case BAR_SCORE -> hud.bossbarScoreAscent();
@@ -312,7 +317,7 @@ public final class PackBuilder {
             };
             String font = switch (g.slot()) {
                 case CHAT -> "hud_chat";
-                case BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE -> "hud_bossbar";
+                case BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB -> "hud_bossbar";
                 case MONEY_PANEL, MONEY_ICON -> "hud_money";
                 case ACTION_PANEL -> "hud_actionbar";
             };
@@ -331,8 +336,6 @@ public final class PackBuilder {
             font.add("providers", e.getValue());
             files.put("assets/tactical/font/" + e.getKey() + ".json", json(font));
         }
-        files.put("assets/minecraft/textures/gui/sprites/boss_bar/yellow_background.png", HudGlyphs.png(HudGlyphs.bossBarLine(false)));
-        files.put("assets/minecraft/textures/gui/sprites/boss_bar/yellow_progress.png", HudGlyphs.png(HudGlyphs.bossBarLine(true)));
         byte[] invisible = HudGlyphs.png(HudGlyphs.bossBarInvisible());
         files.put("assets/minecraft/textures/gui/sprites/boss_bar/white_background.png", invisible);
         files.put("assets/minecraft/textures/gui/sprites/boss_bar/white_progress.png", invisible);
@@ -344,11 +347,18 @@ public final class PackBuilder {
     static final List<String> BUNDLED_SHADERS = List.of("position_tex_color.vsh", "position_tex_color.fsh");
 
     private static void addBundledShaders(Map<String, byte[]> files) throws IOException {
-        for (String name : BUNDLED_SHADERS) {
-            try (var in = PackBuilder.class.getClassLoader().getResourceAsStream("pack/shaders/core/" + name)) {
-                if (in == null) throw new IOException("bundled shader missing: " + name);
-                files.put("assets/minecraft/shaders/core/" + name, in.readAllBytes());
-            }
+        for (String name : BUNDLED_SHADERS) files.put("assets/minecraft/shaders/core/" + name, bundled("pack/shaders/core/" + name));
+        // "Smoother Glowing" v1.5.1 (the 26.3 variant, supplied by the server owner): smoother entity glow outlines.
+        files.put("assets/minecraft/post_effect/entity_outline.json", bundled("pack/glow/entity_outline.json"));
+        files.put("assets/minecraft/shaders/post/entityglow.fsh", bundled("pack/glow/entityglow.fsh"));
+        files.put("credits/smoother_glowing.txt", "Smoother Glowing v1.5.1 - glow outline shader (26.3 overlay), supplied by the server owner.\n"
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private static byte[] bundled(String resource) throws IOException {
+        try (var in = PackBuilder.class.getClassLoader().getResourceAsStream(resource)) {
+            if (in == null) throw new IOException("bundled pack file missing: " + resource);
+            return in.readAllBytes();
         }
     }
 

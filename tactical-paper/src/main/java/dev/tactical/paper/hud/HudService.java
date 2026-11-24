@@ -42,7 +42,6 @@ public final class HudService implements Service {
     }
 
     private static final int HINT_PADDING = 6;
-    private static final int LINE_TWO_OFFSET = 10;
 
     private final Plugin plugin;
     private final ConfigService config;
@@ -119,7 +118,7 @@ public final class HudService implements Service {
         if (hint != null) {
             out = out.append(hintBox(hint, st));
         } else if (st != null) {
-            out = out.append(HudShapes.centred(st.text().shadowColor(ShadowColor.none()), HudText.vanillaWidth(st.plain())));
+            out = out.append(HudShapes.centred(pinch(st.text(), 0).shadowColor(ShadowColor.none()), pinchWidth(st.plain())));
         }
         Component previous = lastSent.get(p.getUniqueId());
         long at = lastSentAt.getOrDefault(p.getUniqueId(), 0L);
@@ -130,21 +129,34 @@ public final class HudService implements Service {
         lastSentAt.put(p.getUniqueId(), ticks);
     }
 
-    /** Two centred lines on a dark box; a status message, if any, replaces the second line. */
+    /** Text in the HUD's Pinch font, shifted {@code offsetY} px (+ down / - up). */
+    private Component pinch(Component c, int offsetY) {
+        return HudText.ttf(config.hud().bossbarFont(), offsetY, c);
+    }
+
+    private int pinchWidth(String plain) {
+        int w = text.ttfWidth(config.hud().bossbarFont(), plain);
+        return w == 0 ? HudText.vanillaWidth(plain) : w;
+    }
+
+    /**
+     * Two centred Pinch lines on a dark box of fixed width, above the held item's name; a status message, if any,
+     * replaces the second line. Every part has zero net advance, so nothing else on the action bar moves.
+     */
     private Component hintBox(Hint hint, Status st) {
-        Component line1 = Component.text(hint.title(), hint.titleColor());
-        int w1 = HudText.vanillaWidth(hint.title());
+        HudConfig h = config.hud();
+        Component line1 = pinch(Component.text(hint.title(), hint.titleColor()), h.actionLine1Offset());
+        int w1 = pinchWidth(hint.title());
         Component line2;
         int w2;
         if (st != null) {
-            line2 = st.text();
-            w2 = HudText.vanillaWidth(st.plain());
+            line2 = pinch(st.text(), h.actionLine2Offset());
+            w2 = pinchWidth(st.plain());
         } else {
-            line2 = Component.text(hint.detail(), hint.detailColor());
-            w2 = HudText.vanillaWidth(hint.detail());
+            line2 = pinch(Component.text(hint.detail(), hint.detailColor()), h.actionLine2Offset());
+            w2 = pinchWidth(hint.detail());
         }
-        line2 = line2.font(Key.key("tactical", "offset_down_" + LINE_TWO_OFFSET));
-        int boxWidth = Math.max(config.hud().actionHintWidth(), Math.max(w1, w2) + 2 * HINT_PADDING); // fixed: never resizes with its text
+        int boxWidth = Math.max(h.actionHintWidth(), Math.max(w1, w2) - 1 + 2 * HINT_PADDING); // fixed: never resizes with its text
         return Component.text()
                 .append(HudShapes.centred(HudShapes.rect(HudGlyphs.ACTION_PANEL, boxWidth, "hud_actionbar", NamedTextColor.BLACK), boxWidth))
                 .append(HudShapes.centred(line1, w1))
@@ -153,27 +165,27 @@ public final class HudService implements Service {
                 .shadowColor(ShadowColor.none());
     }
 
-    /** Zero-advance money widget: panel + coin + right-aligned amount on the hunger-bar row. */
+    /** Zero-advance money widget on the hunger-bar row: panel, coin, and the amount right-aligned in Pinch. */
     public Component moneyWidget(int balance) {
         HudConfig h = config.hud();
         String amount = String.format("%,d", balance);
-        int amountWidth = HudText.vanillaWidth(amount);
-        int panelAdvance = HudGlyphs.MONEY_PANEL_WIDTH + 1;
+        int amountAdvance = pinchWidth(amount);
+        int panel = HudGlyphs.MONEY_PANEL_WIDTH;
         int coinX = 2;
         int coinAdvance = 9;
-        int rightEdge = HudGlyphs.MONEY_PANEL_WIDTH - 3;
-        int gap = Math.max(1, rightEdge - amountWidth - (coinX + coinAdvance));
+        int rightPad = 3;
         Key hudFont = Key.key("tactical", "hud_money");
-        Component panel = Component.text(String.valueOf(HudGlyphs.MONEY_PANEL)).font(hudFont).color(NamedTextColor.WHITE);
+        Component panelGlyph = Component.text(String.valueOf(HudGlyphs.MONEY_PANEL)).font(hudFont).color(NamedTextColor.WHITE);
         Component coin = Component.text(String.valueOf(HudGlyphs.MONEY_COIN)).font(hudFont).color(NamedTextColor.WHITE);
-        Component number = Component.text(amount, NamedTextColor.WHITE).font(Key.key("tactical", "offset_down_" + h.moneyOffsetY()));
-        int total = h.moneyLeft() + coinX + coinAdvance + gap + amountWidth;
+        Component number = pinch(Component.text(amount, NamedTextColor.WHITE), h.moneyTextOffset());
+        int numberX = panel - rightPad - (amountAdvance - 1); // right-aligned on the ink, not the trailing spacing
+        int afterCoin = coinX + coinAdvance;
         return Component.text()
                 .append(TextOffsets.space(h.moneyLeft()))
-                .append(panel).append(TextOffsets.space(-panelAdvance))
+                .append(panelGlyph).append(TextOffsets.space(-(panel + 1)))
                 .append(TextOffsets.space(coinX)).append(coin)
-                .append(TextOffsets.space(gap)).append(number)
-                .append(TextOffsets.space(-total))
+                .append(TextOffsets.space(numberX - afterCoin)).append(number)
+                .append(TextOffsets.space(-(h.moneyLeft() + numberX + amountAdvance)))
                 .build()
                 .shadowColor(ShadowColor.none());
     }

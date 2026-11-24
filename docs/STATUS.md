@@ -204,3 +204,23 @@ All positions are estimates and need a client check; every value is adjustable i
 | Shadows on the boss bar | Verified the server sends `shadow_color: 0` (`/game debug json`) and that the 26.3 client multiplies the shadow alpha by it (no shadow drawn). Still to be confirmed in game |
 | Supplied position_tex_color shader | Ported to the 26.3 shader interface (its uniform block layout was from an older version) and shipped in the pack. Note: in 26.3 GUI text and its shadows use the `text` shader, not `position_tex_color`, so this shader only affects GUI sprites containing its two marker colours |
 
+### Round 9
+| Request | Change |
+|---|---|
+| Smoother Glowing shader | The 26.3 variant (post_effect/entity_outline.json + shaders/post/entityglow.fsh) is in the pack; compiles against the 26.3 interface |
+| Bow pre-round eats arrows | The cancelled shot no longer uses the arrow (thrown items likewise), and the client's inventory is resynced |
+| Timer bar as font icons | The supplied `time/0..10.png` segments (10x1, yellow #FFFF00 on 50 % black) form the bar under the timer panel; the boss bar sprite itself is invisible. Only these icons were taken from the supplied font file |
+| Backgrounds centred, +1 px, rounded | Everything is laid out around the player heads (rows 0-7, they cannot be moved): strip 2 px around the heads, timer panel 4 px around the text, square 18 px score boxes; corner pixels removed from every background |
+| Timer panel without dead space | The panel fits the text; the space reserved for it stays fixed, so heads and scores do not move |
+| Scores | White, double-size Pinch, centred in square boxes |
+| Strip centred on the heads | Sized to the team's actual players, placed against the centre |
+| Hint box over the item name | Moved up (rows -9..11, clear of the held item's name at row 13); both lines in Pinch |
+| Money | Panel 46 px (ends with the hunger bar), amount in Pinch, right-aligned |
+| Team colours | Red #d73b3b, blue #2d63d9 |
+| Round breakdown | `[W]` light green / `[L]` light red in Pinch |
+| Bomb planted message | The planting team sees the site; everyone else only "The bomb has been planted!" |
+| Bomb glow | Dropped and planted bomb glow only for the attacking team (defenders see a plain bomb) |
+| Bomb planted on the boss bar | No "BOMB PLANTED:" text (only the red time); a third boss bar shows a large bomb icon that flashes with every beep |
+| Team icon | The supplied team_flag.png, tinted per team |
+| Old hud.yml | Layout keys changed meaning: an older `hud/hud.yml` is backed up and replaced with the new defaults automatically |
+

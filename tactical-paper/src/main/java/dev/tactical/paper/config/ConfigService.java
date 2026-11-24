@@ -247,6 +247,18 @@ public final class ConfigService implements Service {
             if (parsed.isEmpty()) return Optional.empty();
             int fileVersion = parsed.get().integer(ConfigMigrator.VERSION_KEY, 1, 1, Integer.MAX_VALUE);
             if (fileVersion == version) return parsed;
+            if (kind.equals("hud") && fileVersion < version) {
+                // hud.yml only holds layout tuning that changed meaning: start over from the new defaults.
+                try (var in = ConfigService.class.getClassLoader().getResourceAsStream("defaults/hud/hud.yml")) {
+                    if (in != null) {
+                        backup(file);
+                        String fresh = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                        Files.writeString(file, fresh, StandardCharsets.UTF_8);
+                        log.warning(name + ": HUD layout changed in this version; your old file was backed up to backups/config/ and replaced with the new defaults");
+                        return YamlLoader.parse(fresh, name, report);
+                    }
+                }
+            }
             Map<String, Object> map = YamlLoader.loadMap(text);
             ConfigMigrator.Result result = new ConfigMigrator(kind, version, List.of()).migrate(map);
             switch (result.outcome()) {

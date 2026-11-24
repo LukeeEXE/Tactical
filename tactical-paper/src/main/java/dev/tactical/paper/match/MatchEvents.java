@@ -11,4 +11,8 @@ public final class MatchEvents {
     /** A teammate of the killer damaged the victim shortly before the kill. */
     public record AssistAwarded(UUID assister, UUID victim, UUID killer) {
     }
+
+    /** The planted bomb beeped (the HUD flashes the bomb icon in time with it). */
+    public record BombBeep() {
+    }
 }

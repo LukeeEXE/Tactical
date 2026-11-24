@@ -1,25 +1,30 @@
 # HUD layout in GUI pixels. (pack) = baked into the resource pack: run /game pack rebuild after changing it.
 # Everything else applies after /game reload hud. Preview: /game match test quickplay none 4 (you + 4 virtual players).
-schema-version: 1
+# "Rows" count pixels down from the top of a text line: a player head covers rows 0-7, Pinch capitals rows 2-6.
+schema-version: 2
 bossbar:
-  font: pinch            # a TTF font from resourcepack/fonts/ used for the boss bar text
-  text-offset-y: 0       # move the boss bar text down (+) or up (-) in pixels (uses <font>_down_N / _up_N)
-  tile-ascent: 8         # (pack) team strip behind the heads; higher = drawn higher
-  panel-ascent: 9        # (pack) timer panel behind the text; higher = drawn higher
-  head-advance: 9        # width the client gives an inline player head (8 px + 1); tweak if tiles drift
+  font: pinch            # a TTF font from resourcepack/fonts/ used for the boss bar text and scores
+  text-offset-y: 0       # move the timer text down (+) or up (-) in pixels
+  tile-ascent: 9         # (pack) team strip (12 px tall) behind the heads: 9 = rows -2..9, centred on the heads
+  panel-ascent: 9        # (pack) timer panel (13 px tall): 9 = rows -2..10, 4 px around the text
+  score-ascent: 12       # (pack) square score box (18 px): 12 = rows -5..12, centred on the heads
+  time-row: 12           # (pack) row of the 1 px timer bar under the panel
+  head-advance: 9        # width the client gives an inline player head (8 px + 1)
   head-slot: 10          # horizontal space per player on the team strip (head 8 px + 2 px gap)
-  strip-padding: 2       # strip background beyond the first/last head
-  section-gap: 6         # pixels between the strip, the score box and the timer panel
-  score-ascent: 9        # (pack) score box (16 px tall) vertical position
-  score-offset-y: 3      # move the big score text down (+) / up (-)
-  timer-width: 0         # fixed timer panel width; 0 = wide enough for the longest label (keeps everything still)
+  strip-padding: 3       # strip background left/right of the first/last head
+  section-gap: 6         # pixels between the strip, the score box and the timer
   panel-padding: 4       # pixels of panel left/right of the timer text
-  row-spacing: 19        # distance between two boss bars (vanilla: 19); the timer text is drawn on a second,
-                         # invisible boss bar and moved up by this much so the client centres it exactly
+  score-offset-y: 2      # move the big score digits down (+) / up (-)
+  timer-width: 0         # space reserved for the timer panel; 0 = the longest label (keeps heads and scores still)
+  row-spacing: 19        # distance between two boss bars (vanilla: 19); the timer text sits on the boss bar above
+                         # the heads and is moved down by this much, so the client centres it exactly
 actionbar:
-  panel-ascent: 9        # (pack) two-line hint box ("Right-click to ...") vertical position
+  panel-ascent: 16       # (pack) two-line hint box (21 px): 16 = rows -9..11, clear of the held item's name
   hint-width: 160        # fixed width of the hint box in px (wider only if a text does not fit); 0 = fit the text
+  line1-offset-y: -7     # first hint line (orange), Pinch shift in pixels
+  line2-offset-y: 2      # second hint line (white)
 money:
   enabled: true
   offset-y: 33           # (pack) pixels from the action-bar line down to the hunger-bar row
-  left: 10               # pixels right of the screen centre where the money widget starts (hunger bar = 10)
+  text-offset-y: 32      # Pinch shift of the amount
+  left: 45               # pixels right of the screen centre where the money panel starts (ends with the hunger bar)

@@ -6,6 +6,7 @@ import dev.tactical.engine.match.MatchFlowEvent;
 import dev.tactical.engine.mode.ModeRules;
 import dev.tactical.engine.pack.HudGlyphs;
 import dev.tactical.engine.team.Side;
+import dev.tactical.engine.team.TeamId;
 import dev.tactical.paper.hud.ChatStyle;
 import dev.tactical.paper.hud.TeamStyle;
 import dev.tactical.paper.message.Messages;
@@ -70,8 +71,15 @@ final class MatchAnnouncer {
                             "cause", e.cause().name().toLowerCase(Locale.ROOT).replace('_', ' '));
                 }
             }
-            case MatchFlowEvent.BombPlanted e -> all(match, HudGlyphs.CHAT_BOMB, "chat.bomb-planted",
-                    "player", ChatStyle.player(match, e.planter()), "site", e.site());
+            case MatchFlowEvent.BombPlanted e -> {
+                // Only the planting team is told the site; everyone else just hears that it is down.
+                TeamId planters = match.member(e.planter()).map(MatchMember::team).orElse(null);
+                for (Player p : match.onlinePlayers()) {
+                    boolean own = planters != null && match.member(p.getUniqueId()).map(MatchMember::team).orElse(null) == planters;
+                    send(p, HudGlyphs.CHAT_BOMB, own ? "chat.bomb-planted" : "chat.bomb-planted-enemy",
+                            "player", ChatStyle.player(match, e.planter()), "site", e.site());
+                }
+            }
             case MatchFlowEvent.BombDefused e -> all(match, HudGlyphs.CHAT_DEFUSE, "chat.bomb-defused", "player", ChatStyle.player(match, e.defuser()));
             case MatchFlowEvent.BombDetonated e -> all(match, HudGlyphs.CHAT_BOMB, "chat.bomb-exploded");
             case MatchFlowEvent.RoundEnded e -> {
