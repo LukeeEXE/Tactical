@@ -170,7 +170,7 @@ All positions are estimates and need a client check; every value is adjustable i
 ### HUD round 5
 | Request | Change |
 |---|---|
-| Results like the reference, each team separately, no score | Cyan separators, a centred "<team> won the match!" line, then one block per team: rank, head, name, dotted leader, and right-aligned columns for kills, deaths, assists, K/D and damage. Each column has a **placeholder icon** (`stat_kills`, `stat_deaths`, `stat_assists`, `stat_kdr`, `stat_damage`); replace the PNGs in `resourcepack/assets/tactical/textures/hud/`. MVP gets a star |
+| Results like the reference, each team separately, no score | Red separators, a centred "<team> won the match!" line, then one block per team: rank, head, name, dotted leader, and right-aligned columns for kills, deaths, assists, K/D and damage. Each column has a **placeholder icon** (`stat_kills`, `stat_deaths`, `stat_assists`, `stat_kdr`, `stat_damage`); replace the PNGs in `resourcepack/assets/tactical/textures/hud/`. MVP gets a star |
 | Score next to the timer | Boss bar row: tiles, score, timer panel, score, tiles (your team on the left) |
 | Text not centred on its background | The panel row is laid out symmetrically (fixed-width tile groups and score cells), so the panel is centred on the screen. The timer text is drawn on a second, invisible boss bar and moved up one row (`hud.yml → bossbar.row-spacing`), so the client centres it exactly too, independent of font measurement |
 | Square corners | All panels and tiles have square corners |

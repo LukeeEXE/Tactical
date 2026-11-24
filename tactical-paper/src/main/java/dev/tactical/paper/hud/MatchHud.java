@@ -337,7 +337,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
     }
 
     private static Component separator() {
-        return Component.text(" ".repeat(CHAT_WIDTH / 4 - 1), NamedTextColor.AQUA).decorate(TextDecoration.STRIKETHROUGH);
+        return Component.text(" ".repeat(CHAT_WIDTH / 4 - 1), NamedTextColor.RED).decorate(TextDecoration.STRIKETHROUGH);
     }
 
     /** {@code [shield] Attackers  (WINNER)} with the stat column legend on the right. */
