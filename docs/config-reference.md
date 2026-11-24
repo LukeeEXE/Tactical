@@ -117,19 +117,21 @@ To preview, run `/game match test quickplay none 4`: you plus 4 virtual players 
 
 | Key | Default | Meaning |
 |---|---|---|
-| `bossbar.font` | pinch | TTF font (from `resourcepack/fonts/`) for the boss bar text and scores. Pinch is used **only** here. |
-| `bossbar.text-offset-y` | 0 | Moves the boss bar text down (+) or up (-) in pixels. |
-| `bossbar.tile-ascent` (pack) | 8 | Vertical position of the team strip behind the heads. |
-| `bossbar.panel-ascent` (pack) | 9 | Vertical position of the timer panel behind the text. |
-| `bossbar.score-ascent` (pack) | 9 | Vertical position of the score boxes. |
-| `bossbar.score-offset-y` | 3 | Moves the big (double-size) score digits down (+) or up (-) inside their box. |
-| `bossbar.head-advance` | 9 | Width the client gives an inline head. Tweak this if heads drift out of their slots. |
-| `bossbar.head-slot` | 10 | Pixels per head on the team strip (head plus gap). |
-| `bossbar.strip-padding` | 2 | Team-coloured margin left and right of the heads. |
-| `bossbar.section-gap` / `panel-padding` | 6 / 4 | Gaps between strip, score box and timer panel, and the timer's inner margin. |
-| `bossbar.timer-width` | 0 | Fixed timer panel width in pixels. 0 = wide enough for the longest label, so the row never changes width. |
-| `actionbar.panel-ascent` (pack) | 9 | Vertical position of the two-line hint box ("Right-click to select a kit"). |
-| `actionbar.hint-width` | 160 | Fixed width of the hint box in pixels; it only grows when a text does not fit. 0 = always fit the text. |
+| `bossbar.font` | pinch | TTF font (from `resourcepack/fonts/`) for the boss bar, hint box and money text. |
+| `bossbar.text-offset-y` | 0 | Moves the timer text down (+) or up (-) in pixels. |
+| `bossbar.tile-ascent` (pack) | 9 | Team strip (12 px) behind the heads; 9 = 2 px above and below the heads. |
+| `bossbar.panel-ascent` (pack) | 9 | Timer panel (13 px); 9 = 4 px around the text. |
+| `bossbar.score-ascent` (pack) | 12 | Square score box (18 px), centred on the heads. |
+| `bossbar.time-row` (pack) | 12 | Row of the 1 px timer bar under the panel. |
+| `bossbar.head-advance` / `head-slot` / `strip-padding` | 9 / 10 / 3 | Head width, space per head, strip margin. |
+| `bossbar.section-gap` / `panel-padding` | 6 / 4 | Gap between sections; timer panel margin left/right of the text. |
+| `bossbar.score-offset-y` | 2 | Moves the score digits down (+) / up (-). |
+| `bossbar.timer-width` | 0 | Space reserved for the timer panel. 0 = the longest label, so heads and scores never move. |
+| `bossbar.row-spacing` | 19 | Distance between boss bars (vanilla 19). |
+| `actionbar.panel-ascent` (pack) | 16 | Hint box (21 px); 16 = clear of the held item's name. |
+| `actionbar.hint-width` | 160 | Fixed hint box width; only grows if a text does not fit. 0 = fit the text. |
+| `actionbar.line1-offset-y` / `line2-offset-y` | -7 / 2 | Pinch shift of the two hint lines. |
 | `money.enabled` | true | Show the money widget during matches. |
 | `money.offset-y` (pack) | 33 | Pixels from the action-bar line down to the hunger-bar row. |
-| `money.left` | 10 | Pixels right of the screen centre where the widget starts (the hunger bar starts at 10). |
+| `money.text-offset-y` | 32 | Pinch shift of the amount. |
+| `money.left` | 45 | Pixels right of the screen centre where the panel starts (45 = ends with the hunger bar). |
