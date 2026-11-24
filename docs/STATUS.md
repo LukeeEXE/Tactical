@@ -141,7 +141,7 @@ See `docs/PLAYTEST-PHASE2.md` for the client checklist.
 | 5 | Protection lost on death, couldn't buy it again | Enchantments are limited by the item, not by past purchases. Dying loses them; new armor can be enchanted again |
 | 6 | Durability loss | Match items are unbreakable, and durability damage is cancelled in matches |
 | 7 | Couldn't drop the bomb | Drop now runs after the cancelled vanilla drop. The bomb is thrown 1.5 blocks forward, and the dropper can't pick it back up for 2 s |
-| 8 | Shop opening | Right-click with any item (bows/crossbows excluded so they can charge), right-click a block or player, or press F. An empty-hand right-click into the air sends nothing to the server, so F is the empty-hand alternative |
+| 8 | Shop opening | During the buy phase each buyer has an invisible Interaction hitbox around their body that only they can see. Any right-click (empty hand, any item, into the air) targets it and opens the shop. It is hidden while a bow or crossbow is held, so those can charge. F also opens the shop |
 | 9 | Shooting before the round | Bow and crossbow shots and all thrown projectiles are blocked outside live rounds. Drawing and charging still work |
 | 10 | Arrows blocked by teammates | Projectiles pass through teammates and dead players |
 | 11 | Team names | Messages and HUD say Attackers/Defenders, coloured by team identity (red = started attacking, blue = started defending) |

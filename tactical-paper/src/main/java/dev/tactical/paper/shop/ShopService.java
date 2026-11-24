@@ -115,6 +115,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                 a -> shop.recordChanges(shop.economy().onAssist(a.assister())));
         int[] ticks = {0};
         match.flow().addTickable(f -> {
+            if (f.state() == MatchState.BUY_PHASE) followHitboxes(match);
             if (++ticks[0] % 20 != 0 || f.state() != MatchState.BUY_PHASE) return;
             for (Player p : match.onlinePlayers()) {
                 if (!f.participant(p.getUniqueId()).map(Participant::active).orElse(false)) continue;
@@ -129,6 +130,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
 
     @Override
     public void teardown(GameMatch match) {
+        removeHitboxes(match);
         shops.remove(match.id());
         menus.closeWhere(m -> m instanceof ShopMenu s && s.shop().match() == match);
     }
@@ -145,13 +147,16 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                 // Inventory was cleared and refilled in the same tick as the teleport: resend equipment so no
                 // client keeps showing a stale (invisible) armor state.
                 Bukkit.getScheduler().runTaskLater(plugin, () -> resendEquipment(match), 2L);
+                Bukkit.getScheduler().runTaskLater(plugin, () -> spawnHitboxes(match), 3L);
             }
             case MatchFlowEvent.RoundLive rl -> {
+                removeHitboxes(match);
                 menus.closeWhere(m -> m instanceof ShopMenu s && s.shop() == shop);
                 for (Player p : match.onlinePlayers()) hotbar.remove(p, HotbarItems.SHOP);
             }
             case MatchFlowEvent.PlayerEliminated pe -> {
                 shop.onDeath(pe.victim());
+                removeHitbox(pe.victim());
                 if (pe.killer() != null && pe.cause() == EliminationCause.KILLED) shop.recordChanges(eco.onKill(pe.killer()));
             }
             case MatchFlowEvent.BombPlanted bp -> shop.recordChanges(eco.onPlant(match.flow().teamOn(Side.ATTACKERS)));
@@ -186,6 +191,101 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
             for (Player viewer : p.getWorld().getPlayers()) if (viewer != p) viewer.sendEquipmentChange(p, eq);
             p.updateInventory();
         }
+    }
+
+    // ------------------------------------------------------------------ shop hitbox
+
+    /**
+     * During the buy phase every buyer gets an invisible Interaction entity around their own body, visible only to
+     * them. The client always targets an entity whose box contains the camera, so EVERY right-click (empty hand,
+     * any item, into the air) reaches the server as an entity interaction and opens the shop. It is not mounted on
+     * the player: the client ignores entities riding the player when picking a target. It is hidden while a bow or
+     * crossbow is held, so those can still be charged.
+     */
+    private final Map<UUID, org.bukkit.entity.Interaction> hitboxes = new HashMap<>();
+    private final Set<UUID> hitboxHidden = new HashSet<>();
+    private static final float HITBOX_WIDTH = 1.6f;
+    private static final float HITBOX_HEIGHT = 2.6f;
+
+    private void spawnHitboxes(GameMatch match) {
+        if (match.state() != MatchState.BUY_PHASE) return;
+        for (Player p : match.onlinePlayers()) {
+            if (!match.flow().participant(p.getUniqueId()).map(Participant::active).orElse(false)) continue;
+            removeHitbox(p.getUniqueId());
+            org.bukkit.Location at = hitboxLocation(p);
+            org.bukkit.entity.Interaction box = p.getWorld().spawn(at, org.bukkit.entity.Interaction.class, i -> {
+                i.setInteractionWidth(HITBOX_WIDTH);
+                i.setInteractionHeight(HITBOX_HEIGHT);
+                i.setResponsive(false);
+                i.setPersistent(false);
+                i.setVisibleByDefault(false);
+                i.setSilent(true);
+            });
+            hitboxes.put(p.getUniqueId(), box);
+            hitboxHidden.add(p.getUniqueId());
+        }
+        followHitboxes(match);
+    }
+
+    private void followHitboxes(GameMatch match) {
+        for (Player p : match.onlinePlayers()) {
+            org.bukkit.entity.Interaction box = hitboxes.get(p.getUniqueId());
+            if (box == null) continue;
+            if (!box.isValid() || !box.getWorld().equals(p.getWorld())) {
+                removeHitbox(p.getUniqueId());
+                continue;
+            }
+            org.bukkit.Location target = hitboxLocation(p);
+            if (box.getLocation().distanceSquared(target) > 0.0004) box.teleport(target);
+            boolean hide = keepsRightClick(p.getInventory().getItemInMainHand());
+            if (hide && !hitboxHidden.contains(p.getUniqueId())) {
+                p.hideEntity(plugin, box);
+                hitboxHidden.add(p.getUniqueId());
+            } else if (!hide && hitboxHidden.contains(p.getUniqueId())) {
+                p.showEntity(plugin, box);
+                hitboxHidden.remove(p.getUniqueId());
+            }
+        }
+    }
+
+    /** Centred on the player's feet so the eyes are always inside, with margin for movement between ticks. */
+    private static org.bukkit.Location hitboxLocation(Player p) {
+        org.bukkit.Location l = p.getLocation();
+        l.setY(l.getY() - 0.3);
+        l.setYaw(0);
+        l.setPitch(0);
+        return l;
+    }
+
+    private void removeHitbox(UUID player) {
+        org.bukkit.entity.Interaction box = hitboxes.remove(player);
+        hitboxHidden.remove(player);
+        if (box != null) box.remove();
+    }
+
+    private void removeHitboxes(GameMatch match) {
+        for (MatchMember m : match.members()) removeHitbox(m.uuid());
+    }
+
+    private boolean isOwnHitbox(Player p, org.bukkit.entity.Entity e) {
+        org.bukkit.entity.Interaction box = hitboxes.get(p.getUniqueId());
+        return box != null && box.equals(e);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onHitboxUse(org.bukkit.event.player.PlayerInteractEntityEvent e) {
+        if (!(e.getRightClicked() instanceof org.bukkit.entity.Interaction)) return;
+        boolean own = isOwnHitbox(e.getPlayer(), e.getRightClicked());
+        if (!own && !hitboxes.containsValue(e.getRightClicked())) return;
+        e.setCancelled(true);
+        if (!own || e.getHand() != EquipmentSlot.HAND) return;
+        MatchShop shop = buyingShop(e.getPlayer());
+        if (shop != null && menus.openMenu(e.getPlayer()).isEmpty()) openShop(e.getPlayer(), shop);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onHitboxHit(EntityDamageByEntityEvent e) {
+        if (e.getEntity() instanceof org.bukkit.entity.Interaction && hitboxes.containsValue(e.getEntity())) e.setCancelled(true);
     }
 
     // ------------------------------------------------------------------ input: right-click (or F) opens the shop
