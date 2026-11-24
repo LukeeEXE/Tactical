@@ -26,7 +26,7 @@ public final class HudGlyphs {
             CHAT_COIN = '', CHAT_KIT = '', CHAT_INFO = '', CHAT_SHIELD_RED = '',
             CHAT_SHIELD_BLUE = '\uE20C', CHAT_ARROW = '\uE20D', STAT_KILLS = '\uE210', STAT_DEATHS = '\uE211',
             STAT_ASSISTS = '\uE212', STAT_DAMAGE = '\uE213', STAT_KDR = '\uE214', CHAT_MVP = '\uE215',
-            ROUND_WIN = '\uE216', ROUND_LOSS = '\uE217', ROUND_DIVIDER = '\uE218';
+            ROUND_WIN = '\uE216', ROUND_LOSS = '\uE217', ROUND_DIVIDER = '\uE218', CHAT_TEAM = '\uE219';
     public static final char BAR_TILE_RED = '', BAR_TILE_BLUE = '', BAR_TILE_DEAD = '',
             BAR_SKULL = '', BAR_PANEL_LEFT = '', BAR_PANEL_RIGHT = '';
     /** Timer panel middle segments: BAR_PANEL_FILL + i is 2^i pixels wide (i = 0..7). */
@@ -94,6 +94,8 @@ public final class HudGlyphs {
                         "kkkkkkkk", "krwrrrrk", "krwrrrrk", "krwrrrrk", "krwrrrrk", "krwwwwrk", "krrrrrrk", "kkkkkkkk"),
                 art("round_divider", ROUND_DIVIDER, Group.CHAT,
                         "..g.....", "..g.....", "..g.....", "..g.....", "..g.....", "..g.....", "..g.....", "..g....."),
+                // 16x16 grey "team" icon (drawn at letter height); text colour tints it red/blue per team.
+                image("chat_team", CHAT_TEAM, Group.CHAT, "pack/hud/chat_team.png"),
                 tile("bar_tile_red", BAR_TILE_RED, 0xE5483F),
                 tile("bar_tile_blue", BAR_TILE_BLUE, 0x3F7FE5),
                 tile("bar_tile_dead", BAR_TILE_DEAD, 0x2A2A30),
@@ -123,6 +125,17 @@ public final class HudGlyphs {
             }
         }
         return new Glyph(name, ch, group, img.getWidth(), img.getHeight(), img);
+    }
+
+    /** A glyph drawn from a PNG bundled in the plugin jar. */
+    private static Glyph image(String name, char ch, Group group, String resource) {
+        try (var in = HudGlyphs.class.getClassLoader().getResourceAsStream(resource)) {
+            if (in == null) throw new IllegalStateException("missing bundled HUD image " + resource);
+            BufferedImage img = ImageIO.read(in);
+            return new Glyph(name, ch, group, img.getWidth(), img.getHeight(), img);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /** Low-opacity team tile behind a head: translucent fill, slightly stronger border. */

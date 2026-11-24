@@ -286,8 +286,10 @@ public final class PackBuilder {
             JsonObject p = new JsonObject();
             p.addProperty("type", "bitmap");
             p.addProperty("file", "tactical:hud/" + g.name() + ".png");
-            p.addProperty("ascent", Math.min(ascent, g.height()));
-            p.addProperty("height", g.height());
+            // Chat icons always render at letter height (8 px), whatever the source size (8x8 or 16x16).
+            int height = g.group() == HudGlyphs.Group.CHAT ? 8 : g.height();
+            p.addProperty("ascent", Math.min(ascent, height));
+            p.addProperty("height", height);
             com.google.gson.JsonArray chars = new com.google.gson.JsonArray();
             chars.add(String.valueOf(g.ch()));
             p.add("chars", chars);

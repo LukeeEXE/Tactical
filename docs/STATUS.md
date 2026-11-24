@@ -174,4 +174,4 @@ All positions are estimates and need a client check; every value is adjustable i
 | Score next to the timer | Boss bar row: tiles, score, timer panel, score, tiles (your team on the left) |
 | Text not centred on its background | The panel row is laid out symmetrically (fixed-width tile groups and score cells), so the panel is centred on the screen. The timer text is drawn on a second, invisible boss bar and moved up one row (`hud.yml → bossbar.row-spacing`), so the client centres it exactly too, independent of font measurement |
 | Square corners | All panels and tiles have square corners |
-| Round breakdown | After the winner line, one row per team: `[shield]` then a W/L box per round (placeholders `round_win.png` / `round_loss.png`) with dividers at halftime and before sudden death |
+| Round breakdown | After the winner line, one row per team: `[team icon]` (the provided 16x16 icon, tinted red/blue) then a W/L box per round (placeholders `round_win.png` / `round_loss.png`) with dividers at halftime and before sudden death |

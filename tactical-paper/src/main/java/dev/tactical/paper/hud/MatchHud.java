@@ -352,7 +352,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         int regular = 2 * match.rules().suddenDeathAt();
         TextComponent.Builder b = Component.text();
         b.append(Component.text("[", NamedTextColor.WHITE))
-                .append(ChatStyle.icon(team == TeamId.A ? HudGlyphs.CHAT_SHIELD_RED : HudGlyphs.CHAT_SHIELD_BLUE))
+                .append(ChatStyle.icon(HudGlyphs.CHAT_TEAM).color(TeamStyle.color(team))) // grey icon tinted by team colour
                 .append(Component.text("]", NamedTextColor.WHITE));
         for (int i = 0; i < winners.size(); i++) {
             int round = i + 1;
