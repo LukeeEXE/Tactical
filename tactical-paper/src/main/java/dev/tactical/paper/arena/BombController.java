@@ -275,13 +275,13 @@ public final class BombController {
                 default -> { }
             }
             if (step != PlantProgress.Step.COMPLETED) {
-                p.sendActionBar(progressBar("Planting", plantFraction(), NamedTextColor.RED));
+                dev.tactical.paper.hud.ActionBars.status(p, progressBar("Planting", plantFraction(), NamedTextColor.RED));
             }
         } else if (plant.planter().isPresent()) {
             String why = !holding ? "released" : site.isEmpty() ? "left_site" : "not_on_ground";
             plant.interrupt();
             match.recorder().record(EventTypes.PLANT_CANCEL, List.of(carrier), part.team(), Map.of("reason", why));
-            p.sendActionBar(Component.text("Plant cancelled", NamedTextColor.GRAY));
+            dev.tactical.paper.hud.ActionBars.status(p, Component.text("Plant cancelled", NamedTextColor.GRAY));
         }
     }
 
@@ -346,7 +346,7 @@ public final class BombController {
                 d.put("checkpoint_reached", defuse.checkpointReached());
                 match.recorder().record(EventTypes.DEFUSE_CANCEL, List.of(current.get()), team(current.get()), d);
                 Player p = Bukkit.getPlayer(current.get());
-                if (p != null) p.sendActionBar(Component.text("Defuse interrupted (" + stop.get().name().toLowerCase().replace('_', ' ') + ")"
+                if (p != null) dev.tactical.paper.hud.ActionBars.status(p, Component.text("Defuse interrupted (" + stop.get().name().toLowerCase().replace('_', ' ') + ")"
                         + (defuse.checkpointReached() ? " - checkpoint kept" : ""), NamedTextColor.GRAY));
             }
         }
@@ -385,7 +385,7 @@ public final class BombController {
             match.recorder().record(EventTypes.DEFUSE_PROGRESS, List.of(id), team(id), Map.of("progress_ticks", defuse.progressTicks()),
                     "OK", RecordingSink.Priority.LOW);
         }
-        if (p != null) p.sendActionBar(progressBar("Defusing", defuse.fraction(), NamedTextColor.AQUA)
+        if (p != null) dev.tactical.paper.hud.ActionBars.status(p, progressBar("Defusing", defuse.fraction(), NamedTextColor.AQUA)
                 .append(Component.text(defuse.checkpointReached() ? "  (checkpoint)" : "", NamedTextColor.YELLOW)));
     }
 

@@ -1,0 +1,16 @@
+# HUD layout in GUI pixels. (pack) = baked into the resource pack: run /game pack rebuild after changing it.
+# Everything else applies after /game reload hud. Preview: /game match test quickplay none 4 (you + 4 virtual players).
+schema-version: 1
+bossbar:
+  font: pinch            # a TTF font from resourcepack/fonts/ used for the boss bar text
+  text-offset-y: 0       # move the boss bar text down (+) or up (-) in pixels (uses <font>_down_N / _up_N)
+  tile-ascent: 8         # (pack) team tiles behind the heads; higher = tiles drawn higher
+  panel-ascent: 9        # (pack) timer panel behind the text; higher = drawn higher
+  head-advance: 9        # width the client gives an inline player head (8 px + 1); tweak if tiles drift
+  tile-gap: 1            # pixels between two player tiles
+  section-gap: 8         # pixels between the score, the tiles and the timer panel
+  panel-padding: 4       # pixels of panel left/right of the timer text
+money:
+  enabled: true
+  offset-y: 33           # (pack) pixels from the action-bar line down to the hunger-bar row
+  left: 10               # pixels right of the screen centre where the money widget starts (hunger bar = 10)

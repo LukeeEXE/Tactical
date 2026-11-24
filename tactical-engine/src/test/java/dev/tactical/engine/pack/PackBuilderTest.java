@@ -145,6 +145,30 @@ class PackBuilderTest {
     }
 
     @Test
+    void hudGlyphFontsUseLayout(@TempDir Path root) throws Exception {
+        PackBuilder.Result res = new PackBuilder(97, 1, "t", new HudLayout(8, 9, 33)).build(root, List.of(), KNOWN);
+        assertFalse(res.hasErrors(), res.issues().toString());
+        Map<String, String> files = unzip(res.zip());
+        JsonObject money = JsonParser.parseString(files.get("assets/tactical/font/hud_money.json")).getAsJsonObject();
+        var providers = money.getAsJsonArray("providers");
+        assertEquals(2, providers.size());
+        assertEquals(-24, providers.get(0).getAsJsonObject().get("ascent").getAsInt(), "panel 2 px above the digits");
+        assertEquals(-26, providers.get(1).getAsJsonObject().get("ascent").getAsInt());
+        assertTrue(files.containsKey("assets/tactical/font/hud_chat.json"));
+        assertTrue(files.containsKey("assets/tactical/textures/hud/bar_tile_red.png"));
+        assertTrue(files.containsKey("assets/minecraft/textures/gui/sprites/boss_bar/yellow_progress.png"));
+    }
+
+    @Test
+    void ttfMetricsMeasurePinch() throws Exception {
+        byte[] font = Files.readAllBytes(Path.of("../tactical-paper/src/main/resources/defaults/resourcepack/fonts/pinch.ttf"));
+        TtfMetrics m = TtfMetrics.parse(font);
+        assertEquals(6.0, m.width("A", 7), 0.01);
+        assertEquals(2 * 5 + 2 + 2 * 5, m.width("00:00", 7), 0.01);
+        assertTrue(m.has('Z'));
+    }
+
+    @Test
     void deterministicOutput(@TempDir Path root) throws Exception {
         png(root, "block/panel.png", 16, 16);
         ConfigReport r = new ConfigReport();

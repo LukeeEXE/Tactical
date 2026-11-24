@@ -155,3 +155,14 @@ See `docs/PLAYTEST-PHASE2.md` for the client checklist.
 | Shop box too small | 2.5 × 4.0 blocks, centred on the eyes (configurable: `matches.shop-hitbox`) |
 | Heads in the kit menu not the real player | Heads use the login skin. If the login profile has none (offline mode, or a proxy not forwarding skins), the skin is looked up from Mojang by UUID, then by name, in the background. `/game debug heads` shows where each online player's skin came from |
 | Add the Pinch font with vertical offsets | TTF fonts in `resourcepack/fonts/` generate `tactical:<name>` plus `_down_<n>` / `_up_<n>` variants; Pinch is shipped with attribution |
+
+### HUD redesign (playtest round 4)
+| Request | Change |
+|---|---|
+| Pinch only in the boss bar | Pinch is not the default font; only the boss bar text and scores use it (`hud.yml → bossbar.font`) |
+| Boss bar without role names | Boss bar: score, a translucent team-coloured tile per player with their head (skull on a dark tile when dead), timer panel, enemy tiles, enemy score. Teams stay red/blue by identity |
+| Money like the gem counter | Action-bar money widget on the hunger-bar row: dark rounded panel, coin, right-aligned amount, positioned with horizontal (Negative Space Font) and vertical (shifted font) offsets. A central action-bar owner keeps status messages (plant/defuse progress, shop errors) from erasing it |
+| Timer like the round-start timer | `ROUND 4 STARTS IN: 00:10` in Pinch, white label and yellow time, on a dark panel sized to the text; the boss bar is a thin yellow progress line underneath |
+| Chat like the reference | `[icon] message` with original icons (kill, round, win/loss, bomb, defuse, timer, warning, coin, kit, info). Players appear as team shield + head + name in the team colour. No crown or rank icons. Adds a kill feed and plant/defuse/disconnect messages; all texts in `messages/en_US.yml` (`chat.*`) |
+
+All positions are estimates and need a client check; every value is adjustable in `hud/hud.yml`.

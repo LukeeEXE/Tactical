@@ -90,6 +90,13 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         HandlerList.unregisterAll(this);
     }
 
+    /** Money of a match participant, or -1 if the player is not in a match with an economy. */
+    public int balance(Player p) {
+        GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
+        MatchShop shop = m == null ? null : shops.get(m.id());
+        return shop == null ? -1 : shop.economy().balance(p.getUniqueId());
+    }
+
     public Optional<MatchShop> shop(MatchId id) {
         return Optional.ofNullable(shops.get(id));
     }
@@ -118,12 +125,6 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         match.flow().addTickable(f -> {
             if (f.state() == MatchState.BUY_PHASE) followHitboxes(match);
             if (++ticks[0] % 20 != 0 || f.state() != MatchState.BUY_PHASE) return;
-            for (Player p : match.onlinePlayers()) {
-                if (!f.participant(p.getUniqueId()).map(Participant::active).orElse(false)) continue;
-                // Temporary money display until the custom HUD (Phase 5) owns the action bar.
-                p.sendActionBar(Component.text("$" + String.format("%,d", shop.economy().balance(p.getUniqueId())), NamedTextColor.GOLD)
-                        .append(Component.text("   Right-click to open the shop", NamedTextColor.GRAY)));
-            }
             menus.refreshWhere(m -> m instanceof ShopMenu s && s.shop() == shop);
         });
         return CompletableFuture.completedFuture(null);
@@ -171,7 +172,8 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                 for (Player p : match.onlinePlayers()) {
                     if (survivors.contains(p.getUniqueId())) shop.reconcile(p);
                     int delta = changes.stream().filter(c -> c.player().equals(p.getUniqueId())).mapToInt(EconomyChange::delta).sum();
-                    if (delta > 0) p.sendMessage(Component.text("+$" + String.format("%,d", delta) + " (round reward)", NamedTextColor.GOLD));
+                    if (delta > 0) p.sendMessage(dev.tactical.paper.hud.ChatStyle.line(dev.tactical.engine.pack.HudGlyphs.CHAT_COIN,
+                            Component.text("+" + String.format("%,d", delta), NamedTextColor.GOLD).append(Component.text(" round reward", NamedTextColor.GRAY))));
                 }
             }
             case MatchFlowEvent.HalftimeStarted ht -> {

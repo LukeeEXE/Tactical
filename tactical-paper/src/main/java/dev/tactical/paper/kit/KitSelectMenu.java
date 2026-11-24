@@ -196,7 +196,7 @@ final class KitSelectMenu extends Menu {
             return;
         }
         p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.6f);
-        p.sendActionBar(Component.text(switch (r) {
+        dev.tactical.paper.hud.ActionBars.status(p, Component.text(switch (r) {
             case TAKEN_BY_TEAMMATE -> "A teammate already locked that kit";
             case WOULD_STRAND_TEAMMATE -> "A teammate has no other option - pick another kit";
             case KIT_NOT_AVAILABLE -> "That kit is not available to you";

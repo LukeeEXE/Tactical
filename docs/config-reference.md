@@ -110,3 +110,19 @@ These are player-facing MiniMessage strings. Placeholder values such as `<round>
 ## `gui/icons.yml`
 `icons: {key: {material: <item>}}`: the placeholder item for each menu icon. Every icon also carries `custom_model_data` `tactical:icon/<key>` for resource-pack textures.
 Kit icons use `icon.material` in `kits/<id>.yml`, plus `tactical:kit/<id>` and `state:<available|selected|locked|taken|unavailable>`.
+
+## `hud/hud.yml`
+Values marked (pack) are baked into the resource pack, so run `/game pack rebuild` after changing them. The rest apply after `/game reload hud`.
+To preview, run `/game match test quickplay none 4`: you plus 4 virtual players per team, no map needed.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `bossbar.font` | pinch | TTF font (from `resourcepack/fonts/`) for the boss bar text and scores. Pinch is used **only** here. |
+| `bossbar.text-offset-y` | 0 | Moves the boss bar text down (+) or up (-) in pixels. |
+| `bossbar.tile-ascent` (pack) | 8 | Vertical position of the team tiles behind the heads. |
+| `bossbar.panel-ascent` (pack) | 9 | Vertical position of the timer panel behind the text. |
+| `bossbar.head-advance` | 9 | Width the client gives an inline head. Tweak this if heads drift out of their tiles. |
+| `bossbar.tile-gap` / `section-gap` / `panel-padding` | 1 / 8 / 4 | Spacing in pixels. |
+| `money.enabled` | true | Show the money widget during matches. |
+| `money.offset-y` (pack) | 33 | Pixels from the action-bar line down to the hunger-bar row. |
+| `money.left` | 10 | Pixels right of the screen centre where the widget starts (the hunger bar starts at 10). |

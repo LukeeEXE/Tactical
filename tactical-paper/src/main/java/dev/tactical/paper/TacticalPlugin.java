@@ -13,6 +13,8 @@ import dev.tactical.paper.kit.KitSelectService;
 import dev.tactical.paper.shop.ShopService;
 import dev.tactical.paper.stats.StatsTracker;
 import dev.tactical.paper.hud.MatchHud;
+import dev.tactical.paper.hud.HudService;
+import dev.tactical.paper.hud.HudText;
 import dev.tactical.paper.lobby.LobbyService;
 import dev.tactical.paper.map.MapEditorService;
 import dev.tactical.paper.map.MapService;
@@ -51,6 +53,8 @@ public final class TacticalPlugin extends JavaPlugin {
         AuditService audit = services.register(AuditService.class, new AuditService(db, getLogger()));
         RecorderService recorders = services.register(RecorderService.class, new RecorderService(config, getLogger()));
         PlayerService players = services.register(PlayerService.class, new PlayerService(this, db, getLogger()));
+        HudText hudText = new HudText(config.root().resolve("resourcepack/fonts"));
+        HudService hud = services.register(HudService.class, new HudService(this, config, hudText));
         LobbyService lobby = services.register(LobbyService.class, new LobbyService(config, getLogger()));
         MapService maps = services.register(MapService.class, new MapService(config, tasks, getLogger()));
         MapEditorService editor = services.register(MapEditorService.class, new MapEditorService(this, maps));
@@ -64,9 +68,10 @@ public final class TacticalPlugin extends JavaPlugin {
         HotbarItems hotbar = new HotbarItems(this, icons);
         // Order matters: these hooks run after ArenaService's, so they act on the freshly placed players.
         StatsTracker statsTracker = services.register(StatsTracker.class, new StatsTracker(this, matches));
-        services.register(MatchHud.class, new MatchHud(this, matches, statsTracker));
+        services.register(MatchHud.class, new MatchHud(this, matches, statsTracker, config, hudText));
         services.register(KitSelectService.class, new KitSelectService(this, config, matches, menus, icons, hotbar));
-        services.register(ShopService.class, new ShopService(this, config, maps, matches, menus, icons, hotbar, getLogger()));
+        ShopService shops = services.register(ShopService.class, new ShopService(this, config, maps, matches, menus, icons, hotbar, getLogger()));
+        hud.setMoneyProvider(shops::balance);
         services.register(VitalsService.class, new VitalsService(this, config, p -> matches.matchOf(p.getUniqueId())
                 .map(m -> !m.flow().isPaused() && m.flow().participant(p.getUniqueId()).map(x -> x.active()).orElse(false))
                 .orElse(true)));

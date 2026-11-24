@@ -101,7 +101,7 @@ final class ShopMenu extends Menu {
 
     private static void deny(Player p, String msg) {
         p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.6f);
-        p.sendActionBar(Component.text(msg, NamedTextColor.RED));
+        dev.tactical.paper.hud.ActionBars.status(p, Component.text(msg, NamedTextColor.RED));
     }
 
     static String message(MatchShop.BuyResult r) {

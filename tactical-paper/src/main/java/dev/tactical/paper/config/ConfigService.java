@@ -50,14 +50,14 @@ public final class ConfigService implements Service {
             "modes/quickplay.yml", "modes/competitive.yml", "modes/test.yml",
             "kits/vanguard.yml", "kits/sentinel.yml", "kits/phantom.yml",
             "kits/warden.yml", "kits/striker.yml", "kits/medic.yml",
-            "messages/en_US.yml", "shops/default.yml", "economy/economy.yml", "gui/icons.yml");
+            "messages/en_US.yml", "shops/default.yml", "economy/economy.yml", "gui/icons.yml", "hud/hud.yml");
 
     /** Folders created on first start, even if empty, so admins see the layout. */
     static final List<String> FOLDERS = List.of("maps", "map-pools", "kits", "items", "shops", "economy",
-            "sounds", "npc", "modes", "messages", "logs/matches", "backups", "data", "resourcepack", "lobby", "blocks", "gui");
+            "sounds", "npc", "modes", "messages", "logs/matches", "backups", "data", "resourcepack", "lobby", "blocks", "gui", "hud");
 
     public enum Target {
-        CONFIG, MODES, KITS, MESSAGES, MAPS, SHOPS, ECONOMY, ALL;
+        CONFIG, MODES, KITS, MESSAGES, MAPS, SHOPS, ECONOMY, HUD, ALL;
 
         public static Optional<Target> parse(String s) {
             try {
@@ -78,6 +78,7 @@ public final class ConfigService implements Service {
     private volatile Map<String, String> messages = Map.of();
     private volatile Map<String, dev.tactical.paper.shop.ShopDefinition> shops = Map.of();
     private volatile dev.tactical.engine.economy.EconomyRules economy = dev.tactical.engine.economy.EconomyRules.defaults();
+    private volatile dev.tactical.paper.hud.HudConfig hud = dev.tactical.paper.hud.HudConfig.defaults();
 
     public ConfigService(Plugin plugin) {
         this.plugin = plugin;
@@ -137,6 +138,10 @@ public final class ConfigService implements Service {
         return economy;
     }
 
+    public dev.tactical.paper.hud.HudConfig hud() {
+        return hud;
+    }
+
     // ------------------------------------------------------------------ loading
 
     public synchronized ConfigReport reload(Target target) {
@@ -187,6 +192,14 @@ public final class ConfigService implements Service {
                         if (!er.hasErrors()) economy = e;
                     });
             report.addAll(er);
+        }
+        if (target == Target.HUD || target == Target.ALL) {
+            ConfigReport hr = new ConfigReport();
+            loadFile(root.resolve("hud/hud.yml"), "hud", dev.tactical.paper.hud.HudConfig.SCHEMA_VERSION, hr)
+                    .map(dev.tactical.paper.hud.HudConfig::parse).ifPresent(h -> {
+                        if (!hr.hasErrors()) hud = h;
+                    });
+            report.addAll(hr);
         }
         for (ConfigIssue issue : report.issues()) {
             if (issue.severity() == ConfigIssue.Severity.ERROR) log.severe(issue.toString());

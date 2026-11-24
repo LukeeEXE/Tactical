@@ -58,11 +58,17 @@ public final class PackBuilder {
     private final int formatMajor;
     private final int formatMinor;
     private final String description;
+    private final HudLayout hud;
 
     public PackBuilder(int formatMajor, int formatMinor, String description) {
+        this(formatMajor, formatMinor, description, HudLayout.DEFAULT);
+    }
+
+    public PackBuilder(int formatMajor, int formatMinor, String description, HudLayout hud) {
         this.formatMajor = formatMajor;
         this.formatMinor = formatMinor;
         this.description = description;
+        this.hud = hud;
     }
 
     /**
@@ -83,6 +89,7 @@ public final class PackBuilder {
         addNegativeSpaceFont(files, issues);
         generateVerticalOffsetFonts(files);
         generateTrueTypeFonts(sourceRoot.resolve("fonts"), files, issues);
+        generateHud(files);
         Map<String, byte[]> user = new TreeMap<>();
         readTree(sourceRoot.resolve("assets"), "assets/", user);
         generateBlocks(blocks, knownBlocks, user, files, issues);
@@ -255,6 +262,43 @@ public final class PackBuilder {
     private static boolean startsWith(byte[] d, int... prefix) {
         for (int i = 0; i < prefix.length; i++) if ((d[i] & 0xFF) != prefix[i]) return false;
         return true;
+    }
+
+    // ------------------------------------------------------------------ HUD glyphs
+
+    /**
+     * HUD and chat glyphs (original pixel art, see {@link HudGlyphs}) in three fonts with their own vertical
+     * placement: {@code tactical:hud_chat}, {@code tactical:hud_bossbar}, {@code tactical:hud_money}. Textures live
+     * at {@code assets/tactical/textures/hud/<name>.png}, so an admin PNG at that path replaces the art.
+     * Also restyles the YELLOW boss bar as a thin progress line (the match HUD uses that colour).
+     */
+    private void generateHud(Map<String, byte[]> files) {
+        Map<HudGlyphs.Group, com.google.gson.JsonArray> providers = new java.util.EnumMap<>(HudGlyphs.Group.class);
+        for (HudGlyphs.Glyph g : HudGlyphs.all()) {
+            files.put("assets/tactical/textures/hud/" + g.name() + ".png", HudGlyphs.png(g.image()));
+            int ascent = switch (g.group()) {
+                case CHAT -> 7;
+                case BOSSBAR -> g.height() == HudGlyphs.PANEL_HEIGHT ? hud.bossbarPanelAscent()
+                        : g.height() == HudGlyphs.TILE_SIZE ? hud.bossbarTileAscent() : hud.bossbarTileAscent() - 1;
+                case MONEY -> g.height() == HudGlyphs.PANEL_HEIGHT ? 7 - (hud.moneyOffsetY() - 2) : 7 - hud.moneyOffsetY();
+            };
+            JsonObject p = new JsonObject();
+            p.addProperty("type", "bitmap");
+            p.addProperty("file", "tactical:hud/" + g.name() + ".png");
+            p.addProperty("ascent", Math.min(ascent, g.height()));
+            p.addProperty("height", g.height());
+            com.google.gson.JsonArray chars = new com.google.gson.JsonArray();
+            chars.add(String.valueOf(g.ch()));
+            p.add("chars", chars);
+            providers.computeIfAbsent(g.group(), k -> new com.google.gson.JsonArray()).add(p);
+        }
+        for (Map.Entry<HudGlyphs.Group, com.google.gson.JsonArray> e : providers.entrySet()) {
+            JsonObject font = new JsonObject();
+            font.add("providers", e.getValue());
+            files.put("assets/tactical/font/hud_" + e.getKey().name().toLowerCase(java.util.Locale.ROOT) + ".json", json(font));
+        }
+        files.put("assets/minecraft/textures/gui/sprites/boss_bar/yellow_background.png", HudGlyphs.png(HudGlyphs.bossBarLine(false)));
+        files.put("assets/minecraft/textures/gui/sprites/boss_bar/yellow_progress.png", HudGlyphs.png(HudGlyphs.bossBarLine(true)));
     }
 
     // ------------------------------------------------------------------ construction block
