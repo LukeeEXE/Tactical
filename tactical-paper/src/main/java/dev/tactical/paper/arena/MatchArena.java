@@ -100,6 +100,7 @@ public final class MatchArena {
     private void onEvent(MatchFlowEvent event) {
         switch (event) {
             case MatchFlowEvent.RoundStarted e -> startRound();
+            case MatchFlowEvent.KitSelectionOpened e -> respawnAll();
             case MatchFlowEvent.RoundLive e -> {
                 int removed = removeBarriers();
                 world.playSound(world.getSpawnLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 0f, 1f);
@@ -134,6 +135,55 @@ public final class MatchArena {
             if (flow.participant(p.getUniqueId()).map(Participant::active).orElse(false)) placeAtSpawn(p);
         }
         bomb.onRoundStart();
+        spawnPickups();
+    }
+
+    /**
+     * Kit selection (start, halftime, sudden death): everyone - including players who died last round - is brought
+     * back to their spawn, alive, so they can right-click to (re)open the kit menu.
+     */
+    private void respawnAll() {
+        spectators.reset();
+        for (Player p : match.onlinePlayers()) {
+            if (match.isMember(p.getUniqueId())) placeAtSpawn(p);
+        }
+    }
+
+    // ------------------------------------------------------------------ pickups
+
+    private final List<org.bukkit.entity.Item> pickups = new ArrayList<>();
+    private final NamespacedKey pickupKey = new NamespacedKey("tactical", "pickup");
+
+    /** (Re)spawns the map's pickup items: never despawn or merge, pick-up straight away, only by alive players. */
+    private void spawnPickups() {
+        removePickups();
+        for (var k : map.pickups()) {
+            ItemStack item = parseItem(k.item() + ":" + k.amount());
+            if (item == null) {
+                log.warning("[match=" + match.id() + "] map " + map.id() + ": unknown pickup item '" + k.item() + "'");
+                continue;
+            }
+            ItemStack prepared = dev.tactical.paper.shop.MatchShop.prepare(item);
+            Location at = new Location(world, k.x(), k.y(), k.z());
+            pickups.add(world.dropItem(at, prepared, i -> {
+                i.setVelocity(new org.bukkit.util.Vector());
+                i.setPickupDelay(0);
+                i.setUnlimitedLifetime(true);
+                i.setCanMobPickup(false);
+                i.setPersistent(false);
+                i.getPersistentDataContainer().set(pickupKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+            }));
+        }
+    }
+
+    private void removePickups() {
+        for (org.bukkit.entity.Item i : pickups) if (i.isValid()) i.remove();
+        pickups.clear();
+    }
+
+    /** True if the item entity is one of this match's map pickups. */
+    public boolean isPickup(org.bukkit.entity.Item item) {
+        return item.getPersistentDataContainer().has(pickupKey);
     }
 
     private int removeBarriers() {
@@ -261,6 +311,7 @@ public final class MatchArena {
     /** Moves everyone out of the instance (participants and anyone else) and removes match entities. */
     public void evacuate() {
         bomb.removeEntities();
+        removePickups();
         for (Player p : List.copyOf(world.getPlayers())) {
             try {
                 // setSpectatorTarget throws for players who are not spectators (i.e. everyone still alive).

@@ -176,3 +176,17 @@ All positions are estimates and need a client check; every value is adjustable i
 | Square corners | All panels and tiles have square corners |
 | Round breakdown | After the winner line, one row per team: `[team icon]` (the provided 16x16 icon, tinted red/blue) then a W/L box per round (placeholders `round_win.png` / `round_loss.png`) with dividers at halftime and before sudden death |
 | Team icon everywhere | The 16x16 grey team icon, tinted red/blue, replaces every team shield: kill feed, player names, team names, winner line, team headers and round history |
+
+### HUD round 6
+| Request | Change |
+|---|---|
+| Remove text shadows (NoShadow shader) | That shader no longer works on 1.21.4+, so the built-in `shadow_color` text property is used instead: every boss bar, action bar and HUD background is sent with no shadow. No shader needed |
+| Dead players can't reopen the kit menu | When a kit selection opens (start, halftime, sudden death), everyone is teleported to their spawn, alive. Right-click (the same invisible hitbox as the shop) opens the kit menu; the nether-star item is gone |
+| Money offset moves with other action-bar text | Every action-bar part (money, hint box, status messages) now has zero width, so each one is positioned independently of the others |
+| Map pickup items | `/game map pickup add <item> [amount]`, `removenearest`, `clear`; green particles in the editor. They respawn every round, never despawn or merge, and only alive players can pick them up. Verified on the test server (golden apple spawned at round start) |
+| Boss bar width changes / heads move | Every section has a fixed width: the timer panel is sized for the longest possible label (`bossbar.timer-width`), score boxes for two digits, strips for a full team |
+| One rectangle behind the heads, bigger score with a background | One translucent team-coloured strip per team; scores use a double-size Pinch font in a dark box |
+| Action-bar hint box | Dark two-line box: orange "Right-click to select a kit" / white "No kit selected" (or "Selected: X" / "Locked: X"), and "Right-click to open the shop" / "Buy phase ends in m:ss" in the buy phase. Status messages (plant/defuse progress) replace the second line |
+| Remove kill/round reasons | "(fell out of bounds)", "(bomb defused)" etc. are gone from chat |
+| Breakdown lines | Light gray instead of red |
+

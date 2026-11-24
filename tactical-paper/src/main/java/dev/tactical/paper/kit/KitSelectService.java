@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Opens the kit selection menu for every participant whenever a selection starts (match start, halftime,
  * sudden death), keeps all open menus live while teammates and opponents pick, and closes them when it ends.
- * Players who close the menu reopen it with the hotbar item.
+ * Players who close the menu reopen it by right-clicking (the shop's hitbox, see ShopService).
  */
 public final class KitSelectService implements Service, Listener, MatchLifecycleHook {
 
@@ -71,7 +71,7 @@ public final class KitSelectService implements Service, Listener, MatchLifecycle
         switch (e) {
             case MatchFlowEvent.KitSelectionOpened o -> Bukkit.getScheduler().runTask(plugin, () -> {
                 for (Player p : match.onlinePlayers()) {
-                    hotbar.give(p, HotbarItems.KIT, OPENER_SLOT);
+                    hotbar.remove(p, HotbarItems.KIT);
                     open(p, match);
                 }
             });
@@ -85,10 +85,7 @@ public final class KitSelectService implements Service, Listener, MatchLifecycle
             case MatchFlowEvent.PlayerReconnected r -> {
                 Player p = Bukkit.getPlayer(r.player());
                 if (p != null && match.flow().kitSelection().isPresent()) {
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        hotbar.give(p, HotbarItems.KIT, OPENER_SLOT);
-                        open(p, match);
-                    }, 10L);
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> open(p, match), 10L);
                 }
             }
             default -> { }
@@ -97,6 +94,29 @@ public final class KitSelectService implements Service, Listener, MatchLifecycle
 
     private void refresh(GameMatch match) {
         menus.refreshWhere(m -> m instanceof KitSelectMenu k && k.match() == match);
+    }
+
+    /** Action-bar hint during kit selection: how to (re)open the menu and what is currently picked. */
+    public dev.tactical.paper.hud.HudService.Hint hint(Player p) {
+        GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
+        if (m == null || !m.state().isKitSelection()) return null;
+        var sel = m.flow().kitSelection().orElse(null);
+        if (sel == null || sel.optionsOf(p.getUniqueId()).isEmpty()) return null;
+        String detail = sel.lockedBy(p.getUniqueId()).map(k -> "Locked: " + kitName(k))
+                .or(() -> sel.hoveredBy(p.getUniqueId()).map(k -> "Selected: " + kitName(k)))
+                .orElse("No kit selected");
+        return new dev.tactical.paper.hud.HudService.Hint("Right-click to select a kit",
+                dev.tactical.paper.shop.ShopService.HINT_ORANGE, detail, net.kyori.adventure.text.format.NamedTextColor.WHITE);
+    }
+
+    private String kitName(String id) {
+        var d = config.kits().get(id);
+        return d == null ? id : d.name();
+    }
+
+    /** Opens the kit menu for a member while a selection is running (also used by the right-click hitbox). */
+    public void openFor(Player p, GameMatch match) {
+        open(p, match);
     }
 
     private void open(Player p, GameMatch match) {

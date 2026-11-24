@@ -35,7 +35,7 @@ class MapTest {
     @Test
     void roundTripsThroughYaml() {
         MapDefinition m = valid().withBarriers(List.of(new Barrier("atk", Region.of(new BlockPos(-45, 10, -3), new BlockPos(-45, 13, 3)),
-                List.of("minecraft:glass"))), 2);
+                List.of("minecraft:glass"))), 2).withPickups(List.of(new Pickup("arrow", 8, 1.5, 10, 2.5)), 3);
         DumperOptions o = new DumperOptions();
         o.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
         String yaml = new Yaml(o).dump(MapCodec.toYaml(m));

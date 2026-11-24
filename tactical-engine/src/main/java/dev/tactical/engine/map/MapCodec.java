@@ -22,7 +22,7 @@ public final class MapCodec {
     public static final Pattern SITE_ID = Pattern.compile("[A-Za-z0-9_]{1,16}");
 
     private static final List<String> KEYS = List.of("schema-version", "id", "name", "author", "enabled", "version",
-            "status", "modes", "bounds", "void-y", "spawns", "bomb-sites", "barriers", "construction", "kits", "shop",
+            "status", "modes", "bounds", "void-y", "spawns", "bomb-sites", "barriers", "construction", "pickups", "kits", "shop",
             "updated-at");
 
     private MapCodec() {
@@ -73,6 +73,15 @@ public final class MapCodec {
             if (r != null) construction.add(r);
         }
 
+        List<Pickup> pickups = new ArrayList<>();
+        for (ConfigNode n : root.child("pickups").list()) {
+            n.warnUnknownKeys(List.of("item", "amount", "x", "y", "z"));
+            String item = n.requireString("item");
+            int amount = n.integer("amount", 1, 1, 64);
+            if (item != null) pickups.add(new Pickup(item, amount, n.number("x", 0, -3e7, 3e7), n.number("y", 0, -2048, 2048),
+                    n.number("z", 0, -3e7, 3e7)));
+        }
+
         ConfigNode k = root.child("kits");
         k.warnUnknownKeys(List.of("mode", "list"));
         KitRestriction kits = new KitRestriction(k.enumValue("mode", KitRestriction.Mode.class, KitRestriction.Mode.ALL),
@@ -82,7 +91,7 @@ public final class MapCodec {
 
         if (root.report().errors().size() > before) return Optional.empty();
         return Optional.of(new MapDefinition(id, name, author, enabled, version, status, modes, bounds, atk, def, sites,
-                barriers, construction, kits, shop, voidY, updated));
+                barriers, construction, pickups, kits, shop, voidY, updated));
     }
 
     /** Serialises to plain maps/lists for YAML dumping. */
@@ -119,6 +128,17 @@ public final class MapCodec {
         }
         o.put("barriers", barriers);
         o.put("construction", Map.of("allowed-regions", m.constructionRegions().stream().map(MapCodec::region).toList()));
+        List<Map<String, Object>> pickups = new ArrayList<>();
+        for (Pickup p : m.pickups()) {
+            Map<String, Object> po = new LinkedHashMap<>();
+            po.put("item", p.item());
+            po.put("amount", p.amount());
+            po.put("x", round(p.x()));
+            po.put("y", round(p.y()));
+            po.put("z", round(p.z()));
+            pickups.add(po);
+        }
+        o.put("pickups", pickups);
         Map<String, Object> kits = new LinkedHashMap<>();
         kits.put("mode", m.kits().mode().name().toLowerCase(Locale.ROOT));
         kits.put("list", m.kits().kits().stream().sorted().toList());

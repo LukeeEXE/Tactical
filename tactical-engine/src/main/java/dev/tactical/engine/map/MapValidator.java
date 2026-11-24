@@ -66,6 +66,12 @@ public final class MapValidator {
         for (Region r : m.constructionRegions()) {
             if (m.bounds() != null && !m.bounds().contains(r)) p.add(err("A construction region is outside the map boundaries."));
         }
+        for (Pickup pk : m.pickups()) {
+            if (m.bounds() != null && !m.bounds().contains(pk.x(), pk.y(), pk.z())) {
+                p.add(err("Pickup '" + pk.item() + "' at " + Math.round(pk.x()) + "," + Math.round(pk.y()) + "," + Math.round(pk.z())
+                        + " is outside the map boundaries."));
+            }
+        }
         if (m.modes().isEmpty()) p.add(err("The map supports no game modes."));
         for (String mode : m.modes()) {
             if (!knownModes.contains(mode)) p.add(warn("Unknown mode '" + mode + "'."));

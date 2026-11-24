@@ -252,6 +252,25 @@ public final class PackBuilder {
                 String id = n == 0 ? name : n > 0 ? name + "_down_" + n : name + "_up_" + (-n);
                 files.put("assets/tactical/font/" + id + ".json", json(font));
             }
+            // Double-size variant for large text (e.g. boss bar scores): tactical:<name>_x2 and _x2_down/up_<n> (n <= 32).
+            for (int n = -32; n <= 32; n++) {
+                JsonObject ttf = new JsonObject();
+                ttf.addProperty("type", "ttf");
+                ttf.addProperty("file", "tactical:" + name + ".ttf");
+                ttf.addProperty("size", size * 2);
+                ttf.addProperty("oversample", Math.max(1, oversample / 2));
+                com.google.gson.JsonArray shift = new com.google.gson.JsonArray();
+                shift.add(shiftX);
+                shift.add(shiftY + n);
+                ttf.add("shift", shift);
+                ttf.addProperty("skip", "");
+                com.google.gson.JsonArray providers = new com.google.gson.JsonArray();
+                providers.add(ttf);
+                JsonObject font = new JsonObject();
+                font.add("providers", providers);
+                String id = n == 0 ? name + "_x2" : n > 0 ? name + "_x2_down_" + n : name + "_x2_up_" + (-n);
+                files.put("assets/tactical/font/" + id + ".json", json(font));
+            }
             for (String credit : List.of(base + ".LICENSE.txt", base + ".txt")) {
                 Path c = dir.resolve(credit);
                 if (Files.exists(c)) files.put("credits/fonts/" + credit, Files.readAllBytes(c));
@@ -274,31 +293,42 @@ public final class PackBuilder {
      * uses these two colours; nothing else on the server does).
      */
     private void generateHud(Map<String, byte[]> files) {
-        Map<HudGlyphs.Group, com.google.gson.JsonArray> providers = new java.util.EnumMap<>(HudGlyphs.Group.class);
+        Map<String, com.google.gson.JsonArray> providers = new java.util.TreeMap<>();
         for (HudGlyphs.Glyph g : HudGlyphs.all()) {
             files.put("assets/tactical/textures/hud/" + g.name() + ".png", HudGlyphs.png(g.image()));
-            int ascent = switch (g.group()) {
+            // Chat and boss-bar icons render at letter height (8 px) whatever the source size (8x8 or 16x16).
+            int height = g.slot() == HudGlyphs.Slot.CHAT || g.slot() == HudGlyphs.Slot.BAR_ICON || g.slot() == HudGlyphs.Slot.MONEY_ICON
+                    ? 8 : g.height();
+            int ascent = switch (g.slot()) {
                 case CHAT -> 7;
-                case BOSSBAR -> g.height() == HudGlyphs.PANEL_HEIGHT ? hud.bossbarPanelAscent()
-                        : g.height() == HudGlyphs.TILE_SIZE ? hud.bossbarTileAscent() : hud.bossbarTileAscent() - 1;
-                case MONEY -> g.height() == HudGlyphs.PANEL_HEIGHT ? 7 - (hud.moneyOffsetY() - 2) : 7 - hud.moneyOffsetY();
+                case BAR_ICON -> hud.bossbarTileAscent() - 1;
+                case BAR_STRIP -> hud.bossbarTileAscent();
+                case BAR_PANEL -> hud.bossbarPanelAscent();
+                case BAR_SCORE -> hud.bossbarScoreAscent();
+                case MONEY_PANEL -> 7 - (hud.moneyOffsetY() - 2);
+                case MONEY_ICON -> 7 - hud.moneyOffsetY();
+                case ACTION_PANEL -> hud.actionPanelAscent();
+            };
+            String font = switch (g.slot()) {
+                case CHAT -> "hud_chat";
+                case BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE -> "hud_bossbar";
+                case MONEY_PANEL, MONEY_ICON -> "hud_money";
+                case ACTION_PANEL -> "hud_actionbar";
             };
             JsonObject p = new JsonObject();
             p.addProperty("type", "bitmap");
             p.addProperty("file", "tactical:hud/" + g.name() + ".png");
-            // Chat icons always render at letter height (8 px), whatever the source size (8x8 or 16x16).
-            int height = g.group() == HudGlyphs.Group.CHAT ? 8 : g.height();
             p.addProperty("ascent", Math.min(ascent, height));
             p.addProperty("height", height);
             com.google.gson.JsonArray chars = new com.google.gson.JsonArray();
             chars.add(String.valueOf(g.ch()));
             p.add("chars", chars);
-            providers.computeIfAbsent(g.group(), k -> new com.google.gson.JsonArray()).add(p);
+            providers.computeIfAbsent(font, k -> new com.google.gson.JsonArray()).add(p);
         }
-        for (Map.Entry<HudGlyphs.Group, com.google.gson.JsonArray> e : providers.entrySet()) {
+        for (Map.Entry<String, com.google.gson.JsonArray> e : providers.entrySet()) {
             JsonObject font = new JsonObject();
             font.add("providers", e.getValue());
-            files.put("assets/tactical/font/hud_" + e.getKey().name().toLowerCase(java.util.Locale.ROOT) + ".json", json(font));
+            files.put("assets/tactical/font/" + e.getKey() + ".json", json(font));
         }
         files.put("assets/minecraft/textures/gui/sprites/boss_bar/yellow_background.png", HudGlyphs.png(HudGlyphs.bossBarLine(false)));
         files.put("assets/minecraft/textures/gui/sprites/boss_bar/yellow_progress.png", HudGlyphs.png(HudGlyphs.bossBarLine(true)));

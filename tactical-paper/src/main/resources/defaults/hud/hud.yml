@@ -4,14 +4,20 @@ schema-version: 1
 bossbar:
   font: pinch            # a TTF font from resourcepack/fonts/ used for the boss bar text
   text-offset-y: 0       # move the boss bar text down (+) or up (-) in pixels (uses <font>_down_N / _up_N)
-  tile-ascent: 8         # (pack) team tiles behind the heads; higher = tiles drawn higher
+  tile-ascent: 8         # (pack) team strip behind the heads; higher = drawn higher
   panel-ascent: 9        # (pack) timer panel behind the text; higher = drawn higher
   head-advance: 9        # width the client gives an inline player head (8 px + 1); tweak if tiles drift
-  tile-gap: 1            # pixels between two player tiles
-  section-gap: 8         # pixels between the score, the tiles and the timer panel
+  head-slot: 10          # horizontal space per player on the team strip (head 8 px + 2 px gap)
+  strip-padding: 2       # strip background beyond the first/last head
+  section-gap: 6         # pixels between the strip, the score box and the timer panel
+  score-ascent: 9        # (pack) score box (16 px tall) vertical position
+  score-offset-y: 3      # move the big score text down (+) / up (-)
+  timer-width: 0         # fixed timer panel width; 0 = wide enough for the longest label (keeps everything still)
   panel-padding: 4       # pixels of panel left/right of the timer text
   row-spacing: 19        # distance between two boss bars (vanilla: 19); the timer text is drawn on a second,
                          # invisible boss bar and moved up by this much so the client centres it exactly
+actionbar:
+  panel-ascent: 9        # (pack) two-line hint box ("Right-click to ...") vertical position
 money:
   enabled: true
   offset-y: 33           # (pack) pixels from the action-bar line down to the hunger-bar row

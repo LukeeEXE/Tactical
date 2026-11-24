@@ -123,7 +123,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                 a -> shop.recordChanges(shop.economy().onAssist(a.assister())));
         int[] ticks = {0};
         match.flow().addTickable(f -> {
-            if (f.state() == MatchState.BUY_PHASE) followHitboxes(match);
+            if (hitboxPhase(match)) followHitboxes(match);
             if (++ticks[0] % 20 != 0 || f.state() != MatchState.BUY_PHASE) return;
             menus.refreshWhere(m -> m instanceof ShopMenu s && s.shop() == shop);
         });
@@ -151,6 +151,9 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                 Bukkit.getScheduler().runTaskLater(plugin, () -> resendEquipment(match), 2L);
                 Bukkit.getScheduler().runTaskLater(plugin, () -> spawnHitboxes(match), 3L);
             }
+            case MatchFlowEvent.KitSelectionOpened ko ->
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> spawnHitboxes(match), 3L);
+            case MatchFlowEvent.KitSelectionClosed kc -> removeHitboxes(match);
             case MatchFlowEvent.RoundLive rl -> {
                 removeHitboxes(match);
                 menus.closeWhere(m -> m instanceof ShopMenu s && s.shop() == shop);
@@ -208,10 +211,16 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
     private final Map<UUID, org.bukkit.entity.Interaction> hitboxes = new HashMap<>();
     private final Set<UUID> hitboxHidden = new HashSet<>();
 
+    /** Hitboxes exist while a right-click opens a menu: the buy phase (shop) and kit selection (kit menu). */
+    private static boolean hitboxPhase(GameMatch match) {
+        return match.state() == MatchState.BUY_PHASE || match.state().isKitSelection();
+    }
+
     private void spawnHitboxes(GameMatch match) {
-        if (match.state() != MatchState.BUY_PHASE) return;
+        if (!hitboxPhase(match)) return;
+        boolean kits = match.state().isKitSelection();
         for (Player p : match.onlinePlayers()) {
-            if (!match.flow().participant(p.getUniqueId()).map(Participant::active).orElse(false)) continue;
+            if (!kits && !match.flow().participant(p.getUniqueId()).map(Participant::active).orElse(false)) continue;
             removeHitbox(p.getUniqueId());
             org.bukkit.Location at = hitboxLocation(p);
             org.bukkit.entity.Interaction box = p.getWorld().spawn(at, org.bukkit.entity.Interaction.class, i -> {
@@ -279,10 +288,40 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         boolean own = isOwnHitbox(e.getPlayer(), e.getRightClicked());
         if (!own && !hitboxes.containsValue(e.getRightClicked())) return;
         e.setCancelled(true);
-        if (!own || e.getHand() != EquipmentSlot.HAND) return;
-        MatchShop shop = buyingShop(e.getPlayer());
-        if (shop != null && menus.openMenu(e.getPlayer()).isEmpty()) openShop(e.getPlayer(), shop);
+        if (!own || e.getHand() != EquipmentSlot.HAND || menus.openMenu(e.getPlayer()).isPresent()) return;
+        openMenuFor(e.getPlayer());
     }
+
+    private java.util.function.BiConsumer<Player, GameMatch> kitOpener = (p, m) -> { };
+
+    /** The kit selection menu opener (KitSelectService), used by the right-click hitbox during kit selection. */
+    public void setKitOpener(java.util.function.BiConsumer<Player, GameMatch> opener) {
+        this.kitOpener = opener;
+    }
+
+    /** Opens whatever a right-click opens right now (kit menu or shop); false if nothing. */
+    private boolean openMenuFor(Player p) {
+        GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
+        if (m != null && m.state().isKitSelection()) {
+            kitOpener.accept(p, m);
+            return true;
+        }
+        MatchShop shop = buyingShop(p);
+        if (shop == null) return false;
+        openShop(p, shop);
+        return true;
+    }
+
+    /** Action-bar hint while the shop can be opened. */
+    public dev.tactical.paper.hud.HudService.Hint hint(Player p) {
+        GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
+        if (m == null || buyingShop(p) == null) return null;
+        int s = (Math.max(0, m.flow().stateTicksRemaining()) + 19) / 20;
+        return new dev.tactical.paper.hud.HudService.Hint("Right-click to open the shop", HINT_ORANGE,
+                String.format("Buy phase ends in %d:%02d", s / 60, s % 60), NamedTextColor.WHITE);
+    }
+
+    public static final net.kyori.adventure.text.format.TextColor HINT_ORANGE = net.kyori.adventure.text.format.TextColor.color(0xFFA62B);
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onHitboxHit(EntityDamageByEntityEvent e) {
@@ -359,19 +398,13 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         if (e.getHand() != EquipmentSlot.HAND) return;
         if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (holdsRightClickItem(e.getPlayer())) return;
-        MatchShop shop = buyingShop(e.getPlayer());
-        if (shop == null) return;
-        e.setCancelled(true);
-        openShop(e.getPlayer(), shop);
+        if (openMenuFor(e.getPlayer())) e.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onUseEntity(org.bukkit.event.player.PlayerInteractEntityEvent e) {
         if (e.getHand() != EquipmentSlot.HAND || holdsRightClickItem(e.getPlayer())) return;
-        MatchShop shop = buyingShop(e.getPlayer());
-        if (shop == null) return;
-        e.setCancelled(true);
-        openShop(e.getPlayer(), shop);
+        if (openMenuFor(e.getPlayer())) e.setCancelled(true);
     }
 
 

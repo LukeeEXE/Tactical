@@ -69,9 +69,12 @@ public final class TacticalPlugin extends JavaPlugin {
         // Order matters: these hooks run after ArenaService's, so they act on the freshly placed players.
         StatsTracker statsTracker = services.register(StatsTracker.class, new StatsTracker(this, matches));
         services.register(MatchHud.class, new MatchHud(this, matches, statsTracker, config, hudText));
-        services.register(KitSelectService.class, new KitSelectService(this, config, matches, menus, icons, hotbar));
+        KitSelectService kitSelect = services.register(KitSelectService.class, new KitSelectService(this, config, matches, menus, icons, hotbar));
         ShopService shops = services.register(ShopService.class, new ShopService(this, config, maps, matches, menus, icons, hotbar, getLogger()));
         hud.setMoneyProvider(shops::balance);
+        shops.setKitOpener(kitSelect::openFor);
+        hud.addHintProvider(kitSelect::hint);
+        hud.addHintProvider(shops::hint);
         services.register(VitalsService.class, new VitalsService(this, config, p -> matches.matchOf(p.getUniqueId())
                 .map(m -> !m.flow().isPaused() && m.flow().participant(p.getUniqueId()).map(x -> x.active()).orElse(false))
                 .orElse(true)));

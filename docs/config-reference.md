@@ -119,10 +119,16 @@ To preview, run `/game match test quickplay none 4`: you plus 4 virtual players 
 |---|---|---|
 | `bossbar.font` | pinch | TTF font (from `resourcepack/fonts/`) for the boss bar text and scores. Pinch is used **only** here. |
 | `bossbar.text-offset-y` | 0 | Moves the boss bar text down (+) or up (-) in pixels. |
-| `bossbar.tile-ascent` (pack) | 8 | Vertical position of the team tiles behind the heads. |
+| `bossbar.tile-ascent` (pack) | 8 | Vertical position of the team strip behind the heads. |
 | `bossbar.panel-ascent` (pack) | 9 | Vertical position of the timer panel behind the text. |
-| `bossbar.head-advance` | 9 | Width the client gives an inline head. Tweak this if heads drift out of their tiles. |
-| `bossbar.tile-gap` / `section-gap` / `panel-padding` | 1 / 8 / 4 | Spacing in pixels. |
+| `bossbar.score-ascent` (pack) | 9 | Vertical position of the score boxes. |
+| `bossbar.score-offset-y` | 3 | Moves the big (double-size) score digits down (+) or up (-) inside their box. |
+| `bossbar.head-advance` | 9 | Width the client gives an inline head. Tweak this if heads drift out of their slots. |
+| `bossbar.head-slot` | 10 | Pixels per head on the team strip (head plus gap). |
+| `bossbar.strip-padding` | 2 | Team-coloured margin left and right of the heads. |
+| `bossbar.section-gap` / `panel-padding` | 6 / 4 | Gaps between strip, score box and timer panel, and the timer's inner margin. |
+| `bossbar.timer-width` | 0 | Fixed timer panel width in pixels. 0 = wide enough for the longest label, so the row never changes width. |
+| `actionbar.panel-ascent` (pack) | 9 | Vertical position of the two-line hint box ("Right-click to select a kit"). |
 | `money.enabled` | true | Show the money widget during matches. |
 | `money.offset-y` (pack) | 33 | Pixels from the action-bar line down to the hunger-bar row. |
 | `money.left` | 10 | Pixels right of the screen centre where the widget starts (the hunger bar starts at 10). |

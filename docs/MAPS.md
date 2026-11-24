@@ -9,7 +9,7 @@ Every change is saved immediately to `plugins/Tactical/maps/<id>.yml`. The previ
 ```
 - Build the map normally. The template world (`tactical:map_ascent`) is only ever used for editing.
 - `/game map edit <id>` comes back to it later; `/game map leave` returns to the lobby.
-- Particle previews: white = boundaries, red = bomb sites, aqua = barriers, lime = construction zones, yellow = your selection. Red and blue columns mark attacker and defender spawns. Toggle with `/game map preview`.
+- Particle previews: white = boundaries, red = bomb sites, aqua = barriers, lime = construction zones, yellow = your selection, green sparkles = pickups. Red and blue columns mark attacker and defender spawns. Toggle with `/game map preview`.
 
 ## 2. Configure
 Get the selection wand with `/game map wand`: left-click a block for corner 1, right-click a block for corner 2.
@@ -24,6 +24,7 @@ Get the selection wand with `/game map wand`: left-click a block for corner 1, r
 | `/game map barrier add atk_wall glass-only` | Spawn wall: the blocks in the selection are removed when the buy phase ends and restored every round. Add `glass-only` to only remove glass in the region. |
 | `/game map barrier remove <name>` | Removes a barrier. |
 | `/game map construction add` / `clear` | Zones where construction blocks may be placed (used from Phase 3). |
+| `/game map pickup add <item> [amount]` / `removenearest` / `clear` | Items lying on the map at your position (e.g. `golden_apple 2`). They respawn each round, never despawn, and only alive players can pick them up. Shown as green particles. |
 | `/game map kits all` / `whitelist <kits…>` / `blacklist <kits…>` | Map-specific kit availability. |
 | `/game map modes quickplay competitive` | Which modes may use the map. |
 | `/game map rename <name…>` | Display name. |

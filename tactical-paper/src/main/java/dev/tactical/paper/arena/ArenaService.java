@@ -239,6 +239,27 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
         });
     }
 
+    /** Map pickups: only alive participants of the match pick them up; they never merge with other items. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPickup(org.bukkit.event.entity.EntityPickupItemEvent e) {
+        MatchArena a = arenaOfWorld(e.getItem().getWorld()).orElse(null);
+        if (a == null || !a.isPickup(e.getItem())) return;
+        if (!(e.getEntity() instanceof Player p)) {
+            e.setCancelled(true);
+            return;
+        }
+        GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
+        boolean alive = m != null && arenas.get(m.id()) == a
+                && m.flow().participant(p.getUniqueId()).map(dev.tactical.engine.match.Participant::active).orElse(false);
+        if (!alive) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onMerge(org.bukkit.event.entity.ItemMergeEvent e) {
+        MatchArena a = arenaOfWorld(e.getEntity().getWorld()).orElse(null);
+        if (a != null && (a.isPickup(e.getEntity()) || a.isPickup(e.getTarget()))) e.setCancelled(true);
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDrop(PlayerDropItemEvent e) {
         MatchArena a = arenaOf(e.getPlayer()).orElse(null);

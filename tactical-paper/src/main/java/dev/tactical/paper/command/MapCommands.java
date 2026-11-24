@@ -152,6 +152,21 @@ public final class MapCommands {
                         }, "ADD_CONSTRUCTION_REGION"))))
                         .then(Commands.literal("clear").executes(ctx -> edit(ctx, m -> m.withConstructionRegions(List.of(), now()),
                                 "CLEAR_CONSTRUCTION_REGIONS"))))
+                .then(Commands.literal("pickup")
+                        .then(Commands.literal("add").then(Commands.argument("item", StringArgumentType.word())
+                                .suggests((c, b) -> {
+                                    String r = b.getRemainingLowerCase();
+                                    org.bukkit.Registry.ITEM.forEach(t -> {
+                                        String k = t.getKey().getKey();
+                                        if (k.startsWith(r)) b.suggest(k);
+                                    });
+                                    return b.buildFuture();
+                                })
+                                .executes(ctx -> pickupAdd(ctx, 1))
+                                .then(Commands.argument("amount", IntegerArgumentType.integer(1, 64))
+                                        .executes(ctx -> pickupAdd(ctx, IntegerArgumentType.getInteger(ctx, "amount"))))))
+                        .then(Commands.literal("removenearest").executes(this::pickupRemoveNearest))
+                        .then(Commands.literal("clear").executes(ctx -> edit(ctx, m -> m.withPickups(List.of(), now()), "CLEAR_PICKUPS"))))
                 .then(Commands.literal("kits").then(Commands.argument("mode", StringArgumentType.word())
                         .suggests((c, b) -> {
                             b.suggest("all");
@@ -228,6 +243,7 @@ public final class MapCommands {
         for (BombSite s : m.sites().values()) reply(ctx, "site " + s.id() + ": " + s.region(), NamedTextColor.GRAY);
         for (Barrier b : m.barriers()) reply(ctx, "barrier " + b.name() + ": " + b.region()
                 + (b.onlyMaterials().isEmpty() ? "" : " only " + b.onlyMaterials()), NamedTextColor.GRAY);
+        for (var k : m.pickups()) reply(ctx, "pickup " + k.amount() + "x " + k.item() + " at " + k.x() + " " + k.y() + " " + k.z(), NamedTextColor.GRAY);
         reply(ctx, "construction regions: " + m.constructionRegions().size() + ", kits: " + m.kits().mode()
                 + (m.kits().kits().isEmpty() ? "" : " " + m.kits().kits()), NamedTextColor.GRAY);
         return 1;
@@ -252,6 +268,41 @@ public final class MapCommands {
         String team = s(ctx, "team");
         return edit(ctx, m -> isAttackers(team) ? m.withSpawns(List.of(), m.defenderSpawns(), now())
                 : m.withSpawns(m.attackerSpawns(), List.of(), now()), "CLEAR_SPAWNS");
+    }
+
+    private int pickupAdd(CommandContext<CommandSourceStack> ctx, int amount) {
+        Player p = player(ctx).orElse(null);
+        if (p == null) return 0;
+        String item = s(ctx, "item").toLowerCase(java.util.Locale.ROOT).replace("minecraft:", "");
+        if (dev.tactical.paper.arena.MatchArena.parseItem(item) == null) return fail(ctx, "Unknown item '" + item + "'.");
+        Location l = p.getLocation();
+        double x = Math.round(l.getX() * 2) / 2.0, y = Math.round(l.getY() * 2) / 2.0, z = Math.round(l.getZ() * 2) / 2.0;
+        return edit(ctx, m -> {
+            List<dev.tactical.engine.map.Pickup> list = new ArrayList<>(m.pickups());
+            list.add(new dev.tactical.engine.map.Pickup(item, amount, x, y, z));
+            return m.withPickups(list, now());
+        }, "ADD_PICKUP");
+    }
+
+    private int pickupRemoveNearest(CommandContext<CommandSourceStack> ctx) {
+        Player p = player(ctx).orElse(null);
+        if (p == null) return 0;
+        Location l = p.getLocation();
+        return edit(ctx, m -> {
+            List<dev.tactical.engine.map.Pickup> list = new ArrayList<>(m.pickups());
+            dev.tactical.engine.map.Pickup best = null;
+            double bestD = 9.0; // within 3 blocks
+            for (dev.tactical.engine.map.Pickup k : list) {
+                double d = Math.pow(k.x() - l.getX(), 2) + Math.pow(k.y() - l.getY(), 2) + Math.pow(k.z() - l.getZ(), 2);
+                if (d < bestD) {
+                    bestD = d;
+                    best = k;
+                }
+            }
+            if (best == null) throw new IllegalArgumentException("No pickup within 3 blocks.");
+            list.remove(best);
+            return m.withPickups(list, now());
+        }, "REMOVE_PICKUP");
     }
 
     private int spawnRemoveNearest(CommandContext<CommandSourceStack> ctx) {

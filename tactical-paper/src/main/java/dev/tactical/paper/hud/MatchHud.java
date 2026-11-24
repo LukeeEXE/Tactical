@@ -21,6 +21,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.format.ShadowColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -139,12 +140,15 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
     }
 
     // ------------------------------------------------------------------ boss bar
+    /** Every label the timer can show (with a worst-case time), for the auto panel width. */
+    private static final List<String> TIMER_LABELS = List.of("SELECT YOUR KIT: 00:00", "ROUND 88 STARTS IN: 00:00",
+            "SUDDEN DEATH STARTS IN: 00:00", "ROUND 88: 00:00", "SUDDEN DEATH: 00:00", "BOMB PLANTED: 00:00",
+            "ROUND 88 OVER", "HALFTIME: 00:00", "SUDDEN DEATH IN: 00:00", "MATCH PAUSED", "MATCH OVER", "MATCH ENDED");
 
     /**
-     * Row 1 holds the tiles, scores and timer panel, laid out SYMMETRICALLY (fixed-width tile groups and score cells),
-     * so the panel's centre is exactly the screen centre. Row 2 holds only the timer text, moved up by one boss-bar
-     * row; the client centres it on the screen too, so the text sits exactly in the middle of the panel whatever
-     * width the client gives the font.
+     * Row 1: [team strip] [score box] [timer panel] [score box] [team strip], every part with a FIXED width, so the
+     * row never changes width and heads never move. Row 2 holds only the timer text, moved up onto the panel; the
+     * client centres it on the screen, i.e. exactly on the (centred) panel. Nothing has a text shadow.
      */
     private void update(GameMatch match) {
         EnumMap<TeamId, BossBar[]> b = bars.get(match.id());
@@ -152,22 +156,22 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         MatchFlow f = match.flow();
         HudConfig h = config.hud();
         Timer timer = timer(f);
-        int textWidth = text.ttfWidth(h.bossbarFont(), timer.plain());
-        if (textWidth == 0) textWidth = HudText.vanillaWidth(timer.plain());
-        int panelWidth = textWidth + 2 * h.panelPadding();
-        int cell = Math.max(text.ttfWidth(h.bossbarFont(), "88"), 10);
-        Component textRow = HudText.ttf(h.bossbarFont(), h.bossbarTextOffsetY() - h.rowSpacing(), timer.text());
+        int timerWidth = h.timerWidth() > 0 ? h.timerWidth() : autoTimerWidth();
+        Component textRow = HudText.ttf(h.bossbarFont(), h.bossbarTextOffsetY() - h.rowSpacing(), timer.text())
+                .shadowColor(ShadowColor.none());
         float progress = f.stateDurationTicks() <= 0 ? 1f
                 : Math.max(0f, Math.min(1f, f.stateTicksRemaining() / (float) f.stateDurationTicks()));
         int gap = h.sectionGap();
+        Component panel = HudShapes.rect(HudGlyphs.BAR_PANEL, timerWidth, "hud_bossbar", NamedTextColor.BLACK);
         for (TeamId viewer : TeamId.values()) {
             Component row = Component.text()
-                    .append(tiles(match, viewer)).append(TextOffsets.space(gap))
-                    .append(scoreCell(f, viewer, cell, true)).append(TextOffsets.space(gap))
-                    .append(panel(panelWidth)).append(TextOffsets.space(gap))
-                    .append(scoreCell(f, viewer.other(), cell, false)).append(TextOffsets.space(gap))
-                    .append(tiles(match, viewer.other()))
-                    .build();
+                    .append(strip(match, viewer)).append(TextOffsets.space(gap))
+                    .append(scoreBox(f, viewer)).append(TextOffsets.space(gap))
+                    .append(panel).append(TextOffsets.space(gap))
+                    .append(scoreBox(f, viewer.other())).append(TextOffsets.space(gap))
+                    .append(strip(match, viewer.other()))
+                    .build()
+                    .shadowColor(ShadowColor.none());
             BossBar[] pair = b.get(viewer);
             if (!row.equals(pair[0].name())) pair[0].name(row);
             if (!textRow.equals(pair[1].name())) pair[1].name(textRow);
@@ -175,51 +179,76 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         }
     }
 
-    /** A score in a fixed-width cell, aligned towards the timer, so both sides of the row are equally wide. */
-    private Component scoreCell(MatchFlow f, TeamId team, int cell, boolean leftSide) {
+    private int autoTimerWidth() {
         HudConfig h = config.hud();
+        int max = 0;
+        for (String l : TIMER_LABELS) {
+            int w = text.ttfWidth(h.bossbarFont(), l);
+            max = Math.max(max, w == 0 ? HudText.vanillaWidth(l) : w);
+        }
+        return max + 2 * h.panelPadding();
+    }
+
+    /** Big score (double-size font) centred in a fixed-size dark box. */
+    private Component scoreBox(MatchFlow f, TeamId team) {
+        HudConfig h = config.hud();
+        int box = scoreBoxWidth();
         String value = String.valueOf(f.scoreOf(team));
-        int w = text.ttfWidth(h.bossbarFont(), value);
+        int w = 2 * text.ttfWidth(h.bossbarFont(), value);
         if (w == 0) w = HudText.vanillaWidth(value);
-        Component score = HudText.ttf(h.bossbarFont(), h.bossbarTextOffsetY(), Component.text(value, TeamStyle.color(team)));
-        Component pad = TextOffsets.space(Math.max(0, cell - w));
-        return leftSide ? Component.text().append(pad).append(score).build() : Component.text().append(score).append(pad).build();
+        int left = Math.max(0, (box - w) / 2);
+        Component score = HudText.ttf(h.bossbarFont() + "_x2", h.scoreOffsetY(), Component.text(value, TeamStyle.color(team)));
+        return Component.text()
+                .append(HudShapes.rect(HudGlyphs.BAR_SCORE, box, "hud_bossbar", NamedTextColor.BLACK))
+                .append(TextOffsets.space(-box + left)).append(score).append(TextOffsets.space(box - left - w))
+                .build();
+    }
+
+    private int scoreBoxWidth() {
+        int digits = 2 * text.ttfWidth(config.hud().bossbarFont(), "88");
+        return Math.max(digits, 12) + 8;
+    }
+
+    /** Width of one team strip: always sized for a full team, so both strips are equally wide. */
+    private int stripWidth(GameMatch match) {
+        HudConfig h = config.hud();
+        return 2 * h.stripPadding() + (match.rules().teamSize() - 1) * h.headSlot() + 8;
     }
 
     /**
-     * One translucent team-coloured tile per player with the player's head on top (a skull on a dark tile when
-     * dead). Every tile has a fixed advance, whatever width the client gives the head, so the row never drifts.
+     * One translucent team-coloured rectangle with the players' heads on it (a skull when dead), each head in a fixed
+     * slot. The strip's advance is fixed, whatever width the client gives the heads.
      */
-    private Component tiles(GameMatch match, TeamId team) {
+    private Component strip(GameMatch match, TeamId team) {
         HudConfig h = config.hud();
+        int width = stripWidth(match);
+        int size = match.rules().teamSize();
         Key font = Key.key("tactical", "hud_bossbar");
-        int tileAdvance = HudGlyphs.TILE_SIZE + 1;
-        TextComponent.Builder row = Component.text();
+        TextComponent.Builder row = Component.text()
+                .append(HudShapes.rect(HudGlyphs.BAR_STRIP, width, "hud_bossbar", TeamStyle.color(team)))
+                .append(TextOffsets.space(-width + h.stripPadding()));
+        int used = h.stripPadding();
         int slots = 0;
         for (MatchMember m : match.members()) {
-            if (m.team() != team) continue;
-            if (slots++ > 0) row.append(TextOffsets.space(h.tileGap()));
+            if (m.team() != team || slots >= size) continue;
+            slots++;
             boolean active = match.flow().participant(m.uuid()).map(Participant::active).orElse(false);
-            char tile = !active ? HudGlyphs.BAR_TILE_DEAD : team == TeamId.A ? HudGlyphs.BAR_TILE_RED : HudGlyphs.BAR_TILE_BLUE;
-            row.append(Component.text(String.valueOf(tile)).font(font).color(NamedTextColor.WHITE));
-            row.append(TextOffsets.space(-tileAdvance + 1)); // back to 1 px inside the tile
             int iconAdvance;
             if (!active) {
                 row.append(Component.text(String.valueOf(HudGlyphs.BAR_SKULL)).font(font).color(NamedTextColor.WHITE));
                 iconAdvance = 9;
             } else if (m.virtual()) {
-                row.append(Component.text("\u25CF", TeamStyle.color(team)));
+                row.append(Component.text("o", NamedTextColor.WHITE));
                 iconAdvance = 6;
             } else {
                 row.append(Heads.text(m.uuid(), m.name()));
                 iconAdvance = h.headAdvance();
             }
-            row.append(TextOffsets.space(tileAdvance - 1 - iconAdvance)); // to the end of the tile
+            int step = slots < size ? h.headSlot() : 8;
+            row.append(TextOffsets.space(step - iconAdvance));
+            used += step;
         }
-        // Pad to the full team size so both tile groups are equally wide (keeps the panel centred).
-        for (int i = slots; i < match.rules().teamSize(); i++) {
-            row.append(TextOffsets.space((i > 0 ? h.tileGap() : 0) + tileAdvance));
-        }
+        row.append(TextOffsets.space(width - used)); // advance ends exactly at the strip's right edge
         return row.build();
     }
 
@@ -251,23 +280,6 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         Component words = Component.text(label, NamedTextColor.WHITE);
         if (!value.isEmpty()) words = words.append(Component.text(" " + value, valueColor));
         return new Timer(words, value.isEmpty() ? label : label + " " + value);
-    }
-
-    /** Panel of exactly {@code width} px: left cap, power-of-two fill pieces, right cap; advance = width. */
-    private static Component panel(int width) {
-        Key font = Key.key("tactical", "hud_bossbar");
-        int fill = Math.max(0, width - 2 * HudGlyphs.PANEL_CAP);
-        TextComponent.Builder b = Component.text();
-        b.append(Component.text(String.valueOf(HudGlyphs.BAR_PANEL_LEFT)).font(font)).append(TextOffsets.space(-1));
-        for (int i = 7; i >= 0; i--) {
-            int piece = 1 << i;
-            while (fill >= piece) {
-                b.append(Component.text(String.valueOf((char) (HudGlyphs.BAR_PANEL_FILL + i))).font(font)).append(TextOffsets.space(-1));
-                fill -= piece;
-            }
-        }
-        b.append(Component.text(String.valueOf(HudGlyphs.BAR_PANEL_RIGHT)).font(font)).append(TextOffsets.space(-1));
-        return b.build().color(NamedTextColor.WHITE);
     }
 
     private static String clock(int ticks) {
@@ -365,7 +377,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
     }
 
     private static Component separator() {
-        return Component.text(" ".repeat(CHAT_WIDTH / 4 - 1), NamedTextColor.RED).decorate(TextDecoration.STRIKETHROUGH);
+        return Component.text(" ".repeat(CHAT_WIDTH / 4 - 1), NamedTextColor.GRAY).decorate(TextDecoration.STRIKETHROUGH);
     }
 
     /** {@code [shield] Attackers  (WINNER)} with the stat column legend on the right. */

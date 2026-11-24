@@ -141,12 +141,13 @@ class PackBuilderTest {
         assertTrue(files.containsKey("assets/tactical/font/pinch_down_3.json"));
         assertFalse(files.containsKey("assets/tactical/font/pinch_down_4.json"));
         assertTrue(files.containsKey("credits/fonts/Pinch.LICENSE.txt"));
+        assertTrue(files.containsKey("assets/tactical/font/pinch_x2_down_3.json"));
         assertTrue(res.issues().toString().contains("not a TrueType"), res.issues().toString());
     }
 
     @Test
     void hudGlyphFontsUseLayout(@TempDir Path root) throws Exception {
-        PackBuilder.Result res = new PackBuilder(97, 1, "t", new HudLayout(8, 9, 33)).build(root, List.of(), KNOWN);
+        PackBuilder.Result res = new PackBuilder(97, 1, "t", new HudLayout(8, 9, 9, 33, 9)).build(root, List.of(), KNOWN);
         assertFalse(res.hasErrors(), res.issues().toString());
         Map<String, String> files = unzip(res.zip());
         JsonObject money = JsonParser.parseString(files.get("assets/tactical/font/hud_money.json")).getAsJsonObject();
@@ -155,7 +156,8 @@ class PackBuilderTest {
         assertEquals(-24, providers.get(0).getAsJsonObject().get("ascent").getAsInt(), "panel 2 px above the digits");
         assertEquals(-26, providers.get(1).getAsJsonObject().get("ascent").getAsInt());
         assertTrue(files.containsKey("assets/tactical/font/hud_chat.json"));
-        assertTrue(files.containsKey("assets/tactical/textures/hud/bar_tile_red.png"));
+        assertTrue(files.containsKey("assets/tactical/textures/hud/bar_strip_128.png"));
+        assertTrue(files.containsKey("assets/tactical/font/hud_actionbar.json"));
         assertTrue(files.containsKey("assets/minecraft/textures/gui/sprites/boss_bar/yellow_progress.png"));
     }
 
