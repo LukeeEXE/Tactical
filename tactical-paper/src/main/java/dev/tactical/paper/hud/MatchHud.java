@@ -311,6 +311,12 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
             headlineWidth = HudText.vanillaWidth(words);
         }
         lines.add(Component.text().append(TextOffsets.space(Math.max(0, (CHAT_WIDTH - headlineWidth) / 2))).append(headline).build());
+        if (!f.roundWinners().isEmpty()) {
+            lines.add(Component.empty());
+            for (TeamId team : end.winner() == null ? List.of(TeamId.A, TeamId.B) : List.of(end.winner(), end.winner().other())) {
+                lines.add(roundHistory(match, team));
+            }
+        }
         for (TeamId team : end.winner() == null ? List.of(TeamId.A, TeamId.B) : List.of(end.winner(), end.winner().other())) {
             lines.add(Component.empty());
             lines.add(teamHeader(match, team, team == end.winner()));
@@ -334,6 +340,28 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
                     Title.Times.times(Duration.ofMillis(300), Duration.ofSeconds(Math.max(3, postgameSecs - 1)), Duration.ofMillis(700))));
             p.playSound(p.getLocation(), won ? Sound.UI_TOAST_CHALLENGE_COMPLETE : Sound.ENTITY_WITHER_DEATH, 0.8f, won ? 1f : 1.4f);
         }
+    }
+
+    /**
+     * {@code [shield] [W] [L] [W] | [W] ... | [W]}: one box per round from this team's point of view, with a divider
+     * after the first half and before the sudden-death round.
+     */
+    private static Component roundHistory(GameMatch match, TeamId team) {
+        List<TeamId> winners = match.flow().roundWinners();
+        int half = match.rules().halftimeAfterRound();
+        int regular = 2 * match.rules().suddenDeathAt();
+        TextComponent.Builder b = Component.text();
+        b.append(Component.text("[", NamedTextColor.WHITE))
+                .append(ChatStyle.icon(team == TeamId.A ? HudGlyphs.CHAT_SHIELD_RED : HudGlyphs.CHAT_SHIELD_BLUE))
+                .append(Component.text("]", NamedTextColor.WHITE));
+        for (int i = 0; i < winners.size(); i++) {
+            int round = i + 1;
+            if (round == half + 1 || (round == regular + 1 && round > half + 1)) {
+                b.append(Component.text(" ")).append(ChatStyle.icon(HudGlyphs.ROUND_DIVIDER));
+            }
+            b.append(Component.text(" ")).append(ChatStyle.icon(winners.get(i) == team ? HudGlyphs.ROUND_WIN : HudGlyphs.ROUND_LOSS));
+        }
+        return b.build();
     }
 
     private static Component separator() {

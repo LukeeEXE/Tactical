@@ -25,7 +25,8 @@ public final class HudGlyphs {
             CHAT_BOMB = '', CHAT_DEFUSE = '', CHAT_TIMER = '', CHAT_WARNING = '',
             CHAT_COIN = '', CHAT_KIT = '', CHAT_INFO = '', CHAT_SHIELD_RED = '',
             CHAT_SHIELD_BLUE = '\uE20C', CHAT_ARROW = '\uE20D', STAT_KILLS = '\uE210', STAT_DEATHS = '\uE211',
-            STAT_ASSISTS = '\uE212', STAT_DAMAGE = '\uE213', STAT_KDR = '\uE214', CHAT_MVP = '\uE215';
+            STAT_ASSISTS = '\uE212', STAT_DAMAGE = '\uE213', STAT_KDR = '\uE214', CHAT_MVP = '\uE215',
+            ROUND_WIN = '\uE216', ROUND_LOSS = '\uE217', ROUND_DIVIDER = '\uE218';
     public static final char BAR_TILE_RED = '', BAR_TILE_BLUE = '', BAR_TILE_DEAD = '',
             BAR_SKULL = '', BAR_PANEL_LEFT = '', BAR_PANEL_RIGHT = '';
     /** Timer panel middle segments: BAR_PANEL_FILL + i is 2^i pixels wide (i = 0..7). */
@@ -86,6 +87,13 @@ public final class HudGlyphs {
                         "........", "......y.", ".....y..", "....y...", "...y....", "..y.....", ".y......", "........"),
                 art("chat_mvp", CHAT_MVP, Group.CHAT,
                         "...yy...", "...yy...", "yyyyyyyy", ".yyyyyy.", "..yyyy..", ".yy..yy.", ".y....y.", "........"),
+                // Round history boxes (placeholders: replace round_win.png / round_loss.png to restyle).
+                art("round_win", ROUND_WIN, Group.CHAT,
+                        "kkkkkkkk", "kwnnnnwk", "kwnnnnwk", "kwnwwnwk", "kwwnnwwk", "kwnnnnwk", "knnnnnnk", "kkkkkkkk"),
+                art("round_loss", ROUND_LOSS, Group.CHAT,
+                        "kkkkkkkk", "krwrrrrk", "krwrrrrk", "krwrrrrk", "krwrrrrk", "krwwwwrk", "krrrrrrk", "kkkkkkkk"),
+                art("round_divider", ROUND_DIVIDER, Group.CHAT,
+                        "..g.....", "..g.....", "..g.....", "..g.....", "..g.....", "..g.....", "..g.....", "..g....."),
                 tile("bar_tile_red", BAR_TILE_RED, 0xE5483F),
                 tile("bar_tile_blue", BAR_TILE_BLUE, 0x3F7FE5),
                 tile("bar_tile_dead", BAR_TILE_DEAD, 0x2A2A30),
