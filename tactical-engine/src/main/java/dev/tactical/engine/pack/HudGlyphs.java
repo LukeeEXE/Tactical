@@ -24,7 +24,8 @@ public final class HudGlyphs {
     public static final char CHAT_KILL = '', CHAT_ROUND = '', CHAT_WIN = '', CHAT_LOSS = '',
             CHAT_BOMB = '', CHAT_DEFUSE = '', CHAT_TIMER = '', CHAT_WARNING = '',
             CHAT_COIN = '', CHAT_KIT = '', CHAT_INFO = '', CHAT_SHIELD_RED = '',
-            CHAT_SHIELD_BLUE = '';
+            CHAT_SHIELD_BLUE = '\uE20C', CHAT_ARROW = '\uE20D', STAT_KILLS = '\uE210', STAT_DEATHS = '\uE211',
+            STAT_ASSISTS = '\uE212', STAT_DAMAGE = '\uE213', STAT_KDR = '\uE214', CHAT_MVP = '\uE215';
     public static final char BAR_TILE_RED = '', BAR_TILE_BLUE = '', BAR_TILE_DEAD = '',
             BAR_SKULL = '', BAR_PANEL_LEFT = '', BAR_PANEL_RIGHT = '';
     /** Timer panel middle segments: BAR_PANEL_FILL + i is 2^i pixels wide (i = 0..7). */
@@ -70,6 +71,21 @@ public final class HudGlyphs {
                         "kkkkkkkk", "krrwrrrk", "krwrrrrk", "krrrrrrk", "kRrrrrRk", ".kRrrRk.", "..kRRk..", "...kk..."),
                 art("chat_shield_blue", CHAT_SHIELD_BLUE, Group.CHAT,
                         "kkkkkkkk", "kbbwbbbk", "kbwbbbbk", "kbbbbbbk", "kBbbbbBk", ".kBbbBk.", "..kBBk..", "...kk..."),
+                art("chat_arrow", CHAT_ARROW, Group.CHAT,
+                        "........", "g.......", "g.......", "g.......", "g....g..", "ggggggg.", ".....g..", "........"),
+                // Stat icons are PLACEHOLDERS: replace resourcepack/assets/tactical/textures/hud/stat_*.png with your own art.
+                art("stat_kills", STAT_KILLS, Group.CHAT,
+                        ".......w", "......wg", ".....wg.", "k...wg..", ".k.wg...", "..kg....", ".kGk....", "kG..k..."),
+                art("stat_deaths", STAT_DEATHS, Group.CHAT,
+                        "........", "..kkkk..", ".kggggk.", ".kgkkgk.", ".kggggk.", "..kgkk..", "..kkkk..", "........"),
+                art("stat_assists", STAT_ASSISTS, Group.CHAT,
+                        "........", "...nn...", "...nn...", ".nnnnnn.", ".nnnnnn.", "...nn...", "...nn...", "........"),
+                art("stat_damage", STAT_DAMAGE, Group.CHAT,
+                        "........", ".rr.rr..", "rrrrrrr.", "rrrrrrr.", ".rrrrr..", "..rrr...", "...r....", "........"),
+                art("stat_kdr", STAT_KDR, Group.CHAT,
+                        "........", "......y.", ".....y..", "....y...", "...y....", "..y.....", ".y......", "........"),
+                art("chat_mvp", CHAT_MVP, Group.CHAT,
+                        "...yy...", "...yy...", "yyyyyyyy", ".yyyyyy.", "..yyyy..", ".yy..yy.", ".y....y.", "........"),
                 tile("bar_tile_red", BAR_TILE_RED, 0xE5483F),
                 tile("bar_tile_blue", BAR_TILE_BLUE, 0x3F7FE5),
                 tile("bar_tile_dead", BAR_TILE_DEAD, 0x2A2A30),
@@ -107,22 +123,19 @@ public final class HudGlyphs {
         for (int y = 0; y < TILE_SIZE; y++) {
             for (int x = 0; x < TILE_SIZE; x++) {
                 boolean border = x == 0 || y == 0 || x == TILE_SIZE - 1 || y == TILE_SIZE - 1;
-                boolean corner = (x == 0 || x == TILE_SIZE - 1) && (y == 0 || y == TILE_SIZE - 1);
-                int alpha = corner ? 0 : border ? 0x99 : 0x55;
+                int alpha = border ? 0x99 : 0x55;
                 img.setRGB(x, y, (alpha << 24) | rgb);
             }
         }
         return new Glyph(name, ch, Group.BOSSBAR, TILE_SIZE, TILE_SIZE, img);
     }
 
-    /** Dark translucent panel piece; rounded corners on the requested ends. */
+    /** Dark translucent panel piece (square corners; the end flags are kept for future styling). */
     private static Glyph panel(String name, char ch, Group group, int w, int h, boolean roundLeft, boolean roundRight) {
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                boolean edgeY = y == 0 || y == h - 1;
-                boolean corner = edgeY && ((roundLeft && x == 0) || (roundRight && x == w - 1));
-                img.setRGB(x, y, corner ? 0 : 0x8C000000);
+                img.setRGB(x, y, 0x8C000000); // square corners
             }
         }
         return new Glyph(name, ch, group, w, h, img);
@@ -136,6 +149,11 @@ public final class HudGlyphs {
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** Fully transparent boss bar (the WHITE colour): used by the text-only second boss bar row. */
+    static BufferedImage bossBarInvisible() {
+        return new BufferedImage(182, 5, BufferedImage.TYPE_INT_ARGB);
     }
 
     /** Thin yellow progress line used as the boss bar (replaces the vanilla YELLOW boss bar sprites). */

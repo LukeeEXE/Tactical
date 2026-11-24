@@ -10,6 +10,8 @@ bossbar:
   tile-gap: 1            # pixels between two player tiles
   section-gap: 8         # pixels between the score, the tiles and the timer panel
   panel-padding: 4       # pixels of panel left/right of the timer text
+  row-spacing: 19        # distance between two boss bars (vanilla: 19); the timer text is drawn on a second,
+                         # invisible boss bar and moved up by this much so the client centres it exactly
 money:
   enabled: true
   offset-y: 33           # (pack) pixels from the action-bar line down to the hunger-bar row

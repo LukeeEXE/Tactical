@@ -18,6 +18,7 @@ public record HudConfig(
         int tileGap,
         int sectionGap,
         int panelPadding,
+        int rowSpacing,
         boolean moneyEnabled,
         int moneyOffsetY,
         int moneyLeft
@@ -25,7 +26,7 @@ public record HudConfig(
     public static final int SCHEMA_VERSION = 1;
 
     public static HudConfig defaults() {
-        return new HudConfig("pinch", 0, 8, 9, 9, 1, 8, 4, true, 33, 10);
+        return new HudConfig("pinch", 0, 8, 9, 9, 1, 8, 4, 19, true, 33, 10);
     }
 
     public HudLayout layout() {
@@ -37,7 +38,7 @@ public record HudConfig(
         root.warnUnknownKeys(List.of("schema-version", "bossbar", "money"));
         ConfigNode b = root.child("bossbar");
         b.warnUnknownKeys(List.of("font", "text-offset-y", "tile-ascent", "panel-ascent", "head-advance", "tile-gap",
-                "section-gap", "panel-padding"));
+                "section-gap", "panel-padding", "row-spacing"));
         ConfigNode m = root.child("money");
         m.warnUnknownKeys(List.of("enabled", "offset-y", "left"));
         return new HudConfig(
@@ -49,6 +50,7 @@ public record HudConfig(
                 b.integer("tile-gap", d.tileGap(), 0, 8),
                 b.integer("section-gap", d.sectionGap(), 0, 64),
                 b.integer("panel-padding", d.panelPadding(), 0, 16),
+                b.integer("row-spacing", d.rowSpacing(), 1, 64),
                 m.bool("enabled", d.moneyEnabled()),
                 m.integer("offset-y", d.moneyOffsetY(), 1, 128),
                 m.integer("left", d.moneyLeft(), -200, 200));

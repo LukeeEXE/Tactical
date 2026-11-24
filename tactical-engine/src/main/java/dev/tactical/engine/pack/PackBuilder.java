@@ -270,7 +270,8 @@ public final class PackBuilder {
      * HUD and chat glyphs (original pixel art, see {@link HudGlyphs}) in three fonts with their own vertical
      * placement: {@code tactical:hud_chat}, {@code tactical:hud_bossbar}, {@code tactical:hud_money}. Textures live
      * at {@code assets/tactical/textures/hud/<name>.png}, so an admin PNG at that path replaces the art.
-     * Also restyles the YELLOW boss bar as a thin progress line (the match HUD uses that colour).
+     * Also restyles the YELLOW boss bar as a thin progress line and makes the WHITE boss bar invisible (the match HUD
+     * uses these two colours; nothing else on the server does).
      */
     private void generateHud(Map<String, byte[]> files) {
         Map<HudGlyphs.Group, com.google.gson.JsonArray> providers = new java.util.EnumMap<>(HudGlyphs.Group.class);
@@ -299,6 +300,9 @@ public final class PackBuilder {
         }
         files.put("assets/minecraft/textures/gui/sprites/boss_bar/yellow_background.png", HudGlyphs.png(HudGlyphs.bossBarLine(false)));
         files.put("assets/minecraft/textures/gui/sprites/boss_bar/yellow_progress.png", HudGlyphs.png(HudGlyphs.bossBarLine(true)));
+        byte[] invisible = HudGlyphs.png(HudGlyphs.bossBarInvisible());
+        files.put("assets/minecraft/textures/gui/sprites/boss_bar/white_background.png", invisible);
+        files.put("assets/minecraft/textures/gui/sprites/boss_bar/white_progress.png", invisible);
     }
 
     // ------------------------------------------------------------------ construction block
