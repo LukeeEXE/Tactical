@@ -175,7 +175,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                 for (Player p : match.onlinePlayers()) {
                     if (survivors.contains(p.getUniqueId())) shop.reconcile(p);
                     int delta = changes.stream().filter(c -> c.player().equals(p.getUniqueId())).mapToInt(EconomyChange::delta).sum();
-                    if (delta > 0) p.sendMessage(dev.tactical.paper.hud.ChatStyle.line(dev.tactical.engine.pack.HudGlyphs.CHAT_COIN,
+                    if (delta > 0) p.sendMessage(dev.tactical.paper.hud.ChatStyle.line(dev.tactical.engine.pack.HudGlyphs.CHAT_WARNING,
                             Component.text("+" + String.format("%,d", delta), NamedTextColor.GOLD).append(Component.text(" round reward", NamedTextColor.GRAY))));
                 }
             }

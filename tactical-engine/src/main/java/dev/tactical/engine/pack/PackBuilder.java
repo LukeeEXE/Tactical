@@ -308,7 +308,7 @@ public final class PackBuilder {
             // Chat and boss-bar icons render at letter height (8 px) whatever the source size (8x8 or 16x16).
             int height = switch (g.slot()) {
                 case CHAT, BAR_ICON, MONEY_ICON -> 8;
-                case BAR_BOMB -> 2 * g.height(); // 16x16 art drawn at 32 px (crisp 2x)
+                case BAR_BOMB -> 32;             // 16x16 icon drawn at 32 px (crisp 2x)
                 default -> g.height();
             };
             int ascent = switch (g.slot()) {
@@ -316,7 +316,7 @@ public final class PackBuilder {
                 case BAR_ICON -> 8;                          // same rows as an inline player head (-1..6)
                 case BAR_TIME -> 7 - hud.bossbarTimeRow();
                 case BAR_BOMB -> 7;
-                case PLANT_BAR -> 5;                         // rows 2..8 of the action-bar line
+                case PLANT_BAR -> 6;                         // rows 1..7: centred in the 13 px box (rows -2..10)
                 case BAR_STRIP -> hud.bossbarTileAscent();
                 case BAR_PANEL -> hud.bossbarPanelAscent();
                 case BAR_SCORE -> hud.bossbarScoreAscent();

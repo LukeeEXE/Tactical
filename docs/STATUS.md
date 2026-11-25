@@ -240,3 +240,12 @@ All positions are estimates and need a client check; every value is adjustable i
 | Dust particles | The two supplied shapes replace the dust particle (large while young, small when fading) |
 | hud.yml | Schema 3: older files are backed up and replaced automatically |
 
+### Round 11
+| Request | Change |
+|---|---|
+| Boss bar bomb icon | Supplied 16x16 C4 icon (drawn at 32 px) |
+| Breakdown icons | Kills = sword, deaths = skull, assists = supplied icon; K/D line icon white |
+| Announcement icons | Every match announcement (and the round reward / return-to-lobby lines) uses the supplied warning icon; kill and death lines use the skull |
+| Boss bar skulls | Supplied skull, centred in the 8 px head cell like a head |
+| Plant bar not centred | Simulated against the built pack: horizontally exact (box -24..24, bar -20..20, net advance 0); it sat 1 px low and is now vertically centred too (rows 1..7 in the rows -2..10 box) |
+

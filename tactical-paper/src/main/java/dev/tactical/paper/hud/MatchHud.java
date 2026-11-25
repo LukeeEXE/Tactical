@@ -393,7 +393,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         }
         lines.add(separator());
         int postgameSecs = match.rules().postgameTicks() / ModeRules.TICKS_PER_SECOND;
-        lines.add(ChatStyle.line(HudGlyphs.CHAT_TIMER, Component.text("Returning to the lobby in " + postgameSecs + "s.", NamedTextColor.GRAY)));
+        lines.add(ChatStyle.line(HudGlyphs.CHAT_WARNING, Component.text("Returning to the lobby in " + postgameSecs + "s.", NamedTextColor.GRAY)));
 
         for (Player p : match.onlinePlayers()) {
             for (Component l : lines) p.sendMessage(l);
