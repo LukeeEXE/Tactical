@@ -35,9 +35,10 @@ players pick their second-half kit; the shop always follows the player's current
 The shop is drawn with three background textures and an icon (in the resource pack under
 `assets/tactical/textures/gui/`: `shop_header.png`, `shop_body.png`, `shop_footer.png`, `shop_icon.png`; put your
 own PNG at the same path under `resourcepack/` to replace one, same size). The header shows the icon and "SHOP" in
-Pinch. Row 0 holds the money (gold ingot, hover for the balance) and the exit (door; Escape also closes). The
-"Inventory" label of chest screens is blanked by the pack in every language, since it would be drawn over the
-background.
+Pinch. Row 0 holds the money (coin, hover for the balance). The CONFIRM button over the footer's recess (drawn 3 slots
+wide from inventory row 3, column 4) closes the shop and applies the hotbar; Escape does the same. The vanilla chest
+background is invisible (transparent `gui/container/generic_54.png`) and the "Inventory" label of chest screens is
+blanked in every language, so only the custom screen shows.
 
 ### Arranging the hotbar in the shop
 While the shop is open, the visible inventory row (the slots in the footer texture) holds your hotbar: drag and

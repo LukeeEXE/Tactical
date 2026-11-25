@@ -286,4 +286,5 @@ All positions are estimates and need a client check; every value is adjustable i
 | Remembered hotbar layout: saved on shop close and at round end (survivors), applied each round start; lost items leave their slot empty; bomb excluded; reset at halftime / sudden death | 🟡 | Match runs without errors on the server; **needs a client test** |
 | Slots remember used/lost items: a re-bought item returns to its old hotbar slot (shop row and round start) | 🟡 | Needs a client test |
 | Shop screen alignment (from the in-game screenshot, measured per pixel) | 🟡 | Cart icon placed by its ink (flush with the box's top inside edge); "SHOP" 3 px into its bar; frame strips (footer edge colours) fill the 6 px gaps beside the body and the header's rounded bottom corners, so the vanilla chest border no longer shows |
+| Shop screen round 2: utility squares 1 px lower in their box, footer recess moved onto inventory row 3 cols 3-5, CONFIRM button item (3 slots wide), coin instead of gold ingot, door removed, vanilla chest background invisible | 🟡 | Needs a client test. Note: every 6-row chest screen now has an invisible vanilla background (also the kit selection menu) |
 

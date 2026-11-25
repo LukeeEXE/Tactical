@@ -357,11 +357,11 @@ public final class PackBuilder {
     // ------------------------------------------------------------------ construction block
 
     /** Characters of the {@code tactical:gui_shop} font (custom shop screen drawn through the container title). */
-    public static final char GUI_SHOP_HEADER = '\uED00', GUI_SHOP_BODY = '\uED01', GUI_SHOP_FOOTER = '\uED02', GUI_SHOP_ICON = '\uED03',
-            GUI_SHOP_SIDE_LEFT = '\uED04', GUI_SHOP_SIDE_RIGHT = '\uED05';
-    /** Side frame colours (outside in), taken from the footer texture's edges. */
-    private static final int[] SIDE_LEFT = {0xFF121214, 0xFF68686E, 0xFF68686E, 0xFF39393E, 0xFF39393E, 0xFF39393E};
-    private static final int[] SIDE_RIGHT = {0xFF39393E, 0xFF39393E, 0xFF39393E, 0xFF2C2C30, 0xFF2C2C30, 0xFF121214};
+    public static final char GUI_SHOP_HEADER = '\uED00', GUI_SHOP_BODY = '\uED01', GUI_SHOP_FOOTER = '\uED02', GUI_SHOP_ICON = '\uED03';
+
+    /** Item models used by menus: {@code tactical:<id>} via the item_model component. */
+    public static final String MODEL_SHOP_COIN = "tactical:shop_coin", MODEL_SHOP_CONFIRM = "tactical:shop_confirm",
+            MODEL_BLANK = "tactical:blank";
 
     /**
      * Menu backgrounds as title glyphs. A container title is drawn at (8, 6) of the 176x222 chest screen, before the
@@ -379,19 +379,8 @@ public final class PackBuilder {
         record G(String name, char ch, int ascent, int height) { }
         com.google.gson.JsonArray providers = new com.google.gson.JsonArray();
         for (G g : List.of(new G("shop_header", GUI_SHOP_HEADER, 30, 31), new G("shop_body", GUI_SHOP_BODY, -1, 120),
-                new G("shop_footer", GUI_SHOP_FOOTER, -121, 88), new G("shop_icon", GUI_SHOP_ICON, 24, 24),
-                new G("shop_side_left", GUI_SHOP_SIDE_LEFT, 5, 126), new G("shop_side_right", GUI_SHOP_SIDE_RIGHT, 5, 126))) {
-            byte[] png;
-            if (g.name().startsWith("shop_side_")) {
-                // Frame strips beside the narrower body (x 0-5 and 170-175, y 8-133): drawn first, under everything,
-                // so the vanilla chest border never shows between header and footer.
-                int[] cols = g.name().endsWith("left") ? SIDE_LEFT : SIDE_RIGHT;
-                java.awt.image.BufferedImage strip = new java.awt.image.BufferedImage(6, 126, java.awt.image.BufferedImage.TYPE_INT_ARGB);
-                for (int y = 0; y < 126; y++) for (int x = 0; x < 6; x++) strip.setRGB(x, y, cols[x]);
-                png = HudGlyphs.png(strip);
-            } else {
-                png = bundled("pack/gui/" + g.name() + ".png");
-            }
+                new G("shop_footer", GUI_SHOP_FOOTER, -121, 88), new G("shop_icon", GUI_SHOP_ICON, 24, 24))) {
+            byte[] png = bundled("pack/gui/" + g.name() + ".png");
             if (g.name().equals("shop_icon")) { // icon on a 16x24 canvas (a glyph may not rise above its height)
                 java.awt.image.BufferedImage src = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(png));
                 java.awt.image.BufferedImage tall = new java.awt.image.BufferedImage(16, 24, java.awt.image.BufferedImage.TYPE_INT_ARGB);
@@ -419,10 +408,44 @@ public final class PackBuilder {
         JsonObject font = new JsonObject();
         font.add("providers", providers);
         files.put("assets/tactical/font/gui_shop.json", json(font));
+        // Menu items: the money coin, the 3-slot-wide confirm button (52x16 art on a 52x52 canvas drawn at 3.25x, so one
+        // texel = one GUI pixel, centred on its slot) and an invisible item that keeps purchases out of slots under it.
+        menuItem(files, "shop_coin", bundled("pack/gui/shop_coin.png"), null);
+        JsonObject gui = new JsonObject();
+        com.google.gson.JsonArray rot = new com.google.gson.JsonArray(); rot.add(0); rot.add(0); rot.add(0);
+        com.google.gson.JsonArray tr = new com.google.gson.JsonArray(); tr.add(0); tr.add(0); tr.add(0);
+        com.google.gson.JsonArray sc = new com.google.gson.JsonArray(); sc.add(3.25); sc.add(3.25); sc.add(3.25);
+        gui.add("rotation", rot);
+        gui.add("translation", tr);
+        gui.add("scale", sc);
+        JsonObject display = new JsonObject();
+        display.add("gui", gui);
+        menuItem(files, "shop_confirm", bundled("pack/gui/shop_confirm.png"), display);
+        menuItem(files, "blank", HudGlyphs.png(new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)), null);
+        // The vanilla chest background is made invisible: the custom screens draw their own.
+        files.put("assets/minecraft/textures/gui/container/generic_54.png",
+                HudGlyphs.png(new java.awt.image.BufferedImage(256, 256, java.awt.image.BufferedImage.TYPE_INT_ARGB)));
         byte[] blank = "{\"container.inventory\":\"\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         for (String code : new String(bundled("pack/lang_codes.txt"), java.nio.charset.StandardCharsets.UTF_8).split("\\s+")) {
             if (!code.isBlank()) files.put("assets/minecraft/lang/" + code.trim() + ".json", blank);
         }
+    }
+
+    private static void menuItem(Map<String, byte[]> files, String id, byte[] texture, JsonObject display) {
+        files.put("assets/tactical/textures/item/" + id + ".png", texture);
+        JsonObject model = new JsonObject();
+        model.addProperty("parent", "minecraft:item/generated");
+        JsonObject tex = new JsonObject();
+        tex.addProperty("layer0", "tactical:item/" + id);
+        model.add("textures", tex);
+        if (display != null) model.add("display", display);
+        files.put("assets/tactical/models/item/" + id + ".json", json(model));
+        JsonObject def = new JsonObject();
+        JsonObject m = new JsonObject();
+        m.addProperty("type", "minecraft:model");
+        m.addProperty("model", "tactical:item/" + id);
+        def.add("model", m);
+        files.put("assets/tactical/items/" + id + ".json", json(def));
     }
 
     /** Core shader overrides shipped with the plugin (ported to the current client's shader interface). */

@@ -36,6 +36,14 @@ public abstract class Menu {
         return false;
     }
 
+    /**
+     * A click on a player-inventory slot that the menu uses as a button (e.g. a confirm button drawn over the
+     * inventory). Return true if handled; the click itself is always cancelled.
+     */
+    public boolean onPlayerSlotClick(Player viewer, int slot, org.bukkit.event.inventory.ClickType click) {
+        return false;
+    }
+
     /** Called when the inventory closes for any reason (including disconnect and replacement by another menu). */
     public void onClose(Player viewer) {
     }

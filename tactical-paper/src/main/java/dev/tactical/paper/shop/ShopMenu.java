@@ -41,7 +41,9 @@ final class ShopMenu extends Menu {
     }
 
     // Slot layout (6-row chest), matching the background textures (see PackBuilder.generateGui).
-    static final int MONEY_SLOT = 1, EXIT_SLOT = 7;
+    static final int MONEY_SLOT = 1;
+    /** Player-inventory slots under the confirm button (row 3, columns 3-5; the button is drawn from the middle one). */
+    static final int CONFIRM_LEFT = 30, CONFIRM_SLOT = 31, CONFIRM_RIGHT = 32;
     static final int[] MELEE_SLOTS = {11, 12, 13, 14, 15};      // row 1, columns 2-6
     static final int[] UTILITY_SLOTS = {30, 31, 32};            // row 3, columns 3-5
     static final int[] RANGED_SLOTS = {47, 48, 49, 50, 51};     // row 5, columns 2-6
@@ -58,10 +60,6 @@ final class ShopMenu extends Menu {
         java.util.function.Function<Character, Component> glyph = c -> Component.text(String.valueOf(c)).font(font);
         return Component.text()
                 .append(dev.tactical.paper.hud.TextOffsets.space(-8))                                 // x 0
-                .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_SIDE_LEFT))         // 6 + 1 (under the rest)
-                .append(dev.tactical.paper.hud.TextOffsets.space(170 - 7))                            // x 170
-                .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_SIDE_RIGHT))        // 6 + 1
-                .append(dev.tactical.paper.hud.TextOffsets.space(-177))                               // x 0
                 .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_HEADER))            // 176 + 1
                 .append(dev.tactical.paper.hud.TextOffsets.space(-177 + 6))                           // x 6
                 .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_BODY))              // 164 + 1
@@ -80,12 +78,10 @@ final class ShopMenu extends Menu {
     public void render(Player viewer, MenuView view) {
         int money = shop.economy().balance(viewer.getUniqueId());
         int secs = (shop.match().flow().stateTicksRemaining() + 19) / ModeRules.TICKS_PER_SECOND;
-        view.set(MONEY_SLOT, named(new ItemStack(Material.GOLD_INGOT), Component.text("$" + String.format("%,d", money), NamedTextColor.GOLD),
+        view.set(MONEY_SLOT, named(model(dev.tactical.engine.pack.PackBuilder.MODEL_SHOP_COIN), Component.text("$" + String.format("%,d", money), NamedTextColor.GOLD),
                 List.of(Component.text("Buy phase: " + secs + "s left", NamedTextColor.GRAY),
                         Component.text("Unused purchases last " + shop.economy().rules().retentionRounds() + " more rounds.", NamedTextColor.DARK_GRAY),
                         Component.text("Dying loses everything you bought.", NamedTextColor.DARK_GRAY))));
-        view.set(EXIT_SLOT, named(new ItemStack(Material.OAK_DOOR), Component.text("Exit", NamedTextColor.RED), List.of()),
-                c -> viewer.closeInventory());
         ShopDefinition def = shop.shopOf(viewer.getUniqueId());
         place(viewer, view, def.entries(ShopDefinition.Category.MELEE), MELEE_SLOTS, money);
         place(viewer, view, def.entries(ShopDefinition.Category.UTILITY), UTILITY_SLOTS, money);
@@ -123,11 +119,43 @@ final class ShopMenu extends Menu {
     static final int ROW_START = 9;
     private boolean swapped;
 
-    /** The hotbar is moved into the visible row so it can be rearranged there. */
+    /** Whatever was in the three slots under the confirm button while the shop is open. */
+    private final ItemStack[] underButton = new ItemStack[3];
+
+    /** The hotbar is moved into the visible row so it can be rearranged there; the confirm button is placed. */
     @Override
     public void onOpen(Player viewer) {
-        swapRows(viewer.getInventory());
+        org.bukkit.inventory.PlayerInventory inv = viewer.getInventory();
+        swapRows(inv);
+        for (int i = 0; i < 3; i++) underButton[i] = inv.getItem(CONFIRM_LEFT + i);
+        // The button is drawn 3 slots wide from the middle slot; invisible items keep purchases out of the side slots.
+        inv.setItem(CONFIRM_LEFT, blank());
+        inv.setItem(CONFIRM_SLOT, named(model(dev.tactical.engine.pack.PackBuilder.MODEL_SHOP_CONFIRM),
+                Component.text("Confirm", NamedTextColor.GREEN), List.of(Component.text("Close the shop and keep this hotbar", NamedTextColor.GRAY))));
+        inv.setItem(CONFIRM_RIGHT, blank());
         swapped = true;
+    }
+
+    @Override
+    public boolean onPlayerSlotClick(Player viewer, int slot, ClickType click) {
+        if (slot < CONFIRM_LEFT || slot > CONFIRM_RIGHT) return false;
+        viewer.playSound(viewer.getLocation(), Sound.UI_BUTTON_CLICK, 0.6f, 1.2f);
+        viewer.closeInventory(); // onClose applies the hotbar
+        return true;
+    }
+
+    /** An item drawn with one of the pack's item models (plain paper underneath). */
+    private static ItemStack model(String modelKey) {
+        ItemStack item = new ItemStack(Material.PAPER);
+        item.setData(io.papermc.paper.datacomponent.DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key(modelKey));
+        return item;
+    }
+
+    private static ItemStack blank() {
+        ItemStack item = model(dev.tactical.engine.pack.PackBuilder.MODEL_BLANK);
+        item.setData(io.papermc.paper.datacomponent.DataComponentTypes.TOOLTIP_DISPLAY,
+                io.papermc.paper.datacomponent.item.TooltipDisplay.tooltipDisplay().hideTooltip(true).build());
+        return item;
     }
 
     @Override
@@ -141,6 +169,7 @@ final class ShopMenu extends Menu {
         if (!swapped) return;
         swapped = false;
         org.bukkit.inventory.PlayerInventory inv = viewer.getInventory();
+        for (int i = 0; i < 3; i++) inv.setItem(CONFIRM_LEFT + i, underButton[i]); // button and blanks go away
         ItemStack cursor = viewer.getItemOnCursor();
         if (cursor != null && !cursor.getType().isAir()) {
             viewer.setItemOnCursor(null);

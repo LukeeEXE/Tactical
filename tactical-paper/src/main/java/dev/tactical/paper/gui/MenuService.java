@@ -148,15 +148,23 @@ public final class MenuService implements Service, Listener {
         if (!(e.getView().getTopInventory().getHolder(false) instanceof Holder h)) return;
         e.setCancelled(true); // cancel FIRST, whatever happens below
         if (!(e.getWhoClicked() instanceof Player p) || !p.getUniqueId().equals(h.viewer)) return;
+        ClickType type = e.getClick();
         if (e.getClickedInventory() != e.getView().getTopInventory()) {
-            // Own inventory: only plain moves within the slots the menu opens up (e.g. arranging the hotbar).
+            // Own inventory: buttons the menu placed there, and plain moves within the slots it opens up.
+            if (e.getClickedInventory() == e.getView().getBottomInventory() && (type == ClickType.LEFT || type == ClickType.RIGHT)) {
+                try {
+                    if (h.menu.onPlayerSlotClick(p, e.getSlot(), type)) return;
+                } catch (Throwable t) {
+                    log.log(Level.SEVERE, "Menu click handler failed in " + h.menu.getClass().getSimpleName(), t);
+                    return;
+                }
+            }
             if (e.getClickedInventory() == e.getView().getBottomInventory() && h.menu.editablePlayerSlot(e.getSlot())
                     && (e.getClick() == ClickType.LEFT || e.getClick() == ClickType.RIGHT) && PLAIN_MOVES.contains(e.getAction())) {
                 e.setCancelled(false);
             }
             return;
         }
-        ClickType type = e.getClick();
         if (type != ClickType.LEFT && type != ClickType.RIGHT && type != ClickType.SHIFT_LEFT && type != ClickType.SHIFT_RIGHT) return;
         if (e.getAction() == InventoryAction.COLLECT_TO_CURSOR || e.getAction() == InventoryAction.HOTBAR_SWAP) return;
         long now = System.currentTimeMillis();
