@@ -249,7 +249,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
 
     /** Space reserved for one team's strip: a full team, so both sides are equally wide. */
     private int stripSlot(GameMatch match) {
-        return stripWidth(match.rules().teamSize());
+        return stripWidth(match.rules().teamSize()) + HudGlyphs.STRIP_POINT;
     }
 
     private int stripWidth(int players) {
@@ -266,13 +266,15 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         List<MatchMember> members = new ArrayList<>();
         for (MatchMember m : match.members()) if (m.team() == team && members.size() < match.rules().teamSize()) members.add(m);
         int slot = stripSlot(match);
-        int width = stripWidth(members.size());
+        int point = HudGlyphs.STRIP_POINT;
+        int width = stripWidth(members.size()) + point; // pointed on the outer end, where nothing is next to it
         int lead = leftSide ? slot - width : 0;
+        int headsStart = (leftSide ? point : 0) + h.stripPadding();
         Key font = Key.key("tactical", "hud_bossbar");
         TextComponent.Builder row = Component.text().append(TextOffsets.space(lead))
-                .append(HudShapes.rect(HudGlyphs.BAR_STRIP, width, "hud_bossbar", TeamStyle.color(team)))
-                .append(TextOffsets.space(-width + h.stripPadding()));
-        int used = h.stripPadding();
+                .append(HudShapes.rect(leftSide ? HudGlyphs.STRIP_POINT_LEFT : HudGlyphs.STRIP_POINT_RIGHT, width, "hud_bossbar", TeamStyle.color(team)))
+                .append(TextOffsets.space(-width + headsStart));
+        int used = headsStart;
         for (int i = 0; i < members.size(); i++) {
             MatchMember m = members.get(i);
             boolean active = match.flow().participant(m.uuid()).map(Participant::active).orElse(false);

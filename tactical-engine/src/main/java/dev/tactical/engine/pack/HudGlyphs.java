@@ -28,7 +28,11 @@ public final class HudGlyphs {
      * A solid rectangle available in every width from 1 to {@link #RECT_MAX} px as ONE glyph each (codepoint
      * {@code base + width - 1}), so a background is a single quad: no seams between pieces at any GUI scale.
      */
-    public record RectSet(String name, char base, Slot slot, int height, int alpha) {
+    public record RectSet(String name, char base, Slot slot, int height, int alpha, Shape shape) {
+        public RectSet(String name, char base, Slot slot, int height, int alpha) {
+            this(name, base, slot, height, alpha, Shape.RECT);
+        }
+
         public char glyph(int width) {
             if (width < 1 || width > RECT_MAX) throw new IllegalArgumentException("rect width 1.." + RECT_MAX + ": " + width);
             return (char) (base + width - 1);
@@ -36,6 +40,9 @@ public final class HudGlyphs {
     }
 
     public static final int RECT_MAX = 256;
+
+    /** RECT: rounded rectangle. POINT_LEFT / POINT_RIGHT: one end cut at 45 degrees to a point (top row longest). */
+    public enum Shape { RECT, POINT_LEFT, POINT_RIGHT }
 
     // ---- private-use characters (stable: the plugin and the pack agree on these)
     public static final char CHAT_KILL = '\uE200', CHAT_ROUND = '\uE201', CHAT_WIN = '\uE202', CHAT_LOSS = '\uE203',
@@ -54,6 +61,11 @@ public final class HudGlyphs {
 
     /** Team strip behind the heads (soft; tinted red/blue). */
     public static final RectSet BAR_STRIP = new RectSet("bar_strip", '\uE400', Slot.BAR_STRIP, 10, 0x66);
+    /** Team strips with a pointed outer end: left team points left, right team points right. */
+    public static final RectSet STRIP_POINT_LEFT = new RectSet("strip_left", '\uEA00', Slot.BAR_STRIP, 10, 0x66, Shape.POINT_LEFT);
+    public static final RectSet STRIP_POINT_RIGHT = new RectSet("strip_right", '\uEB00', Slot.BAR_STRIP, 10, 0x66, Shape.POINT_RIGHT);
+    /** Extra width of a pointed end (one pixel per row). */
+    public static final int STRIP_POINT = 9;
     /** Timer panel (tinted black). */
     public static final RectSet BAR_PANEL = new RectSet("bar_panel", '\uE300', Slot.BAR_PANEL, 13, 0x8C);
     /** Score box (tinted black). */
@@ -63,7 +75,8 @@ public final class HudGlyphs {
     /** 1 px timer line under the timer panel, any width: filled part (tinted #FFFF00) and empty part (tinted black, 50 %). */
     public static final RectSet TIME_FILL = new RectSet("time_fill", '\uE800', Slot.BAR_TIME, 1, 0xFF);
     public static final RectSet TIME_EMPTY = new RectSet("time_empty", '\uE900', Slot.BAR_TIME, 1, 0x80);
-    public static final List<RectSet> RECT_SETS = List.of(BAR_STRIP, BAR_PANEL, BAR_SCORE, ACTION_PANEL, TIME_FILL, TIME_EMPTY);
+    public static final List<RectSet> RECT_SETS = List.of(BAR_STRIP, STRIP_POINT_LEFT, STRIP_POINT_RIGHT, BAR_PANEL,
+            BAR_SCORE, ACTION_PANEL, TIME_FILL, TIME_EMPTY);
 
     public static final int MONEY_PANEL_WIDTH = 46, MONEY_PANEL_HEIGHT = 11;
 
@@ -127,7 +140,7 @@ public final class HudGlyphs {
         out.add(image("plant_full", PLANT_FULL, Slot.PLANT_BAR, "pack/hud/plant/full.png"));
         for (RectSet set : RECT_SETS) {
             for (int w = 1; w <= RECT_MAX; w++) {
-                out.add(rect(set.name() + "_" + w, set.glyph(w), set.slot(), w, set.height(), (set.alpha() << 24) | 0xFFFFFF));
+                out.add(rect(set.name() + "_" + w, set.glyph(w), set.slot(), w, set.height(), (set.alpha() << 24) | 0xFFFFFF, set.shape()));
             }
         }
         return out;
@@ -144,24 +157,63 @@ public final class HudGlyphs {
         return new Glyph(name, ch, slot, img.getWidth(), img.getHeight(), img);
     }
 
+    /** Chat icons are drawn 7 px tall, the height of chat capitals; images taller than 8 px are scaled to that. */
+    public static final int CHAT_ICON_HEIGHT = 7;
+
     /** A glyph drawn from a PNG bundled in the plugin jar. */
     private static Glyph image(String name, char ch, Slot slot, String resource) {
         try (var in = HudGlyphs.class.getClassLoader().getResourceAsStream(resource)) {
             if (in == null) throw new IllegalStateException("missing bundled HUD image " + resource);
             BufferedImage img = ImageIO.read(in);
+            if (slot == Slot.CHAT && img.getHeight() > 8) img = chatCanvas(img);
             return new Glyph(name, ch, slot, img.getWidth(), img.getHeight(), img);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
     }
 
+    /**
+     * Crops a large chat icon to its ink and centres it on a canvas that the client draws {@value #CHAT_ICON_HEIGHT} px
+     * tall and 8 px wide (14 rows = exactly 2:1). A single 1/255-alpha pixel in the last column fixes the measured
+     * width, so every chat icon advances 9 px like the 8x8 ones; it is invisible (text discards alpha below 0.1).
+     */
+    private static BufferedImage chatCanvas(BufferedImage src) {
+        int minX = src.getWidth(), minY = src.getHeight(), maxX = -1, maxY = -1;
+        for (int y = 0; y < src.getHeight(); y++) {
+            for (int x = 0; x < src.getWidth(); x++) {
+                if ((src.getRGB(x, y) >>> 24) != 0) {
+                    minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+                }
+            }
+        }
+        if (maxX < 0) return src;
+        int w = maxX - minX + 1, h = maxY - minY + 1;
+        int canvasH = Math.max(h, 14);
+        double scale = CHAT_ICON_HEIGHT / (double) canvasH;
+        int canvasW = Math.max(w + 1, (int) Math.round(8 / scale));
+        BufferedImage out = new BufferedImage(canvasW, canvasH, BufferedImage.TYPE_INT_ARGB);
+        int ox = (canvasW - 1 - w) / 2, oy = (canvasH - h) / 2;
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) out.setRGB(ox + x, oy + y, src.getRGB(minX + x, minY + y));
+        out.setRGB(canvasW - 1, canvasH - 1, 0x01FFFFFF); // width marker, never visible
+        return out;
+    }
+
     /** Solid rectangle with slightly rounded corners (the four corner pixels are left out). */
     private static Glyph rect(String name, char ch, Slot slot, int w, int h, int argb) {
+        return rect(name, ch, slot, w, h, argb, Shape.RECT);
+    }
+
+    private static Glyph rect(String name, char ch, Slot slot, int w, int h, int argb, Shape shape) {
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                boolean corner = w > 2 && h > 2 && (x == 0 || x == w - 1) && (y == 0 || y == h - 1);
-                img.setRGB(x, y, corner ? 0 : argb);
+                boolean in = switch (shape) {
+                    case RECT -> !(w > 2 && h > 2 && (x == 0 || x == w - 1) && (y == 0 || y == h - 1));
+                    // pointed end: row y starts y px in (top row is the longest); the square end keeps rounded corners
+                    case POINT_LEFT -> x >= y && !(w > 2 && h > 2 && x == w - 1 && (y == 0 || y == h - 1));
+                    case POINT_RIGHT -> x < w - y && !(w > 2 && h > 2 && x == 0 && (y == 0 || y == h - 1));
+                };
+                img.setRGB(x, y, in ? argb : 0);
             }
         }
         return new Glyph(name, ch, slot, w, h, img);

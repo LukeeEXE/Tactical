@@ -249,3 +249,11 @@ All positions are estimates and need a client check; every value is adjustable i
 | Boss bar skulls | Supplied skull, centred in the 8 px head cell like a head |
 | Plant bar not centred | Simulated against the built pack: horizontally exact (box -24..24, bar -20..20, net advance 0); it sat 1 px low and is now vertically centred too (rows 1..7 in the rows -2..10 box) |
 
+### Round 12
+| Request | Change |
+|---|---|
+| Pointed team backgrounds | Each team strip has its outer end cut at 45 degrees to a point (top row longest); the end next to the score box stays square with rounded corners |
+| New team icon | Supplied 14x14 shield, tinted per team |
+| Chat icons too big | Large chat icons are drawn 7 px tall (chat capital height), cropped to their ink; each still advances 9 px so the results columns stay aligned |
+| Team chat and game chat | Planned for Phase 4 together with voice chat (roadmap updated) |
+

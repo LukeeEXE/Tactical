@@ -307,7 +307,8 @@ public final class PackBuilder {
             files.put("assets/tactical/textures/hud/" + g.name() + ".png", HudGlyphs.png(g.image()));
             // Chat and boss-bar icons render at letter height (8 px) whatever the source size (8x8 or 16x16).
             int height = switch (g.slot()) {
-                case CHAT, BAR_ICON, MONEY_ICON -> 8;
+                case CHAT -> g.height() > 8 ? HudGlyphs.CHAT_ICON_HEIGHT : 8; // large icons: as tall as capitals
+                case BAR_ICON, MONEY_ICON -> 8;
                 case BAR_BOMB -> 32;             // 16x16 icon drawn at 32 px (crisp 2x)
                 default -> g.height();
             };
