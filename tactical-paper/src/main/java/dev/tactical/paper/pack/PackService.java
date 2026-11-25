@@ -196,7 +196,7 @@ public final class PackService implements Service, Listener {
 
     /** Generated rectangle pieces (plain colour, tinted in code): not worth editing, so not exported. */
     private static final java.util.regex.Pattern RECT_PIECE =
-            java.util.regex.Pattern.compile(".*/(bar_strip|bar_panel|bar_score|action_panel)_\\d+\\.png");
+            java.util.regex.Pattern.compile(".*/(bar_strip|bar_panel|bar_score|action_panel|time_fill|time_empty)_\\d+\\.png");
 
     /**
      * Copies the art the pack currently uses (HUD and chat icons, construction block) to

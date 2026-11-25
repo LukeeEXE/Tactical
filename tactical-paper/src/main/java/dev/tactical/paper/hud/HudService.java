@@ -38,7 +38,7 @@ public final class HudService implements Service {
     public record Hint(String title, TextColor titleColor, String detail, TextColor detailColor) {
     }
 
-    private record Status(Component text, String plain, long until) {
+    private record Status(Component text, String plain, long until, boolean placed) {
     }
 
     private static final int HINT_PADDING = 6;
@@ -83,12 +83,12 @@ public final class HudService implements Service {
     @Override
     public void disable() {
         if (task != null) task.cancel();
-        ActionBars.install((p, t, ticks) -> p.sendActionBar(t));
+        ActionBars.install((p, t, ticks, placed) -> p.sendActionBar(t));
     }
 
-    private void setStatus(Player p, Component c, int durationTicks) {
+    private void setStatus(Player p, Component c, int durationTicks, boolean placed) {
         String plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(c);
-        status.put(p.getUniqueId(), new Status(c, plain, ticks + durationTicks));
+        status.put(p.getUniqueId(), new Status(c, plain, ticks + durationTicks, placed));
         render(p, true);
     }
 
@@ -115,7 +115,9 @@ public final class HudService implements Service {
         }
         Component out = Component.empty();
         if (balance >= 0) out = out.append(moneyWidget(balance));
-        if (hint != null) {
+        if (st != null && st.placed()) {
+            out = out.append(st.text());
+        } else if (hint != null) {
             out = out.append(hintBox(hint, st));
         } else if (st != null) {
             out = out.append(HudShapes.centred(pinch(st.text(), 0).shadowColor(ShadowColor.none()), pinchWidth(st.plain())));

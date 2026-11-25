@@ -226,3 +226,17 @@ All positions are estimates and need a client check; every value is adjustable i
 | Pack no longer loads after adding the glow shader | The supplied entityglow.fsh initialised globals from uniforms, which strict GLSL compilers (AMD, Intel, macOS) reject, and Minecraft then drops the whole pack. Rewritten to standard GLSL 3.30 (same look). `config.yml → resource-pack.smooth-glow: false` leaves it out if needed |
 | Pack still failed (client log) | Cause was the ported position_tex_color.vsh: 26.3 compiles shaders with Vulkan rules, where `gl_VertexID` is `gl_VertexIndex`. Fixed; all bundled shaders now checked with `glslangValidator -V` (Vulkan mode), which reproduces the client's error |
 
+### Round 10
+| Request | Change |
+|---|---|
+| Boss bar at the top of the screen | Content is on the first boss bar again. The game draws inline heads 2 px from the top (rows -1..6, measured from the screenshot), so the strip and boxes start at row -2 (1 px from the edge) to keep 1 px around the heads |
+| Timer text behind its background | The text bar is now drawn after the panel bar (moved up instead of down) |
+| Heads centred / strip aligned with the score boxes | Strip 1 px around the heads; strip, score boxes and timer panel share the same top; skulls drawn on the same rows as heads; test-player dots centred in the head cell |
+| Big gap | Shorter timer labels shrink the reserved timer space; section gap 4 px |
+| Timer line sticks out / must match the text | The line is two exact-width pieces (filled #FFFF00, empty 50 % black) exactly as wide as the text |
+| Panel width twitching between 00:11 and 00:12 | Widths are measured with every digit at its widest |
+| "ROUND 4 STARTS IN:" | Now "STARTING IN:" |
+| Planting visual | No text; a bar of the supplied empty/half/full 2x7 icons (20 segments, fills pixel by pixel) on a dark box; defusing uses the same bar |
+| Dust particles | The two supplied shapes replace the dust particle (large while young, small when fading) |
+| hud.yml | Schema 3: older files are backed up and replaced automatically |
+

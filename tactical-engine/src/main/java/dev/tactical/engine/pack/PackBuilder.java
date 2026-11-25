@@ -313,9 +313,10 @@ public final class PackBuilder {
             };
             int ascent = switch (g.slot()) {
                 case CHAT -> 7;
-                case BAR_ICON -> 7;                          // same rows as an inline player head
+                case BAR_ICON -> 8;                          // same rows as an inline player head (-1..6)
                 case BAR_TIME -> 7 - hud.bossbarTimeRow();
                 case BAR_BOMB -> 7;
+                case PLANT_BAR -> 5;                         // rows 2..8 of the action-bar line
                 case BAR_STRIP -> hud.bossbarTileAscent();
                 case BAR_PANEL -> hud.bossbarPanelAscent();
                 case BAR_SCORE -> hud.bossbarScoreAscent();
@@ -327,7 +328,7 @@ public final class PackBuilder {
                 case CHAT -> "hud_chat";
                 case BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB -> "hud_bossbar";
                 case MONEY_PANEL, MONEY_ICON -> "hud_money";
-                case ACTION_PANEL -> "hud_actionbar";
+                case ACTION_PANEL, PLANT_BAR -> "hud_actionbar";
             };
             JsonObject p = new JsonObject();
             p.addProperty("type", "bitmap");
@@ -356,6 +357,12 @@ public final class PackBuilder {
 
     private static void addBundledShaders(Map<String, byte[]> files, boolean smoothGlow) throws IOException {
         for (String name : BUNDLED_SHADERS) files.put("assets/minecraft/shaders/core/" + name, bundled("pack/shaders/core/" + name));
+        // Dust particles (bomb-site ring, editor previews): two supplied shapes, large while young, small when fading.
+        files.put("assets/tactical/textures/particle/dust_big.png", bundled("pack/particle/dust_big.png"));
+        files.put("assets/tactical/textures/particle/dust_small.png", bundled("pack/particle/dust_small.png"));
+        files.put("assets/minecraft/particles/dust.json", ("{\"textures\":[\"tactical:dust_big\",\"tactical:dust_big\","
+                + "\"tactical:dust_big\",\"tactical:dust_big\",\"tactical:dust_small\",\"tactical:dust_small\","
+                + "\"tactical:dust_small\",\"tactical:dust_small\"]}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
         if (!smoothGlow) return;
         // "Smoother Glowing" v1.5.1 (the 26.3 variant, supplied by the server owner): smoother entity glow outlines.
         files.put("assets/minecraft/post_effect/entity_outline.json", bundled("pack/glow/entity_outline.json"));

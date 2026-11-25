@@ -147,7 +147,7 @@ class PackBuilderTest {
 
     @Test
     void hudGlyphFontsUseLayout(@TempDir Path root) throws Exception {
-        PackBuilder.Result res = new PackBuilder(97, 1, "t", new HudLayout(9, 9, 12, 12, 33, 16)).build(root, List.of(), KNOWN);
+        PackBuilder.Result res = new PackBuilder(97, 1, "t", new HudLayout(9, 9, 9, 11, 33, 16)).build(root, List.of(), KNOWN);
         assertFalse(res.hasErrors(), res.issues().toString());
         Map<String, String> files = unzip(res.zip());
         JsonObject money = JsonParser.parseString(files.get("assets/tactical/font/hud_money.json")).getAsJsonObject();
@@ -160,15 +160,16 @@ class PackBuilderTest {
         assertTrue(files.containsKey("assets/tactical/font/hud_actionbar.json"));
         assertFalse(files.containsKey("assets/minecraft/textures/gui/sprites/boss_bar/yellow_progress.png"));
         assertTrue(files.containsKey("assets/minecraft/textures/gui/sprites/boss_bar/white_progress.png"));
-        assertTrue(files.containsKey("assets/tactical/textures/hud/bar_time_10.png"));
+        assertTrue(files.containsKey("assets/tactical/textures/hud/plant_half.png"));
+        assertTrue(files.containsKey("assets/minecraft/particles/dust.json"));
         assertTrue(files.containsKey("assets/minecraft/post_effect/entity_outline.json"));
         JsonObject bar = JsonParser.parseString(files.get("assets/tactical/font/hud_bossbar.json")).getAsJsonObject();
         boolean timeRow = false;
         for (var e : bar.getAsJsonArray("providers")) {
             var o = e.getAsJsonObject();
-            if (o.get("file").getAsString().endsWith("bar_time_5.png")) timeRow = o.get("ascent").getAsInt() == -5 && o.get("height").getAsInt() == 1;
+            if (o.get("file").getAsString().endsWith("time_fill_5.png")) timeRow = o.get("ascent").getAsInt() == -4 && o.get("height").getAsInt() == 1;
         }
-        assertTrue(timeRow, "timer bar segment on row 12");
+        assertTrue(timeRow, "timer line on row 11");
     }
 
     @Test

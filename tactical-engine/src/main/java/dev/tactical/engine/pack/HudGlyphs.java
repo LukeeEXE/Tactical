@@ -19,7 +19,7 @@ import java.util.Map;
 public final class HudGlyphs {
 
     /** Where a glyph is drawn; decides its font and vertical placement. */
-    public enum Slot { CHAT, BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB, MONEY_PANEL, MONEY_ICON, ACTION_PANEL }
+    public enum Slot { CHAT, BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB, PLANT_BAR, MONEY_PANEL, MONEY_ICON, ACTION_PANEL }
 
     public record Glyph(String name, char ch, Slot slot, int width, int height, BufferedImage image) {
     }
@@ -46,21 +46,24 @@ public final class HudGlyphs {
             ROUND_WIN = '\uE216', ROUND_LOSS = '\uE217', ROUND_DIVIDER = '\uE218', CHAT_TEAM = '\uE219';
     public static final char BAR_SKULL = '\uE223';
     public static final char MONEY_PANEL = '\uE240', MONEY_COIN = '\uE241';
-    /** Timer bar segments: {@code BAR_TIME + n} is a 10 px segment with n px filled (n = 0..10). */
-    public static final char BAR_TIME = '\uE700';
-    public static final int BAR_TIME_SEGMENT = 10;
+    /** Plant/defuse progress segments (2x7): empty, half, full. */
+    public static final char PLANT_EMPTY = '\uE720', PLANT_HALF = '\uE721', PLANT_FULL = '\uE722';
+    public static final int PLANT_SEGMENT = 2;
     /** Large bomb icon on its own boss bar while the bomb is planted. */
     public static final char BAR_BOMB = '\uE710';
 
     /** Team strip behind the heads (soft; tinted red/blue). */
-    public static final RectSet BAR_STRIP = new RectSet("bar_strip", '\uE400', Slot.BAR_STRIP, 12, 0x66);
+    public static final RectSet BAR_STRIP = new RectSet("bar_strip", '\uE400', Slot.BAR_STRIP, 10, 0x66);
     /** Timer panel (tinted black). */
     public static final RectSet BAR_PANEL = new RectSet("bar_panel", '\uE300', Slot.BAR_PANEL, 13, 0x8C);
     /** Score box (tinted black). */
     public static final RectSet BAR_SCORE = new RectSet("bar_score", '\uE500', Slot.BAR_SCORE, 18, 0x8C);
     /** Two-line action-bar hint box (tinted black). */
     public static final RectSet ACTION_PANEL = new RectSet("action_panel", '\uE600', Slot.ACTION_PANEL, 21, 0x8C);
-    public static final List<RectSet> RECT_SETS = List.of(BAR_STRIP, BAR_PANEL, BAR_SCORE, ACTION_PANEL);
+    /** 1 px timer line under the timer panel, any width: filled part (tinted #FFFF00) and empty part (tinted black, 50 %). */
+    public static final RectSet TIME_FILL = new RectSet("time_fill", '\uE800', Slot.BAR_TIME, 1, 0xFF);
+    public static final RectSet TIME_EMPTY = new RectSet("time_empty", '\uE900', Slot.BAR_TIME, 1, 0x80);
+    public static final List<RectSet> RECT_SETS = List.of(BAR_STRIP, BAR_PANEL, BAR_SCORE, ACTION_PANEL, TIME_FILL, TIME_EMPTY);
 
     public static final int MONEY_PANEL_WIDTH = 46, MONEY_PANEL_HEIGHT = 11;
 
@@ -129,9 +132,9 @@ public final class HudGlyphs {
                 rect("money_panel", MONEY_PANEL, Slot.MONEY_PANEL, MONEY_PANEL_WIDTH, MONEY_PANEL_HEIGHT, 0x8C000000),
                 art("money_coin", MONEY_COIN, Slot.MONEY_ICON,
                         "..kkkk..", ".kyyyyk.", "kyywyyok", "kywyyyok", "kyyyyyok", "kyyyyook", ".kooook.", "..kkkk..")));
-        for (int n = 0; n <= BAR_TIME_SEGMENT; n++) {
-            out.add(image("bar_time_" + n, (char) (BAR_TIME + n), Slot.BAR_TIME, "pack/hud/time/" + n + ".png"));
-        }
+        out.add(image("plant_empty", PLANT_EMPTY, Slot.PLANT_BAR, "pack/hud/plant/empty.png"));
+        out.add(image("plant_half", PLANT_HALF, Slot.PLANT_BAR, "pack/hud/plant/half.png"));
+        out.add(image("plant_full", PLANT_FULL, Slot.PLANT_BAR, "pack/hud/plant/full.png"));
         for (RectSet set : RECT_SETS) {
             for (int w = 1; w <= RECT_MAX; w++) {
                 out.add(rect(set.name() + "_" + w, set.glyph(w), set.slot(), w, set.height(), (set.alpha() << 24) | 0xFFFFFF));

@@ -36,11 +36,11 @@ public record HudConfig(
         int moneyTextOffset,
         int moneyLeft
 ) {
-    /** 2: layout reworked around the player heads (older files are replaced by the new defaults, with a backup). */
-    public static final int SCHEMA_VERSION = 2;
+    /** 3: top-aligned layout (older files are replaced by the new defaults, with a backup). */
+    public static final int SCHEMA_VERSION = 3;
 
     public static HudConfig defaults() {
-        return new HudConfig("pinch", 0, 9, 9, 12, 12, 9, 10, 3, 6, 4, 19, 2, 0,
+        return new HudConfig("pinch", 0, 9, 9, 9, 11, 9, 10, 3, 4, 4, 19, 5, 0,
                 16, 160, -7, 2, true, 33, 32, 45);
     }
 
@@ -62,7 +62,7 @@ public record HudConfig(
         return new HudConfig(
                 b.string("font", d.bossbarFont()).toLowerCase(java.util.Locale.ROOT),
                 b.integer("text-offset-y", d.bossbarTextOffsetY(), -64, 64),
-                b.integer("tile-ascent", d.bossbarTileAscent(), -64, 12),
+                b.integer("tile-ascent", d.bossbarTileAscent(), -64, 10),
                 b.integer("panel-ascent", d.bossbarPanelAscent(), -64, 13),
                 b.integer("score-ascent", d.scoreAscent(), -64, 18),
                 b.integer("time-row", d.timeRow(), -64, 64),

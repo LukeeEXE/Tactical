@@ -319,7 +319,7 @@ public final class BombController {
                 default -> { }
             }
             if (step != PlantProgress.Step.COMPLETED) {
-                dev.tactical.paper.hud.ActionBars.status(p, progressBar("Planting", plantFraction(), NamedTextColor.RED));
+                dev.tactical.paper.hud.ActionBars.progress(p, plantFraction());
             }
         } else if (plant.planter().isPresent()) {
             String why = !holding ? "released" : site.isEmpty() ? "left_site" : "not_on_ground";
@@ -428,8 +428,7 @@ public final class BombController {
             match.recorder().record(EventTypes.DEFUSE_PROGRESS, List.of(id), team(id), Map.of("progress_ticks", defuse.progressTicks()),
                     "OK", RecordingSink.Priority.LOW);
         }
-        if (p != null) dev.tactical.paper.hud.ActionBars.status(p, progressBar("Defusing", defuse.fraction(), NamedTextColor.AQUA)
-                .append(Component.text(defuse.checkpointReached() ? "  (checkpoint)" : "", NamedTextColor.YELLOW)));
+        if (p != null) dev.tactical.paper.hud.ActionBars.progress(p, defuse.fraction());
     }
 
     /** Why this defender cannot defuse right now (empty = valid stance this tick). */
@@ -545,13 +544,6 @@ public final class BombController {
             d.put("z", Math.round(l.getZ() * 100) / 100.0);
         }
         return d;
-    }
-
-    private static Component progressBar(String label, double fraction, NamedTextColor color) {
-        int filled = (int) Math.round(Math.max(0, Math.min(1, fraction)) * 20);
-        return Component.text(label + " ", color)
-                .append(Component.text("|".repeat(filled), color))
-                .append(Component.text("|".repeat(20 - filled), NamedTextColor.DARK_GRAY));
     }
 
     // ------------------------------------------------------------------ queries
