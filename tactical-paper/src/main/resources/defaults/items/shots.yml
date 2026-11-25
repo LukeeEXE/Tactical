@@ -1,0 +1,42 @@
+# Custom items. Every file in items/ may define several; ids must be unique across files.
+# After editing: /game reload items (shops that sell them: /game reload shops).
+#
+# type: shot  - right-click: apply the effects to yourself.
+#               left-click a player: a positive shot applies to a TEAMMATE, a negative shot to an OPPONENT
+#               (no damage). Any other punch is a normal punch. One shot is used per application.
+#               A shot can never mix positive and negative effects.
+#
+# material:        item used for the shot (potion bottles get the shot's colour)
+# name:            MiniMessage display name
+# description:     MiniMessage lines (green by default); <duration> = longest effect, e.g. 1.8s; <level> = first effect level
+# color:           particle colour of the ring around the target and the trail while the effect lasts
+# ring-radius:     radius of that ring in blocks
+# trail:           particles around the target while the effect lasts
+# cooldown-ticks:  shared by all shots (20 = 1 second)
+# effects:         list of effects; every effect has a 'type'. Available now:
+#   { type: potion, effect: <any vanilla effect>, level: 1, duration-ticks: 100, polarity: positive|negative }
+#   (polarity defaults to the effect's own: speed is positive, slowness negative)
+schema-version: 1
+items:
+  speed_shot:
+    type: shot
+    material: potion
+    name: "<white>Shot of Speed"
+    description:
+      - "Increase your movement speed by <white>40%</white>"
+      - "for <white><duration></white>."
+    color: "#3fd6e0"
+    ring-radius: 0.8
+    trail: true
+    cooldown-ticks: 20
+    effects:
+      - { type: potion, effect: speed, level: 2, duration-ticks: 36 }
+  slowness_shot:
+    type: shot
+    material: potion
+    name: "<white>Shot of Slowness"
+    description:
+      - "Slow an opponent by <white>30%</white> for <white><duration></white>."
+    color: "#6b5a8e"
+    effects:
+      - { type: potion, effect: slowness, level: 2, duration-ticks: 60 }

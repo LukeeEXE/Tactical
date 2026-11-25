@@ -43,13 +43,23 @@ public record ShopDefinition(String id, Map<String, String> categories, Map<Stri
             }
             if (n.has("give")) {
                 ConfigNode g = n.child("give");
-                g.warnUnknownKeys(List.of("material", "amount"));
+                g.warnUnknownKeys(List.of("material", "item", "amount"));
+                int amount = g.integer("amount", 1, 1, 64);
+                if (g.has("item") == g.has("material")) {
+                    g.error("needs exactly one of 'material' (vanilla item) or 'item' (custom item from items/*.yml)");
+                    continue;
+                }
+                if (g.has("item")) {
+                    String custom = g.requireString("item");
+                    if (custom != null) entries.put(e.getKey(), new ShopEntry(e.getKey(), category, name, ShopEntry.Kind.ITEM, price, max,
+                            enabled, null, amount, null, 0, List.of(), custom.toLowerCase(Locale.ROOT)));
+                    continue;
+                }
                 String mat = g.requireString("material");
                 Material m = mat == null ? null : Material.matchMaterial(mat);
                 if (mat != null && (m == null || !m.isItem())) g.child("material").error("unknown item '" + mat + "'");
-                int amount = g.integer("amount", 1, 1, 64);
                 if (m != null) entries.put(e.getKey(), new ShopEntry(e.getKey(), category, name, ShopEntry.Kind.ITEM, price, max,
-                        enabled, m.getKey().asString(), amount, null, 0, List.of()));
+                        enabled, m.getKey().asString(), amount, null, 0, List.of(), null));
             } else {
                 ConfigNode en = n.child("enchant");
                 en.warnUnknownKeys(List.of("enchantment", "level", "applies-to"));
@@ -71,7 +81,7 @@ public record ShopDefinition(String id, Map<String, String> categories, Map<Stri
                 }
                 if (applies.isEmpty()) en.error("applies-to must list at least one item");
                 entries.put(e.getKey(), new ShopEntry(e.getKey(), category, name, ShopEntry.Kind.ENCHANT, price, max, enabled,
-                        null, 1, ench, level, applies));
+                        null, 1, ench, level, applies, null));
             }
         }
         if (root.report().errors().size() > before) return Optional.empty();

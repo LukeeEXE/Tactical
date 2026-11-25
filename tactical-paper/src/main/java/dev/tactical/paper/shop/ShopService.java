@@ -90,6 +90,28 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         HandlerList.unregisterAll(this);
     }
 
+    private dev.tactical.paper.item.ItemService items;
+
+    /** Custom items (shots...) for entries with {@code give: { item: <id> }}. */
+    public void setItems(dev.tactical.paper.item.ItemService items) {
+        this.items = items;
+    }
+
+    /** The stack a shop entry gives: a custom item, or a prepared vanilla item. Null if it cannot be made. */
+    org.bukkit.inventory.ItemStack createItem(ShopEntry e, int amount) {
+        if (e.customItem() != null) return items == null ? null : items.create(e.customItem(), amount).orElse(null);
+        org.bukkit.Material m = e.material() == null ? null : org.bukkit.Material.matchMaterial(e.material());
+        return m == null ? null : MatchShop.prepare(new org.bukkit.inventory.ItemStack(m, amount));
+    }
+
+    String itemKey(org.bukkit.inventory.ItemStack item) {
+        if (items != null) {
+            var id = items.idOf(item);
+            if (id.isPresent()) return "tactical:" + id.get();
+        }
+        return item.getType().getKey().asString();
+    }
+
     /** Money of a match participant, or -1 if the player is not in a match with an economy. */
     public int balance(Player p) {
         GameMatch m = matches.matchOf(p.getUniqueId()).orElse(null);
@@ -111,12 +133,13 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
         }
         Map<UUID, TeamId> teams = new LinkedHashMap<>();
         for (MatchMember m : match.members()) teams.put(m.uuid(), m.team());
-        Map<org.bukkit.Material, Integer> base = new HashMap<>();
+        Map<String, Integer> base = new HashMap<>();
         for (String spec : config.general().placeholderLoadout()) {
             org.bukkit.inventory.ItemStack i = dev.tactical.paper.arena.MatchArena.parseItem(spec);
-            if (i != null) base.merge(i.getType(), i.getAmount(), Integer::sum);
+            if (i != null) base.merge(i.getType().getKey().asString(), i.getAmount(), Integer::sum);
         }
-        MatchShop shop = new MatchShop(match, new MatchEconomy(config.economy(), teams), def, m -> base.getOrDefault(m, 0));
+        MatchShop shop = new MatchShop(match, new MatchEconomy(config.economy(), teams), def, k -> base.getOrDefault(k, 0),
+                this::createItem, this::itemKey);
         shops.put(match.id(), shop);
         match.bus().subscribe(MatchFlowEvent.class, e -> onEvent(shop, e));
         match.bus().subscribe(dev.tactical.paper.match.MatchEvents.AssistAwarded.class,
@@ -167,6 +190,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
             case MatchFlowEvent.BombPlanted bp -> shop.recordChanges(eco.onPlant(match.flow().teamOn(Side.ATTACKERS)));
             case MatchFlowEvent.BombDefused bd -> shop.recordChanges(eco.onDefuse(bd.defuser()));
             case MatchFlowEvent.RoundEnded re -> {
+                // (purchases are reconciled by item id, so shots used during the round are gone from the ledger)
                 Set<UUID> survivors = new HashSet<>();
                 for (Participant p : match.flow().participants()) if (p.active()) survivors.add(p.id());
                 boolean planted = match.flow().bomb() != BombStatus.NOT_PLANTED;
@@ -339,7 +363,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
     }
 
     private void openShop(Player p, MatchShop shop) {
-        menus.open(p, new ShopMenu(shop, icons));
+        menus.open(p, new ShopMenu(shop, icons, this::createItem));
     }
 
     /** Items whose right-click does something on its own (vanilla items without a component that says so). */

@@ -70,8 +70,15 @@ public final class TacticalPlugin extends JavaPlugin {
         StatsTracker statsTracker = services.register(StatsTracker.class, new StatsTracker(this, matches));
         services.register(MatchHud.class, new MatchHud(this, matches, statsTracker, config, hudText));
         KitSelectService kitSelect = services.register(KitSelectService.class, new KitSelectService(this, config, matches, menus, icons, hotbar));
+        dev.tactical.paper.item.ItemService items = services.register(dev.tactical.paper.item.ItemService.class,
+                new dev.tactical.paper.item.ItemService(this, config, matches));
         ShopService shops = services.register(ShopService.class, new ShopService(this, config, maps, matches, menus, icons, hotbar, getLogger()));
         hud.setMoneyProvider(shops::balance);
+        shops.setItems(items);
+        dev.tactical.paper.item.ItemLore.install(s -> {
+            int w = hud.text().ttfWidth(config.hud().bossbarFont(), s);
+            return w == 0 ? dev.tactical.paper.hud.HudText.vanillaWidth(s) : w;
+        }, config.hud().bossbarFont());
         shops.setKitOpener(kitSelect::openFor);
         hud.addHintProvider(kitSelect::hint);
         hud.addHintProvider(shops::hint);
@@ -88,7 +95,7 @@ public final class TacticalPlugin extends JavaPlugin {
         }
         MapCommands mapCommands = new MapCommands(maps, editor, config, audit, lobby, tasks);
         GameCommand command = new GameCommand(config, matches, recorders, audit, messages, tasks, getPluginMeta().getVersion(),
-                maps, List.of(mapCommands::attach, new PackCommands(pack, audit, tasks)::attach));
+                maps, List.of(mapCommands::attach, new PackCommands(pack, audit, tasks)::attach, items::attach));
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS,
                 event -> event.registrar().register(command.build(), "Tactical shooter commands", List.of("tactical")));
         getLogger().info("Tactical enabled in " + (System.currentTimeMillis() - start) + " ms");

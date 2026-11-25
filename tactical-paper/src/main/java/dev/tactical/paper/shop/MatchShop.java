@@ -31,9 +31,9 @@ import java.util.function.ToIntFunction;
  * Economy and purchases of ONE match. The purchase LEDGER is authoritative, never the items: every round the items
  * are re-created from it, so moving items around can never duplicate a purchase, and expiry/death loss are exact.
  *
- * <p>Purchased items are plain items (no per-purchase tag) so they STACK with each other and with the loadout
- * (e.g. arrows). What a player still owns is derived at round end by counting that material in the inventory and
- * subtracting what the loadout gave (used items are consumed oldest-purchase-first).
+ * <p>Purchased items carry no per-purchase tag so they STACK with each other and with the loadout (e.g. arrows).
+ * What a player still owns is derived at round end by counting that item (custom item id, else material) in the
+ * inventory and subtracting what the loadout gave (used items are consumed oldest-purchase-first).
  * <ul>
  *   <li>Bought in round N: usable in rounds N..N+retention while unused; dropped at the start of the round after.</li>
  *   <li>Dying loses every purchase, including enchantments (the enchanted item is gone, so it can be bought again).</li>
@@ -51,15 +51,33 @@ public final class MatchShop {
     private final GameMatch match;
     private final MatchEconomy economy;
     private final ShopDefinition shop;
-    private final ToIntFunction<Material> baseCount;
+    private final ToIntFunction<String> baseCount;
+    private final ItemFactory factory;
     private final Map<UUID, List<Purchase>> ledger = new HashMap<>();
 
-    /** @param baseCount how many of a material the round-start loadout gives (not purchases) */
-    MatchShop(GameMatch match, MatchEconomy economy, ShopDefinition shop, ToIntFunction<Material> baseCount) {
+    /** Creates the stack an ITEM entry gives (vanilla or custom), or null if it cannot be made. */
+    @FunctionalInterface
+    public interface ItemFactory {
+        ItemStack create(ShopEntry entry, int amount);
+    }
+
+    /** Identifies an inventory stack: {@code tactical:<id>} for custom items, else the material key. */
+    @FunctionalInterface
+    public interface ItemKeys {
+        String keyOf(ItemStack item);
+    }
+
+    private final ItemKeys keys;
+
+    /** @param baseCount how many of an item key the round-start loadout gives (not purchases) */
+    MatchShop(GameMatch match, MatchEconomy economy, ShopDefinition shop, ToIntFunction<String> baseCount,
+              ItemFactory factory, ItemKeys keys) {
         this.match = match;
         this.economy = economy;
         this.shop = shop;
         this.baseCount = baseCount;
+        this.factory = factory;
+        this.keys = keys;
     }
 
     public GameMatch match() {
@@ -132,9 +150,9 @@ public final class MatchShop {
             Purchase pu = list.get(i);
             if (!pu.entryId().equals(entryId) || pu.round() != match.flow().round()) continue;
             if (e.kind() == ShopEntry.Kind.ITEM) {
-                Material m = material(e);
-                if (m == null || count(p.getInventory(), m) - baseCount.applyAsInt(m) < pu.amount()) continue;
-                remove(p.getInventory(), m, pu.amount());
+                String k = e.itemKey();
+                if (k == null || count(p.getInventory(), k) - baseCount.applyAsInt(k) < pu.amount()) continue;
+                remove(p.getInventory(), k, pu.amount());
             } else {
                 removeEnchant(p, e);
             }
@@ -186,7 +204,7 @@ public final class MatchShop {
     void reconcile(Player p) {
         List<Purchase> list = ledger.get(p.getUniqueId());
         if (list == null) return;
-        Map<Material, Integer> remaining = new HashMap<>();
+        Map<String, Integer> remaining = new HashMap<>();
         List<Purchase> out = new ArrayList<>(list);
         for (int i = out.size() - 1; i >= 0; i--) { // newest first keep their amounts
             Purchase pu = out.get(i);
@@ -199,10 +217,10 @@ public final class MatchShop {
                 if (enchantTarget(p.getInventory(), e, false) == null) out.remove(i); // the enchanted item is gone
                 continue;
             }
-            Material m = material(e);
-            int left = remaining.computeIfAbsent(m, k -> Math.max(0, count(p.getInventory(), k) - baseCount.applyAsInt(k)));
+            String key = e.itemKey();
+            int left = remaining.computeIfAbsent(key, k -> Math.max(0, count(p.getInventory(), k) - baseCount.applyAsInt(k)));
             int have = Math.min(left, pu.amount());
-            remaining.put(m, left - have);
+            remaining.put(key, left - have);
             out.set(i, new Purchase(pu.entryId(), pu.round(), have));
         }
         out.removeIf(pu -> pu.amount() <= 0);
@@ -229,10 +247,9 @@ public final class MatchShop {
             target.addUnsafeEnchantment(ench, e.level());
             return true;
         }
-        Material m = material(e);
-        if (m == null) return false;
-        ItemStack item = prepare(new ItemStack(m, Math.max(1, amount)));
-        EquipmentSlot armorSlot = m.getEquipmentSlot();
+        ItemStack item = factory.create(e, Math.max(1, amount));
+        if (item == null) return false;
+        EquipmentSlot armorSlot = item.getType().getEquipmentSlot();
         if (armorSlot.isArmor()) {
             ItemStack current = inv.getItem(armorSlot);
             if (current == null || current.getType().isAir()) {
@@ -243,14 +260,10 @@ public final class MatchShop {
         return inv.addItem(item).isEmpty();
     }
 
-    /** Match items never break and show no durability bar. */
+    /** Match items never break and show no durability bar; weapons and armor get the standard lore. */
     public static ItemStack prepare(ItemStack item) {
         if (item.getType().getMaxDurability() > 0) item.setData(DataComponentTypes.UNBREAKABLE);
-        return item;
-    }
-
-    private static Material material(ShopEntry e) {
-        return e.material() == null ? null : Material.matchMaterial(e.material());
+        return dev.tactical.paper.item.ItemLore.decorate(item);
     }
 
     /** First item the enchantment applies to; with {@code needsUpgrade} only items below the purchased level. */
@@ -279,19 +292,19 @@ public final class MatchShop {
         return k == null ? null : RegistryAccess.registryAccess().getRegistry(RegistryKey.ENCHANTMENT).get(k);
     }
 
-    static int count(PlayerInventory inv, Material m) {
+    int count(PlayerInventory inv, String key) {
         int n = 0;
-        for (ItemStack i : inv.getContents()) if (i != null && i.getType() == m) n += i.getAmount();
+        for (ItemStack i : inv.getContents()) if (i != null && !i.getType().isAir() && key.equals(keys.keyOf(i))) n += i.getAmount();
         return n;
     }
 
-    /** Removes up to {@code amount} of a material, taking from the main inventory before armor slots. */
-    private static void remove(PlayerInventory inv, Material m, int amount) {
+    /** Removes up to {@code amount} of an item, taking from the main inventory before armor slots. */
+    private void remove(PlayerInventory inv, String key, int amount) {
         ItemStack[] c = inv.getContents();
         for (int pass = 0; pass < 2 && amount > 0; pass++) {
             for (int i = 0; i < c.length && amount > 0; i++) {
                 boolean armorSlot = i >= 36 && i <= 39;
-                if (c[i] == null || c[i].getType() != m || (pass == 0) == armorSlot) continue;
+                if (c[i] == null || c[i].getType().isAir() || !key.equals(keys.keyOf(c[i])) || (pass == 0) == armorSlot) continue;
                 int take = Math.min(amount, c[i].getAmount());
                 amount -= take;
                 if (take == c[i].getAmount()) inv.setItem(i, null);

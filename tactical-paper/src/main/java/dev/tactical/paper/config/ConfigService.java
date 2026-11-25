@@ -50,14 +50,14 @@ public final class ConfigService implements Service {
             "modes/quickplay.yml", "modes/competitive.yml", "modes/test.yml",
             "kits/vanguard.yml", "kits/sentinel.yml", "kits/phantom.yml",
             "kits/warden.yml", "kits/striker.yml", "kits/medic.yml",
-            "messages/en_US.yml", "shops/default.yml", "economy/economy.yml", "gui/icons.yml", "hud/hud.yml");
+            "messages/en_US.yml", "items/shots.yml", "shops/default.yml", "economy/economy.yml", "gui/icons.yml", "hud/hud.yml");
 
     /** Folders created on first start, even if empty, so admins see the layout. */
     static final List<String> FOLDERS = List.of("maps", "map-pools", "kits", "items", "shops", "economy",
             "sounds", "npc", "modes", "messages", "logs/matches", "backups", "data", "resourcepack", "lobby", "blocks", "gui", "hud");
 
     public enum Target {
-        CONFIG, MODES, KITS, MESSAGES, MAPS, SHOPS, ECONOMY, HUD, ALL;
+        CONFIG, MODES, KITS, MESSAGES, MAPS, ITEMS, SHOPS, ECONOMY, HUD, ALL;
 
         public static Optional<Target> parse(String s) {
             try {
@@ -75,6 +75,7 @@ public final class ConfigService implements Service {
     private volatile GeneralConfig general = GeneralConfig.defaults();
     private volatile Map<String, ModeRules> modes = Map.of();
     private volatile Map<String, KitDefinition> kits = Map.of();
+    private volatile Map<String, dev.tactical.paper.item.ItemDefinition> items = Map.of();
     private volatile Map<String, String> messages = Map.of();
     private volatile Map<String, dev.tactical.paper.shop.ShopDefinition> shops = Map.of();
     private volatile dev.tactical.engine.economy.EconomyRules economy = dev.tactical.engine.economy.EconomyRules.defaults();
@@ -115,6 +116,11 @@ public final class ConfigService implements Service {
 
     public Map<String, ModeRules> modes() {
         return modes;
+    }
+
+    /** Custom items from items/*.yml, by item id. */
+    public Map<String, dev.tactical.paper.item.ItemDefinition> items() {
+        return items;
     }
 
     public Map<String, KitDefinition> kits() {
@@ -180,10 +186,31 @@ public final class ConfigService implements Service {
                 messages = Collections.unmodifiableMap(m);
             });
         }
+        if (target == Target.ITEMS || target == Target.ALL) {
+            Map<String, Map<String, dev.tactical.paper.item.ItemDefinition>> files = loadDirectory("items", "items", 1, Map.of(),
+                    dev.tactical.paper.item.ItemDefinition::parseFile, report);
+            Map<String, dev.tactical.paper.item.ItemDefinition> all = new TreeMap<>();
+            for (Map.Entry<String, Map<String, dev.tactical.paper.item.ItemDefinition>> f : files.entrySet()) {
+                for (var d : f.getValue().values()) {
+                    if (all.putIfAbsent(d.id(), d) != null) report.error("items/" + f.getKey() + ".yml", 0, "items." + d.id(),
+                            "item id '" + d.id() + "' is defined in more than one file");
+                }
+            }
+            items = Collections.unmodifiableMap(all);
+        }
         if (target == Target.SHOPS || target == Target.ALL) {
             shops = loadDirectory("shops", "shop", dev.tactical.paper.shop.ShopDefinition.SCHEMA_VERSION, shops,
                     (node) -> dev.tactical.paper.shop.ShopDefinition.parse(node, baseName(node.file())), report);
             if (!shops.containsKey("default")) report.error("shops/default.yml", 0, "", "the default shop is missing or invalid");
+        }
+        if (target == Target.SHOPS || target == Target.ITEMS || target == Target.ALL) {
+            for (var shop : shops.values()) {
+                for (var e : shop.entries().values()) {
+                    if (e.customItem() != null && !items.containsKey(e.customItem())) {
+                        report.error("shops/" + shop.id() + ".yml", 0, "items." + e.id(), "unknown custom item '" + e.customItem() + "' (see items/*.yml)");
+                    }
+                }
+            }
         }
         if (target == Target.ECONOMY || target == Target.ALL) {
             ConfigReport er = new ConfigReport();
@@ -205,7 +232,7 @@ public final class ConfigService implements Service {
             if (issue.severity() == ConfigIssue.Severity.ERROR) log.severe(issue.toString());
             else log.warning(issue.toString());
         }
-        log.info("Loaded configuration (" + target + "): " + modes.size() + " modes, " + kits.size() + " kits, " + shops.size() + " shops"
+        log.info("Loaded configuration (" + target + "): " + modes.size() + " modes, " + kits.size() + " kits, " + items.size() + " items, " + shops.size() + " shops"
                 + (report.hasErrors() ? ", " + report.errors().size() + " error(s)" : ""));
         return report;
     }

@@ -18,6 +18,7 @@ permissions:
       tactical.admin.pools: true
       tactical.admin.pack: true
       tactical.admin.lobby: true
+      tactical.admin.items: true
       tactical.bypass.hunger: true
   tactical.admin.maps:
     description: Create, edit, validate and publish maps.
@@ -27,6 +28,9 @@ permissions:
     default: op
   tactical.admin.pack:
     description: Rebuild the resource pack and use the custom block palette.
+    default: op
+  tactical.admin.items:
+    description: List custom items and give them to yourself (/game item).
     default: op
   tactical.admin.lobby:
     description: Set the lobby spawn.

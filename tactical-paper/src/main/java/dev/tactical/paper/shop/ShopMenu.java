@@ -29,7 +29,10 @@ final class ShopMenu extends Menu {
     private final MatchShop shop;
     private final Icons icons;
 
-    ShopMenu(MatchShop shop, Icons icons) {
+    private final MatchShop.ItemFactory factory;
+
+    ShopMenu(MatchShop shop, Icons icons, MatchShop.ItemFactory factory) {
+        this.factory = factory;
         this.shop = shop;
         this.icons = icons;
     }
@@ -80,11 +83,21 @@ final class ShopMenu extends Menu {
     }
 
     private ItemStack entryIcon(Player viewer, ShopEntry e, int money) {
-        Material m = e.kind() == ShopEntry.Kind.ENCHANT ? Material.ENCHANTED_BOOK : Material.matchMaterial(e.material());
-        ItemStack item = icons.icon("shop.category", Component.empty(), List.of()).withType(m == null ? Material.PAPER : m);
+        // The real item (with its lore) for item entries; an enchanted book with an ENCHANT tag for upgrades.
+        ItemStack real = e.kind() == ShopEntry.Kind.ITEM ? factory.create(e, 1) : null;
+        ItemStack item = real != null ? real : icons.icon("shop.category", Component.empty(), List.of())
+                .withType(e.kind() == ShopEntry.Kind.ENCHANT ? Material.ENCHANTED_BOOK : Material.PAPER);
         int carried = shop.carried(viewer.getUniqueId(), e.id());
         MatchShop.BuyResult can = shop.canBuy(viewer, e);
         List<Component> lore = new ArrayList<>();
+        List<Component> existing = item.lore();
+        if (existing != null && !existing.isEmpty()) {
+            lore.addAll(existing);
+        } else {
+            lore.add(dev.tactical.paper.item.ItemLore.tag(e.kind() == ShopEntry.Kind.ENCHANT
+                    ? dev.tactical.paper.item.ItemCategory.ENCHANT : dev.tactical.paper.item.ItemCategory.of(item.getType())));
+        }
+        lore.add(Component.empty());
         lore.add(Component.text("Price: $" + String.format("%,d", e.price()), e.price() <= money ? NamedTextColor.GREEN : NamedTextColor.RED));
         lore.add(Component.text("Owned: " + carried + "/" + e.maxCarry(), NamedTextColor.GRAY));
         if (can != MatchShop.BuyResult.OK) lore.add(Component.text(message(can), NamedTextColor.RED));

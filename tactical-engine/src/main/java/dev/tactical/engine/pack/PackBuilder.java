@@ -317,7 +317,8 @@ public final class PackBuilder {
                 case BAR_ICON -> 8;                          // same rows as an inline player head (-1..6)
                 case BAR_TIME -> 7 - hud.bossbarTimeRow();
                 case BAR_BOMB -> 7;
-                case PLANT_BAR -> 6;                         // rows 1..7: centred in the 13 px box (rows -2..10)
+                case PLANT_BAR -> 6;
+                case TOOLTIP_TAG -> 7;                       // rows 0..8 of a lore line: 2 px around Pinch capitals                         // rows 1..7: centred in the 13 px box (rows -2..10)
                 case BAR_STRIP -> hud.bossbarTileAscent();
                 case BAR_PANEL -> hud.bossbarPanelAscent();
                 case BAR_SCORE -> hud.bossbarScoreAscent();
@@ -330,6 +331,7 @@ public final class PackBuilder {
                 case BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB -> "hud_bossbar";
                 case MONEY_PANEL, MONEY_ICON -> "hud_money";
                 case ACTION_PANEL, PLANT_BAR -> "hud_actionbar";
+                case TOOLTIP_TAG -> "hud_tooltip";
             };
             JsonObject p = new JsonObject();
             p.addProperty("type", "bitmap");

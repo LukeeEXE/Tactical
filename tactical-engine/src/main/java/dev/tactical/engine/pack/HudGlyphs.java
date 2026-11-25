@@ -19,7 +19,7 @@ import java.util.Map;
 public final class HudGlyphs {
 
     /** Where a glyph is drawn; decides its font and vertical placement. */
-    public enum Slot { CHAT, BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB, PLANT_BAR, MONEY_PANEL, MONEY_ICON, ACTION_PANEL }
+    public enum Slot { CHAT, BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB, PLANT_BAR, MONEY_PANEL, MONEY_ICON, ACTION_PANEL, TOOLTIP_TAG }
 
     public record Glyph(String name, char ch, Slot slot, int width, int height, BufferedImage image) {
     }
@@ -42,7 +42,7 @@ public final class HudGlyphs {
     public static final int RECT_MAX = 256;
 
     /** RECT: rounded rectangle. POINT_LEFT / POINT_RIGHT: one end cut at 45 degrees to a point (top row longest). */
-    public enum Shape { RECT, POINT_LEFT, POINT_RIGHT }
+    public enum Shape { RECT, POINT_LEFT, POINT_RIGHT, BOXED }
 
     // ---- private-use characters (stable: the plugin and the pack agree on these)
     public static final char CHAT_KILL = '\uE200', CHAT_ROUND = '\uE201', CHAT_WIN = '\uE202', CHAT_LOSS = '\uE203',
@@ -52,6 +52,8 @@ public final class HudGlyphs {
             STAT_ASSISTS = '\uE212', STAT_DAMAGE = '\uE213', STAT_KDR = '\uE214', CHAT_MVP = '\uE215',
             ROUND_WIN = '\uE216', ROUND_LOSS = '\uE217', ROUND_DIVIDER = '\uE218', CHAT_TEAM = '\uE219';
     public static final char BAR_SKULL = '\uE223';
+    /** Mouse icons for item lore usage lines ("Right-Click to Use"). */
+    public static final char MOUSE_LEFT = '\uE224', MOUSE_RIGHT = '\uE225';
     public static final char MONEY_PANEL = '\uE240', MONEY_COIN = '\uE241';
     /** Plant/defuse progress segments (2x7): empty, half, full. */
     public static final char PLANT_EMPTY = '\uE720', PLANT_HALF = '\uE721', PLANT_FULL = '\uE722';
@@ -75,7 +77,9 @@ public final class HudGlyphs {
     /** 1 px timer line under the timer panel, any width: filled part (tinted #FFFF00) and empty part (tinted black, 50 %). */
     public static final RectSet TIME_FILL = new RectSet("time_fill", '\uE800', Slot.BAR_TIME, 1, 0xFF);
     public static final RectSet TIME_EMPTY = new RectSet("time_empty", '\uE900', Slot.BAR_TIME, 1, 0x80);
-    public static final List<RectSet> RECT_SETS = List.of(BAR_STRIP, STRIP_POINT_LEFT, STRIP_POINT_RIGHT, BAR_PANEL,
+    /** Item category tag in lore ("UTILITY"): bright 1 px border, translucent fill, tinted per category. */
+    public static final RectSet TOOLTIP_TAG = new RectSet("tooltip_tag", '\uEC00', Slot.TOOLTIP_TAG, 9, 0x60, Shape.BOXED);
+    public static final List<RectSet> RECT_SETS = List.of(TOOLTIP_TAG, BAR_STRIP, STRIP_POINT_LEFT, STRIP_POINT_RIGHT, BAR_PANEL,
             BAR_SCORE, ACTION_PANEL, TIME_FILL, TIME_EMPTY);
 
     public static final int MONEY_PANEL_WIDTH = 46, MONEY_PANEL_HEIGHT = 11;
@@ -144,6 +148,10 @@ public final class HudGlyphs {
                 image("bar_skull", BAR_SKULL, Slot.BAR_ICON, "pack/hud/skull.png"),
                 image("bar_bomb", BAR_BOMB, Slot.BAR_BOMB, "pack/hud/bomb.png"),
                 rect("money_panel", MONEY_PANEL, Slot.MONEY_PANEL, MONEY_PANEL_WIDTH, MONEY_PANEL_HEIGHT, 0x8C000000),
+                art("mouse_left", MOUSE_LEFT, Slot.CHAT,
+                        "..kkkk..", ".krrkwk.", ".krrkwk.", ".kkkkkk.", ".kwwwwk.", ".kwwwwk.", ".kwwwwk.", "..kkkk.."),
+                art("mouse_right", MOUSE_RIGHT, Slot.CHAT,
+                        "..kkkk..", ".kwkrrk.", ".kwkrrk.", ".kkkkkk.", ".kwwwwk.", ".kwwwwk.", ".kwwwwk.", "..kkkk.."),
                 art("money_coin", MONEY_COIN, Slot.MONEY_ICON,
                         "..kkkk..", ".kyyyyk.", "kyywyyok", "kywyyyok", "kyyyyyok", "kyyyyook", ".kooook.", "..kkkk..")));
         out.add(image("plant_empty", PLANT_EMPTY, Slot.PLANT_BAR, "pack/hud/plant/empty.png"));
@@ -241,8 +249,10 @@ public final class HudGlyphs {
                     // pointed end: row y starts y px in (top row is the longest); the square end keeps rounded corners
                     case POINT_LEFT -> x >= y && !(w > 2 && h > 2 && x == w - 1 && (y == 0 || y == h - 1));
                     case POINT_RIGHT -> x < w - y && !(w > 2 && h > 2 && x == 0 && (y == 0 || y == h - 1));
+                    case BOXED -> !(w > 2 && h > 2 && (x == 0 || x == w - 1) && (y == 0 || y == h - 1));
                 };
-                img.setRGB(x, y, in ? argb : 0);
+                boolean border = shape == Shape.BOXED && (x == 0 || x == w - 1 || y == 0 || y == h - 1);
+                img.setRGB(x, y, !in ? 0 : border ? (argb | 0xFF000000) : argb);
             }
         }
         return new Glyph(name, ch, slot, w, h, img);

@@ -265,3 +265,12 @@ All positions are estimates and need a client check; every value is adjustable i
 | Warning icon in the message colour | Tinted with the first colour the message template gives its own text (player/team placeholders do not count); round reward gold, lobby countdown gray |
 | Timer line too short | Now exactly as wide as the timer panel |
 
+### Custom items: Shots (Phase 3)
+| Item | Status | Notes |
+|---|---|---|
+| Custom item framework: `items/*.yml`, item id in persistent data, `/game item list/give`, reload target `items` | 🟡 | Works on the server (items load, shop references validated). Tamper-proof (HMAC) ids come with the exploit checklist |
+| Effect registry: pluggable effect types, `potion` (any vanilla effect, polarity from its category) | ✅ | Custom effects register a new type |
+| Shot (formerly "spark"): right-click self, left-click teammate (positive) / opponent (negative) with no damage, otherwise a normal punch; used up; 1 s shared cooldown; coloured particle ring + trail | 🟡 | **Needs a client test** |
+| Shop sells custom items (`give: { item: <id> }`); ledger counts by item id | 🟡 | Needs a client test |
+| Item lore: name, category tag box (UTILITY / WEAPON / ARMOR / ENCHANT / AMMO), description with `<duration>`/`<level>`, mouse usage lines; on shots, loadout and shop weapons/armor, and shop icons | 🟡 | Needs a client test. Mouse icons are placeholder art |
+
