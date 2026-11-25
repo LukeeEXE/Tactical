@@ -52,13 +52,14 @@ public final class MatchArena {
     private final BombController bomb;
     private final SpectatorController spectators;
     private final LobbyService lobby;
-    private final List<String> loadout;
+    /** Gives a player their kit's base kit (set by the item service). */
+    private final java.util.function.BiConsumer<Player, String> equipper;
     private final int positionInterval;
     private final Logger log;
     private long ticks;
 
     public MatchArena(GameMatch match, MapDefinition map, World world, LobbyService lobby, NamespacedKey itemKey,
-                      List<String> loadout, int positionInterval, Logger log) {
+                      java.util.function.BiConsumer<Player, String> equipper, int positionInterval, Logger log) {
         this.match = match;
         this.flow = match.flow();
         this.map = map;
@@ -67,7 +68,7 @@ public final class MatchArena {
         this.bomb = new BombController(match, world, map.sites(), itemKey);
         this.spectators = new SpectatorController(match);
         this.lobby = lobby;
-        this.loadout = loadout;
+        this.equipper = equipper;
         this.positionInterval = positionInterval;
         this.log = log;
         match.bus().subscribe(MatchFlowEvent.class, this::onEvent);
@@ -265,10 +266,7 @@ public final class MatchArena {
         p.teleport(spawnFor(p.getUniqueId(), index));
         LobbyService.resetPlayer(p, GameMode.ADVENTURE);
         p.getInventory().clear();
-        for (String spec : loadout) {
-            ItemStack item = parseItem(spec);
-            if (item != null) p.getInventory().addItem(dev.tactical.paper.shop.MatchShop.prepare(item));
-        }
+        equipper.accept(p, flow.participant(p.getUniqueId()).map(Participant::currentKit).orElse(null));
     }
 
     private int indexOnSide(UUID id) {

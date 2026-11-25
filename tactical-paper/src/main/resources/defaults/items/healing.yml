@@ -1,0 +1,13 @@
+# Healing shot used by the default kits (see shots.yml for the format).
+schema-version: 1
+items:
+  heal_shot:
+    type: shot
+    material: potion
+    name: "<white>Shot of Healing"
+    description:
+      - "Instantly heal <white>4</white> hearts."
+    color: "#ff5a6e"
+    trail: false
+    effects:
+      - { type: potion, effect: instant_health, level: 2, duration-ticks: 1 }

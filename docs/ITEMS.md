@@ -43,7 +43,7 @@ New effect types (custom effects) are added in code with `ItemEffects.register("
 them in YAML like any other effect. Each effect declares its polarity, which decides who a shot can target.
 
 ## Selling custom items
-In `shops/<id>.yml`: `give: { item: speed_shot }` (instead of `material:`). Purchases are tracked by item id, so
+In a kit's shop (`kits/<id>.yml`, see KITS.md): `give: { item: speed_shot }` (instead of `material:`). Purchases are tracked by item id, so
 used shots are gone at round end and unused ones are kept like any other purchase.
 
 ## Item lore

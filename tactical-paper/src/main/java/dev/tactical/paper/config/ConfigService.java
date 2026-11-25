@@ -50,14 +50,14 @@ public final class ConfigService implements Service {
             "modes/quickplay.yml", "modes/competitive.yml", "modes/test.yml",
             "kits/vanguard.yml", "kits/sentinel.yml", "kits/phantom.yml",
             "kits/warden.yml", "kits/striker.yml", "kits/medic.yml",
-            "messages/en_US.yml", "items/shots.yml", "shops/default.yml", "economy/economy.yml", "gui/icons.yml", "hud/hud.yml");
+            "messages/en_US.yml", "items/shots.yml", "items/healing.yml", "economy/economy.yml", "gui/icons.yml", "hud/hud.yml");
 
     /** Folders created on first start, even if empty, so admins see the layout. */
-    static final List<String> FOLDERS = List.of("maps", "map-pools", "kits", "items", "shops", "economy",
+    static final List<String> FOLDERS = List.of("maps", "map-pools", "kits", "items", "economy",
             "sounds", "npc", "modes", "messages", "logs/matches", "backups", "data", "resourcepack", "lobby", "blocks", "gui", "hud");
 
     public enum Target {
-        CONFIG, MODES, KITS, MESSAGES, MAPS, ITEMS, SHOPS, ECONOMY, HUD, ALL;
+        CONFIG, MODES, KITS, MESSAGES, MAPS, ITEMS, ECONOMY, HUD, ALL;
 
         public static Optional<Target> parse(String s) {
             try {
@@ -77,7 +77,6 @@ public final class ConfigService implements Service {
     private volatile Map<String, KitDefinition> kits = Map.of();
     private volatile Map<String, dev.tactical.paper.item.ItemDefinition> items = Map.of();
     private volatile Map<String, String> messages = Map.of();
-    private volatile Map<String, dev.tactical.paper.shop.ShopDefinition> shops = Map.of();
     private volatile dev.tactical.engine.economy.EconomyRules economy = dev.tactical.engine.economy.EconomyRules.defaults();
     private volatile dev.tactical.paper.hud.HudConfig hud = dev.tactical.paper.hud.HudConfig.defaults();
 
@@ -134,10 +133,6 @@ public final class ConfigService implements Service {
 
     public Map<String, String> messages() {
         return messages;
-    }
-
-    public Map<String, dev.tactical.paper.shop.ShopDefinition> shops() {
-        return shops;
     }
 
     public dev.tactical.engine.economy.EconomyRules economy() {
@@ -198,16 +193,16 @@ public final class ConfigService implements Service {
             }
             items = Collections.unmodifiableMap(all);
         }
-        if (target == Target.SHOPS || target == Target.ALL) {
-            shops = loadDirectory("shops", "shop", dev.tactical.paper.shop.ShopDefinition.SCHEMA_VERSION, shops,
-                    (node) -> dev.tactical.paper.shop.ShopDefinition.parse(node, baseName(node.file())), report);
-            if (!shops.containsKey("default")) report.error("shops/default.yml", 0, "", "the default shop is missing or invalid");
-        }
-        if (target == Target.SHOPS || target == Target.ITEMS || target == Target.ALL) {
-            for (var shop : shops.values()) {
-                for (var e : shop.entries().values()) {
+        if (target == Target.KITS || target == Target.ITEMS || target == Target.ALL) {
+            for (KitDefinition kit : kits.values()) {
+                for (var e : kit.shop().entries().values()) {
                     if (e.customItem() != null && !items.containsKey(e.customItem())) {
-                        report.error("shops/" + shop.id() + ".yml", 0, "items." + e.id(), "unknown custom item '" + e.customItem() + "' (see items/*.yml)");
+                        report.error("kits/" + kit.id() + ".yml", 0, "shop." + e.category() + "." + e.id(), "unknown custom item '" + e.customItem() + "' (see items/*.yml)");
+                    }
+                }
+                for (var b : kit.baseKit()) {
+                    if (b.item() != null && !items.containsKey(b.item())) {
+                        report.error("kits/" + kit.id() + ".yml", 0, "base-kit", "unknown custom item '" + b.item() + "' (see items/*.yml)");
                     }
                 }
             }
@@ -232,7 +227,7 @@ public final class ConfigService implements Service {
             if (issue.severity() == ConfigIssue.Severity.ERROR) log.severe(issue.toString());
             else log.warning(issue.toString());
         }
-        log.info("Loaded configuration (" + target + "): " + modes.size() + " modes, " + kits.size() + " kits, " + items.size() + " items, " + shops.size() + " shops"
+        log.info("Loaded configuration (" + target + "): " + modes.size() + " modes, " + kits.size() + " kits, " + items.size() + " items"
                 + (report.hasErrors() ? ", " + report.errors().size() + " error(s)" : ""));
         return report;
     }
@@ -274,14 +269,15 @@ public final class ConfigService implements Service {
             if (parsed.isEmpty()) return Optional.empty();
             int fileVersion = parsed.get().integer(ConfigMigrator.VERSION_KEY, 1, 1, Integer.MAX_VALUE);
             if (fileVersion == version) return parsed;
-            if (kind.equals("hud") && fileVersion < version) {
-                // hud.yml only holds layout tuning that changed meaning: start over from the new defaults.
-                try (var in = ConfigService.class.getClassLoader().getResourceAsStream("defaults/hud/hud.yml")) {
+            if ((kind.equals("hud") || kind.equals("kit")) && fileVersion < version) {
+                // Layout tuning / placeholder kits whose format changed: start over from the bundled default, if any.
+                String bundledPath = "defaults/" + root.relativize(file).toString().replace('\\', '/');
+                try (var in = ConfigService.class.getClassLoader().getResourceAsStream(bundledPath)) {
                     if (in != null) {
                         backup(file);
                         String fresh = new String(in.readAllBytes(), StandardCharsets.UTF_8);
                         Files.writeString(file, fresh, StandardCharsets.UTF_8);
-                        log.warning(name + ": HUD layout changed in this version; your old file was backed up to backups/config/ and replaced with the new defaults");
+                        log.warning(name + ": format changed in this version; your old file was backed up to backups/config/ and replaced with the new default");
                         return YamlLoader.parse(fresh, name, report);
                     }
                 }

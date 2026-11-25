@@ -125,6 +125,65 @@ public final class ItemService implements Service, Listener {
         root.then(cmd);
     }
 
+    // ------------------------------------------------------------------ base kits
+
+    /**
+     * Clears nothing; gives the player's kit base kit (or the config's placeholder loadout for kits without one).
+     * Custom items come from items/*.yml; vanilla items are prepared (unbreakable, lore). Armor slots are worn.
+     */
+    public void equipBaseKit(Player p, String kitId) {
+        dev.tactical.paper.config.KitDefinition kit = kitId == null ? null : config.kits().get(kitId);
+        org.bukkit.inventory.PlayerInventory inv = p.getInventory();
+        if (kit == null || kit.baseKit().isEmpty()) {
+            for (String spec : config.general().placeholderLoadout()) {
+                ItemStack item = dev.tactical.paper.arena.MatchArena.parseItem(spec);
+                if (item != null) inv.addItem(dev.tactical.paper.shop.MatchShop.prepare(item));
+            }
+            return;
+        }
+        for (dev.tactical.paper.config.KitDefinition.KitItem ki : kit.baseKit()) {
+            ItemStack item = stack(ki);
+            if (item == null) continue;
+            switch (ki.slot()) {
+                case "helmet" -> inv.setHelmet(item);
+                case "chestplate" -> inv.setChestplate(item);
+                case "leggings" -> inv.setLeggings(item);
+                case "boots" -> inv.setBoots(item);
+                case "offhand" -> inv.setItemInOffHand(item);
+                case "auto" -> {
+                    EquipmentSlot armor = item.getType().getEquipmentSlot();
+                    if (armor.isArmor() && (inv.getItem(armor) == null || inv.getItem(armor).getType().isAir())) inv.setItem(armor, item);
+                    else inv.addItem(item);
+                }
+                default -> inv.setItem(Integer.parseInt(ki.slot()), item);
+            }
+        }
+    }
+
+    /** How many of an inventory item key ({@code tactical:<id>} or a material key) a kit's base kit gives. */
+    public int baseCount(String kitId, String key) {
+        dev.tactical.paper.config.KitDefinition kit = kitId == null ? null : config.kits().get(kitId);
+        int n = 0;
+        if (kit == null || kit.baseKit().isEmpty()) {
+            for (String spec : config.general().placeholderLoadout()) {
+                ItemStack i = dev.tactical.paper.arena.MatchArena.parseItem(spec);
+                if (i != null && i.getType().getKey().asString().equals(key)) n += i.getAmount();
+            }
+            return n;
+        }
+        for (var ki : kit.baseKit()) {
+            String k = ki.item() != null ? "tactical:" + ki.item() : ki.material();
+            if (k.equals(key)) n += ki.amount();
+        }
+        return n;
+    }
+
+    private ItemStack stack(dev.tactical.paper.config.KitDefinition.KitItem ki) {
+        if (ki.item() != null) return create(ki.item(), ki.amount()).orElse(null);
+        org.bukkit.Material m = org.bukkit.Material.matchMaterial(ki.material());
+        return m == null ? null : dev.tactical.paper.shop.MatchShop.prepare(new ItemStack(m, ki.amount()));
+    }
+
     public Optional<ItemDefinition> definition(String id) {
         return Optional.ofNullable(config.items().get(id));
     }

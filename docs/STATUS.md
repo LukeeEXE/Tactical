@@ -274,3 +274,12 @@ All positions are estimates and need a client check; every value is adjustable i
 | Shop sells custom items (`give: { item: <id> }`); ledger counts by item id | 🟡 | Needs a client test |
 | Item lore: name, category tag box (UTILITY / WEAPON / ARMOR / ENCHANT / AMMO), description with `<duration>`/`<level>`, mouse usage lines; on shots, loadout and shop weapons/armor, and shop icons | 🟡 | Needs a client test. Mouse icons are placeholder art |
 
+### Kit base kits and kit shops (Phase 3)
+| Item | Status | Notes |
+|---|---|---|
+| Base kit per kit (`base-kit:` in kits/<id>.yml), given every round, vanilla or custom items, fixed slots / armor | 🟡 | Live-tested on the server (no errors); **needs a client test** |
+| Shop per kit (`shop:` with melee / utility / ranged), same on every map; map shops removed | 🟡 | Needs a client test |
+| Old placeholder kit files (schema 1) are backed up and replaced with the new defaults | ✅ | Verified on the test server |
+| Custom shop screen: header/body/footer textures + cart icon as title glyphs, "SHOP" in Pinch, money ingot, exit door, items centred per row; "Inventory" label blanked in all 145 languages | 🟡 | Positions verified against the built pack with the layout simulator; **needs a client test** |
+| Default kits | 🟡 | Placeholder contents (wooden sword, pickaxe, a shot; same shop for all) until the real kit designs |
+

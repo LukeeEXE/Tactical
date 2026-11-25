@@ -99,6 +99,7 @@ public final class PackBuilder {
         generateTrueTypeFonts(sourceRoot.resolve("fonts"), files, issues);
         generateHud(files);
         addBundledShaders(files, smoothGlow);
+        generateGui(files);
         Map<String, byte[]> user = new TreeMap<>();
         readTree(sourceRoot.resolve("assets"), "assets/", user);
         generateBlocks(blocks, knownBlocks, user, files, issues);
@@ -354,6 +355,56 @@ public final class PackBuilder {
     }
 
     // ------------------------------------------------------------------ construction block
+
+    /** Characters of the {@code tactical:gui_shop} font (custom shop screen drawn through the container title). */
+    public static final char GUI_SHOP_HEADER = '\uED00', GUI_SHOP_BODY = '\uED01', GUI_SHOP_FOOTER = '\uED02', GUI_SHOP_ICON = '\uED03';
+
+    /**
+     * Menu backgrounds as title glyphs. A container title is drawn at (8, 6) of the 176x222 chest screen, before the
+     * slots (so items stay on top); a bitmap glyph's top lands at {@code 13 - ascent}. Textures at
+     * {@code assets/tactical/textures/gui/*.png} (admin files with the same name replace them).
+     * <ul>
+     *   <li>header 176x31 at y -17 (above the chest, over the title strip; its box holds the shop icon)</li>
+     *   <li>body 164x120 at (6, 14): slot frames on row 1 cols 2-6, row 3 cols 3-5, row 5 cols 2-6</li>
+     *   <li>footer 176x88 at y 134: covers the player inventory except its first row</li>
+     * </ul>
+     * Also blanks the "Inventory" label of chest screens ({@code container.inventory}) in every language, since it
+     * would be drawn over these backgrounds.
+     */
+    private static void generateGui(Map<String, byte[]> files) throws IOException {
+        record G(String name, char ch, int ascent, int height) { }
+        com.google.gson.JsonArray providers = new com.google.gson.JsonArray();
+        for (G g : List.of(new G("shop_header", GUI_SHOP_HEADER, 30, 31), new G("shop_body", GUI_SHOP_BODY, -1, 120),
+                new G("shop_footer", GUI_SHOP_FOOTER, -121, 88), new G("shop_icon", GUI_SHOP_ICON, 24, 24))) {
+            byte[] png = bundled("pack/gui/" + g.name() + ".png");
+            if (g.name().equals("shop_icon")) { // 16x16 icon on a 16x24 canvas: a glyph may not rise above its height
+                java.awt.image.BufferedImage src = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(png));
+                java.awt.image.BufferedImage tall = new java.awt.image.BufferedImage(16, 24, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                for (int y = 0; y < Math.min(16, src.getHeight()); y++) {
+                    for (int x = 0; x < Math.min(16, src.getWidth()); x++) tall.setRGB(x, y, src.getRGB(x, y));
+                }
+                tall.setRGB(15, 23, 0x01FFFFFF); // invisible: fixes the measured width (advance 17) whatever the icon
+                png = HudGlyphs.png(tall);
+            }
+            files.put("assets/tactical/textures/gui/" + g.name() + ".png", png);
+            JsonObject p = new JsonObject();
+            p.addProperty("type", "bitmap");
+            p.addProperty("file", "tactical:gui/" + g.name() + ".png");
+            p.addProperty("ascent", g.ascent());
+            p.addProperty("height", g.height());
+            com.google.gson.JsonArray chars = new com.google.gson.JsonArray();
+            chars.add(String.valueOf(g.ch()));
+            p.add("chars", chars);
+            providers.add(p);
+        }
+        JsonObject font = new JsonObject();
+        font.add("providers", providers);
+        files.put("assets/tactical/font/gui_shop.json", json(font));
+        byte[] blank = "{\"container.inventory\":\"\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        for (String code : new String(bundled("pack/lang_codes.txt"), java.nio.charset.StandardCharsets.UTF_8).split("\\s+")) {
+            if (!code.isBlank()) files.put("assets/minecraft/lang/" + code.trim() + ".json", blank);
+        }
+    }
 
     /** Core shader overrides shipped with the plugin (ported to the current client's shader interface). */
     static final List<String> BUNDLED_SHADERS = List.of("position_tex_color.vsh", "position_tex_color.fsh");

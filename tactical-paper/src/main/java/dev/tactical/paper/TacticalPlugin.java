@@ -61,7 +61,7 @@ public final class TacticalPlugin extends JavaPlugin {
         MatchService matches = services.register(MatchService.class,
                 new MatchService(this, config, db, recorders, players, messages, audit, lobby, tasks, getLogger()));
         services.register(MatchListener.class, new MatchListener(this, matches));
-        services.register(ArenaService.class, new ArenaService(this, config, maps, matches, lobby, getLogger()));
+        ArenaService arena = services.register(ArenaService.class, new ArenaService(this, config, maps, matches, lobby, getLogger()));
         PackService pack = services.register(PackService.class, new PackService(this, config, tasks, getLogger()));
         MenuService menus = services.register(MenuService.class, new MenuService(this, getLogger()));
         Icons icons = new Icons(this, config.root().resolve("gui/icons.yml"), getLogger());
@@ -75,6 +75,7 @@ public final class TacticalPlugin extends JavaPlugin {
         ShopService shops = services.register(ShopService.class, new ShopService(this, config, maps, matches, menus, icons, hotbar, getLogger()));
         hud.setMoneyProvider(shops::balance);
         shops.setItems(items);
+        arena.setEquipper(items::equipBaseKit);
         dev.tactical.paper.item.ItemLore.install(s -> {
             int w = hud.text().ttfWidth(config.hud().bossbarFont(), s);
             return w == 0 ? dev.tactical.paper.hud.HudText.vanillaWidth(s) : w;

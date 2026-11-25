@@ -50,8 +50,9 @@ public final class MatchShop {
 
     private final GameMatch match;
     private final MatchEconomy economy;
-    private final ShopDefinition shop;
-    private final ToIntFunction<String> baseCount;
+    /** Each player's shop is their current kit's shop. */
+    private final java.util.function.Function<UUID, ShopDefinition> shopOf;
+    private final java.util.function.ToIntBiFunction<UUID, String> baseCount;
     private final ItemFactory factory;
     private final Map<UUID, List<Purchase>> ledger = new HashMap<>();
 
@@ -69,12 +70,13 @@ public final class MatchShop {
 
     private final ItemKeys keys;
 
-    /** @param baseCount how many of an item key the round-start loadout gives (not purchases) */
-    MatchShop(GameMatch match, MatchEconomy economy, ShopDefinition shop, ToIntFunction<String> baseCount,
+    /** @param baseCount how many of an item key a player's base kit gives (not purchases) */
+    MatchShop(GameMatch match, MatchEconomy economy, java.util.function.Function<UUID, ShopDefinition> shopOf,
+              java.util.function.ToIntBiFunction<UUID, String> baseCount,
               ItemFactory factory, ItemKeys keys) {
         this.match = match;
         this.economy = economy;
-        this.shop = shop;
+        this.shopOf = shopOf;
         this.baseCount = baseCount;
         this.factory = factory;
         this.keys = keys;
@@ -88,8 +90,13 @@ public final class MatchShop {
         return economy;
     }
 
-    public ShopDefinition shop() {
-        return shop;
+    /** The shop of this player's current kit. */
+    public ShopDefinition shopOf(UUID player) {
+        return shopOf.apply(player);
+    }
+
+    private ShopEntry entry(UUID player, String entryId) {
+        return entryId == null ? null : shopOf.apply(player).entries().get(entryId);
     }
 
     /** Number of purchases of this entry the player still holds (for the max-carry limit). */
@@ -119,7 +126,7 @@ public final class MatchShop {
     }
 
     public BuyResult buy(Player p, String entryId) {
-        ShopEntry e = shop.entries().get(entryId);
+        ShopEntry e = entry(p.getUniqueId(), entryId);
         if (e == null) return fail(p, entryId, BuyResult.UNKNOWN);
         BuyResult r = canBuy(p, e);
         if (r != BuyResult.OK) return fail(p, entryId, r);
@@ -143,7 +150,7 @@ public final class MatchShop {
     /** Sells back a purchase made THIS round that is still fully owned. */
     public boolean sellBack(Player p, String entryId) {
         if (!economy.rules().sellBackSameRound() || match.state() != MatchState.BUY_PHASE || match.flow().isPaused()) return false;
-        ShopEntry e = shop.entries().get(entryId);
+        ShopEntry e = entry(p.getUniqueId(), entryId);
         List<Purchase> list = ledger.get(p.getUniqueId());
         if (e == null || list == null) return false;
         for (int i = list.size() - 1; i >= 0; i--) {
@@ -151,7 +158,7 @@ public final class MatchShop {
             if (!pu.entryId().equals(entryId) || pu.round() != match.flow().round()) continue;
             if (e.kind() == ShopEntry.Kind.ITEM) {
                 String k = e.itemKey();
-                if (k == null || count(p.getInventory(), k) - baseCount.applyAsInt(k) < pu.amount()) continue;
+                if (k == null || count(p.getInventory(), k) - baseCount.applyAsInt(p.getUniqueId(), k) < pu.amount()) continue;
                 remove(p.getInventory(), k, pu.amount());
             } else {
                 removeEnchant(p, e);
@@ -183,7 +190,7 @@ public final class MatchShop {
         List<Purchase> kept = new ArrayList<>();
         List<Purchase> enchants = new ArrayList<>();
         for (Purchase pu : list) {
-            ShopEntry e = shop.entries().get(pu.entryId());
+            ShopEntry e = entry(p.getUniqueId(), pu.entryId());
             if (e == null || pu.amount() <= 0) continue;
             if (round - pu.round() > keep) {
                 match.recorder().record(EventTypes.ITEM_EXPIRED, List.of(p.getUniqueId()), team(p.getUniqueId()),
@@ -195,7 +202,7 @@ public final class MatchShop {
         }
         // Enchantments after items, so they land on the re-delivered armor/weapons.
         for (Purchase pu : enchants) {
-            if (apply(p, shop.entries().get(pu.entryId()), 1)) kept.add(pu);
+            if (apply(p, entry(p.getUniqueId(), pu.entryId()), 1)) kept.add(pu);
         }
         ledger.put(p.getUniqueId(), kept);
     }
@@ -208,7 +215,7 @@ public final class MatchShop {
         List<Purchase> out = new ArrayList<>(list);
         for (int i = out.size() - 1; i >= 0; i--) { // newest first keep their amounts
             Purchase pu = out.get(i);
-            ShopEntry e = shop.entries().get(pu.entryId());
+            ShopEntry e = entry(p.getUniqueId(), pu.entryId());
             if (e == null) {
                 out.remove(i);
                 continue;
@@ -218,7 +225,7 @@ public final class MatchShop {
                 continue;
             }
             String key = e.itemKey();
-            int left = remaining.computeIfAbsent(key, k -> Math.max(0, count(p.getInventory(), k) - baseCount.applyAsInt(k)));
+            int left = remaining.computeIfAbsent(key, k -> Math.max(0, count(p.getInventory(), k) - baseCount.applyAsInt(p.getUniqueId(), k)));
             int have = Math.min(left, pu.amount());
             remaining.put(key, left - have);
             out.set(i, new Purchase(pu.entryId(), pu.round(), have));

@@ -125,20 +125,17 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
 
     @Override
     public CompletableFuture<Void> prepare(GameMatch match, MatchService.MatchRequest request) {
-        String shopId = request.mapId() == null ? "default" : maps.map(request.mapId()).map(m -> m.shop()).orElse("default");
-        ShopDefinition def = config.shops().getOrDefault(shopId, config.shops().get("default"));
-        if (def == null) {
-            log.warning("[match=" + match.id() + "] no shop available (shops/default.yml invalid?); buying is disabled");
-            def = new ShopDefinition("none", Map.of(), Map.of());
-        }
         Map<UUID, TeamId> teams = new LinkedHashMap<>();
         for (MatchMember m : match.members()) teams.put(m.uuid(), m.team());
-        Map<String, Integer> base = new HashMap<>();
-        for (String spec : config.general().placeholderLoadout()) {
-            org.bukkit.inventory.ItemStack i = dev.tactical.paper.arena.MatchArena.parseItem(spec);
-            if (i != null) base.merge(i.getType().getKey().asString(), i.getAmount(), Integer::sum);
-        }
-        MatchShop shop = new MatchShop(match, new MatchEconomy(config.economy(), teams), def, k -> base.getOrDefault(k, 0),
+        // Every player shops in their CURRENT kit's shop (the same on every map); base-kit items are not purchases.
+        java.util.function.Function<UUID, String> kitOf = id -> match.flow().participant(id).map(Participant::currentKit).orElse(null);
+        MatchShop shop = new MatchShop(match, new MatchEconomy(config.economy(), teams),
+                id -> {
+                    String kit = kitOf.apply(id);
+                    var def = kit == null ? null : config.kits().get(kit);
+                    return def == null ? ShopDefinition.empty(kit == null ? "none" : kit) : def.shop();
+                },
+                (id, key) -> items == null ? 0 : items.baseCount(kitOf.apply(id), key),
                 this::createItem, this::itemKey);
         shops.put(match.id(), shop);
         match.bus().subscribe(MatchFlowEvent.class, e -> onEvent(shop, e));

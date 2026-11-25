@@ -61,6 +61,12 @@ import java.util.logging.Logger;
 public final class ArenaService implements Service, Listener, MatchLifecycleHook {
 
     private final Plugin plugin;
+    /** Base-kit equipper (the item service installs the real one). */
+    private java.util.function.BiConsumer<org.bukkit.entity.Player, String> equipper = (p, kit) -> { };
+
+    public void setEquipper(java.util.function.BiConsumer<org.bukkit.entity.Player, String> equipper) {
+        this.equipper = equipper;
+    }
     private final ConfigService config;
     private final MapService maps;
     private final MatchService matches;
@@ -142,7 +148,7 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
                 return;
             }
             var g = config.general();
-            MatchArena arena = new MatchArena(match, m, world, lobby, itemKey, g.placeholderLoadout(), g.positionIntervalTicks(), log);
+            MatchArena arena = new MatchArena(match, m, world, lobby, itemKey, (p, kit) -> equipper.accept(p, kit), g.positionIntervalTicks(), log);
             arenas.put(match.id(), arena);
             arena.start();
             log.info("[match=" + match.id() + "] map instance " + world.getKey() + " ready in " + (System.currentTimeMillis() - start) + " ms");
