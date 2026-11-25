@@ -58,6 +58,10 @@ final class ShopMenu extends Menu {
         java.util.function.Function<Character, Component> glyph = c -> Component.text(String.valueOf(c)).font(font);
         return Component.text()
                 .append(dev.tactical.paper.hud.TextOffsets.space(-8))                                 // x 0
+                .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_SIDE_LEFT))         // 6 + 1 (under the rest)
+                .append(dev.tactical.paper.hud.TextOffsets.space(170 - 7))                            // x 170
+                .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_SIDE_RIGHT))        // 6 + 1
+                .append(dev.tactical.paper.hud.TextOffsets.space(-177))                               // x 0
                 .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_HEADER))            // 176 + 1
                 .append(dev.tactical.paper.hud.TextOffsets.space(-177 + 6))                           // x 6
                 .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_BODY))              // 164 + 1
@@ -65,7 +69,7 @@ final class ShopMenu extends Menu {
                 .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_FOOTER))            // 176 + 1
                 .append(dev.tactical.paper.hud.TextOffsets.space(-177 + 7))                           // x 7: icon box
                 .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_ICON))              // 16 + 1
-                .append(dev.tactical.paper.hud.TextOffsets.space(40 - 7 - 17))                        // x 40: header bar
+                .append(dev.tactical.paper.hud.TextOffsets.space(37 - 7 - 17))                        // x 37: 3 px into the bar
                 .append(Component.text("SHOP", HEADER_TEXT).font(net.kyori.adventure.key.Key.key("tactical", "pinch_up_14")))
                 .build()
                 .color(NamedTextColor.WHITE)

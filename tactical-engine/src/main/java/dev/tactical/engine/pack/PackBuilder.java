@@ -357,7 +357,11 @@ public final class PackBuilder {
     // ------------------------------------------------------------------ construction block
 
     /** Characters of the {@code tactical:gui_shop} font (custom shop screen drawn through the container title). */
-    public static final char GUI_SHOP_HEADER = '\uED00', GUI_SHOP_BODY = '\uED01', GUI_SHOP_FOOTER = '\uED02', GUI_SHOP_ICON = '\uED03';
+    public static final char GUI_SHOP_HEADER = '\uED00', GUI_SHOP_BODY = '\uED01', GUI_SHOP_FOOTER = '\uED02', GUI_SHOP_ICON = '\uED03',
+            GUI_SHOP_SIDE_LEFT = '\uED04', GUI_SHOP_SIDE_RIGHT = '\uED05';
+    /** Side frame colours (outside in), taken from the footer texture's edges. */
+    private static final int[] SIDE_LEFT = {0xFF121214, 0xFF68686E, 0xFF68686E, 0xFF39393E, 0xFF39393E, 0xFF39393E};
+    private static final int[] SIDE_RIGHT = {0xFF39393E, 0xFF39393E, 0xFF39393E, 0xFF2C2C30, 0xFF2C2C30, 0xFF121214};
 
     /**
      * Menu backgrounds as title glyphs. A container title is drawn at (8, 6) of the 176x222 chest screen, before the
@@ -375,13 +379,28 @@ public final class PackBuilder {
         record G(String name, char ch, int ascent, int height) { }
         com.google.gson.JsonArray providers = new com.google.gson.JsonArray();
         for (G g : List.of(new G("shop_header", GUI_SHOP_HEADER, 30, 31), new G("shop_body", GUI_SHOP_BODY, -1, 120),
-                new G("shop_footer", GUI_SHOP_FOOTER, -121, 88), new G("shop_icon", GUI_SHOP_ICON, 24, 24))) {
-            byte[] png = bundled("pack/gui/" + g.name() + ".png");
-            if (g.name().equals("shop_icon")) { // 16x16 icon on a 16x24 canvas: a glyph may not rise above its height
+                new G("shop_footer", GUI_SHOP_FOOTER, -121, 88), new G("shop_icon", GUI_SHOP_ICON, 24, 24),
+                new G("shop_side_left", GUI_SHOP_SIDE_LEFT, 5, 126), new G("shop_side_right", GUI_SHOP_SIDE_RIGHT, 5, 126))) {
+            byte[] png;
+            if (g.name().startsWith("shop_side_")) {
+                // Frame strips beside the narrower body (x 0-5 and 170-175, y 8-133): drawn first, under everything,
+                // so the vanilla chest border never shows between header and footer.
+                int[] cols = g.name().endsWith("left") ? SIDE_LEFT : SIDE_RIGHT;
+                java.awt.image.BufferedImage strip = new java.awt.image.BufferedImage(6, 126, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                for (int y = 0; y < 126; y++) for (int x = 0; x < 6; x++) strip.setRGB(x, y, cols[x]);
+                png = HudGlyphs.png(strip);
+            } else {
+                png = bundled("pack/gui/" + g.name() + ".png");
+            }
+            if (g.name().equals("shop_icon")) { // icon on a 16x24 canvas (a glyph may not rise above its height)
                 java.awt.image.BufferedImage src = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(png));
                 java.awt.image.BufferedImage tall = new java.awt.image.BufferedImage(16, 24, java.awt.image.BufferedImage.TYPE_INT_ARGB);
-                for (int y = 0; y < Math.min(16, src.getHeight()); y++) {
-                    for (int x = 0; x < Math.min(16, src.getWidth()); x++) tall.setRGB(x, y, src.getRGB(x, y));
+                int top = src.getHeight(); // first row with ink: the icon is placed by its ink, not its empty margin
+                for (int y = 0; y < src.getHeight() && top == src.getHeight(); y++) {
+                    for (int x = 0; x < src.getWidth(); x++) if ((src.getRGB(x, y) >>> 24) != 0) { top = y; break; }
+                }
+                for (int y = top; y < Math.min(top + 16, src.getHeight()); y++) {
+                    for (int x = 0; x < Math.min(16, src.getWidth()); x++) tall.setRGB(x, y - top, src.getRGB(x, y));
                 }
                 tall.setRGB(15, 23, 0x01FFFFFF); // invisible: fixes the measured width (advance 17) whatever the icon
                 png = HudGlyphs.png(tall);
