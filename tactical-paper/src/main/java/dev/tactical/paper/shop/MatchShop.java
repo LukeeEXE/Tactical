@@ -320,6 +320,70 @@ public final class MatchShop {
         }
     }
 
+    // ------------------------------------------------------------------ hotbar layouts
+
+    private static final String BOMB_KEY = "tactical:bomb";
+
+    /** Per player: what each hotbar slot held (item key, null = empty) when they last arranged / survived a round. */
+    private final Map<UUID, String[]> layouts = new HashMap<>();
+
+    /** Remembers the player's current hotbar order (shop closed, or round survived). */
+    public void rememberLayout(Player p) {
+        String[] keys = new String[9];
+        for (int i = 0; i < 9; i++) {
+            ItemStack it = p.getInventory().getItem(i);
+            String k = it == null || it.getType().isAir() ? null : this.keys.keyOf(it);
+            keys[i] = BOMB_KEY.equals(k) ? null : k; // the bomb changes hands every round: never part of a layout
+        }
+        layouts.put(p.getUniqueId(), keys);
+    }
+
+    /** New kits (halftime, sudden death): layouts start over. */
+    void clearLayouts() {
+        layouts.clear();
+    }
+
+    /**
+     * Round start, after the base kit and kept purchases were given: every remembered slot gets its item back. A slot
+     * whose item is gone (lost by dying) stays EMPTY; other items fill the slots that were empty in the layout, then
+     * the main inventory, and only then the reserved slots.
+     */
+    void applyLayout(Player p) {
+        String[] layout = layouts.get(p.getUniqueId());
+        if (layout == null) return;
+        PlayerInventory inv = p.getInventory();
+        List<ItemStack> pool = new ArrayList<>();
+        for (int i = 0; i < 36; i++) {
+            ItemStack it = inv.getItem(i);
+            if (it == null || it.getType().isAir() || BOMB_KEY.equals(keys.keyOf(it))) continue; // the bomb stays put
+            pool.add(it);
+            inv.setItem(i, null);
+        }
+        boolean[] reserved = new boolean[9];
+        for (int i = 0; i < 9; i++) {
+            if (layout[i] == null || inv.getItem(i) != null) continue;
+            reserved[i] = true;
+            for (int j = 0; j < pool.size(); j++) {
+                if (layout[i].equals(keys.keyOf(pool.get(j)))) {
+                    inv.setItem(i, pool.remove(j));
+                    break;
+                }
+            }
+        }
+        List<Integer> free = new ArrayList<>();
+        for (int i = 0; i < 9; i++) if (!reserved[i]) free.add(i);
+        for (int i = 9; i < 36; i++) free.add(i);
+        for (int i = 0; i < 9; i++) if (reserved[i] && inv.getItem(i) == null) free.add(i); // last resort
+        for (ItemStack it : pool) {
+            while (!free.isEmpty() && inv.getItem(free.get(0)) != null) free.remove(0);
+            if (free.isEmpty()) {
+                inv.addItem(it);
+                continue;
+            }
+            inv.setItem(free.remove(0), it);
+        }
+    }
+
     // ------------------------------------------------------------------ recording
 
     void recordChanges(List<EconomyChange> changes) {

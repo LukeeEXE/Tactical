@@ -44,4 +44,8 @@ While the shop is open, the visible inventory row (the slots in the footer textu
 click items within that row to reorder them. When the shop closes (door, Escape, or the buy phase ending), that row
 becomes your hotbar in the new order. Items bought while the shop is open appear in that row too. Only plain moves
 inside the row are allowed (no shift-click, number keys, double-click or dropping).
+The order is remembered for the rest of the half: it is saved when the shop closes and at the end of every round you
+survive (so changes made during the round count too), and applied at the start of each round after the base kit and
+kept purchases are given. A slot whose item you lost by dying stays empty; new items fill the slots that were empty,
+then the inventory. The bomb is never part of a layout. Layouts reset at halftime and before sudden death (new kits).
 

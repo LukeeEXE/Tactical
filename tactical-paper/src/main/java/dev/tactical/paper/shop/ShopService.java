@@ -166,6 +166,12 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                     if (!match.flow().participant(p.getUniqueId()).map(Participant::active).orElse(false)) continue;
                     shop.onRoundStart(p);
                 }
+                // Remembered hotbar layouts, once the base kit and kept purchases are in the inventory.
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    for (Player p : match.onlinePlayers()) {
+                        if (match.flow().participant(p.getUniqueId()).map(Participant::active).orElse(false)) shop.applyLayout(p);
+                    }
+                }, 1L);
                 // Inventory was cleared and refilled in the same tick as the teleport: resend equipment so no
                 // client keeps showing a stale (invisible) armor state.
                 Bukkit.getScheduler().runTaskLater(plugin, () -> resendEquipment(match), 2L);
@@ -194,7 +200,10 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
                 List<EconomyChange> changes = eco.onRoundEnd(re.winnerTeam(), match.flow().teamOn(Side.ATTACKERS), planted, survivors);
                 shop.recordChanges(changes);
                 for (Player p : match.onlinePlayers()) {
-                    if (survivors.contains(p.getUniqueId())) shop.reconcile(p);
+                    if (survivors.contains(p.getUniqueId())) {
+                        shop.reconcile(p);
+                        shop.rememberLayout(p); // includes changes made during the round
+                    }
                     int delta = changes.stream().filter(c -> c.player().equals(p.getUniqueId())).mapToInt(EconomyChange::delta).sum();
                     if (delta > 0) p.sendMessage(dev.tactical.paper.hud.ChatStyle.line(dev.tactical.engine.pack.HudGlyphs.CHAT_WARNING, NamedTextColor.GOLD,
                             Component.text("+" + String.format("%,d", delta), NamedTextColor.GOLD).append(Component.text(" round reward", NamedTextColor.GRAY))));
@@ -203,8 +212,12 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
             case MatchFlowEvent.HalftimeStarted ht -> {
                 shop.recordChanges(eco.onHalftime());
                 if (eco.rules().halftimeClearPurchases()) shop.clearAll();
+                shop.clearLayouts(); // new kits
             }
-            case MatchFlowEvent.SuddenDeathStarted sd -> shop.recordChanges(eco.onSuddenDeath());
+            case MatchFlowEvent.SuddenDeathStarted sd -> {
+                shop.recordChanges(eco.onSuddenDeath());
+                shop.clearLayouts();
+            }
             default -> { }
         }
     }

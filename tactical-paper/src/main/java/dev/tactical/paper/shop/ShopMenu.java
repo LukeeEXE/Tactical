@@ -143,6 +143,7 @@ final class ShopMenu extends Menu {
             if (!putInRow(inv, cursor)) inv.addItem(cursor).values().forEach(left -> viewer.getWorld().dropItem(viewer.getLocation(), left));
         }
         swapRows(inv);
+        shop.rememberLayout(viewer);
     }
 
     private static void swapRows(org.bukkit.inventory.PlayerInventory inv) {
