@@ -282,4 +282,5 @@ All positions are estimates and need a client check; every value is adjustable i
 | Old placeholder kit files (schema 1) are backed up and replaced with the new defaults | ✅ | Verified on the test server |
 | Custom shop screen: header/body/footer textures + cart icon as title glyphs, "SHOP" in Pinch, money ingot, exit door, items centred per row; "Inventory" label blanked in all 145 languages | 🟡 | Positions verified against the built pack with the layout simulator; **needs a client test** |
 | Default kits | 🟡 | Placeholder contents (wooden sword, pickaxe, a shot; same shop for all) until the real kit designs |
+| Arrange the hotbar in the shop: hotbar shown in the visible inventory row, reordered by plain clicks/drags, written back on close (also when the buy phase closes the shop); purchases land in that row | 🟡 | Needs a client test |
 

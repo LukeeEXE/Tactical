@@ -38,3 +38,10 @@ own PNG at the same path under `resourcepack/` to replace one, same size). The h
 Pinch. Row 0 holds the money (gold ingot, hover for the balance) and the exit (door; Escape also closes). The
 "Inventory" label of chest screens is blanked by the pack in every language, since it would be drawn over the
 background.
+
+### Arranging the hotbar in the shop
+While the shop is open, the visible inventory row (the slots in the footer texture) holds your hotbar: drag and
+click items within that row to reorder them. When the shop closes (door, Escape, or the buy phase ending), that row
+becomes your hotbar in the new order. Items bought while the shop is open appear in that row too. Only plain moves
+inside the row are allowed (no shift-click, number keys, double-click or dropping).
+

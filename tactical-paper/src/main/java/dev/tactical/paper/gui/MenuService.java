@@ -97,6 +97,11 @@ public final class MenuService implements Service, Listener {
         render(p, h);
         p.openInventory(h.inventory); // closes any previous menu first (its onClose runs)
         open.put(p.getUniqueId(), h);
+        try {
+            menu.onOpen(p);
+        } catch (Throwable t) {
+            log.log(Level.SEVERE, "Menu open handler failed in " + menu.getClass().getSimpleName(), t);
+        }
     }
 
     public Optional<Menu> openMenu(Player p) {
@@ -143,7 +148,14 @@ public final class MenuService implements Service, Listener {
         if (!(e.getView().getTopInventory().getHolder(false) instanceof Holder h)) return;
         e.setCancelled(true); // cancel FIRST, whatever happens below
         if (!(e.getWhoClicked() instanceof Player p) || !p.getUniqueId().equals(h.viewer)) return;
-        if (e.getClickedInventory() != e.getView().getTopInventory()) return; // clicks in own inventory do nothing
+        if (e.getClickedInventory() != e.getView().getTopInventory()) {
+            // Own inventory: only plain moves within the slots the menu opens up (e.g. arranging the hotbar).
+            if (e.getClickedInventory() == e.getView().getBottomInventory() && h.menu.editablePlayerSlot(e.getSlot())
+                    && (e.getClick() == ClickType.LEFT || e.getClick() == ClickType.RIGHT) && PLAIN_MOVES.contains(e.getAction())) {
+                e.setCancelled(false);
+            }
+            return;
+        }
         ClickType type = e.getClick();
         if (type != ClickType.LEFT && type != ClickType.RIGHT && type != ClickType.SHIFT_LEFT && type != ClickType.SHIFT_RIGHT) return;
         if (e.getAction() == InventoryAction.COLLECT_TO_CURSOR || e.getAction() == InventoryAction.HOTBAR_SWAP) return;
@@ -164,9 +176,19 @@ public final class MenuService implements Service, Listener {
         if (open.get(p.getUniqueId()) == h) render(p, h); // the handler may have opened another menu
     }
 
+    private static final java.util.Set<InventoryAction> PLAIN_MOVES = java.util.EnumSet.of(InventoryAction.PICKUP_ALL,
+            InventoryAction.PICKUP_HALF, InventoryAction.PICKUP_SOME, InventoryAction.PICKUP_ONE, InventoryAction.PLACE_ALL,
+            InventoryAction.PLACE_SOME, InventoryAction.PLACE_ONE, InventoryAction.SWAP_WITH_CURSOR, InventoryAction.NOTHING);
+
     @EventHandler(priority = EventPriority.LOWEST)
     public void onDrag(InventoryDragEvent e) {
-        if (e.getView().getTopInventory().getHolder(false) instanceof Holder) e.setCancelled(true);
+        if (!(e.getView().getTopInventory().getHolder(false) instanceof Holder h)) return;
+        int top = e.getView().getTopInventory().getSize();
+        boolean allowed = !e.getRawSlots().isEmpty();
+        for (int raw : e.getRawSlots()) {
+            if (raw < top || !h.menu.editablePlayerSlot(e.getView().convertSlot(raw))) allowed = false;
+        }
+        e.setCancelled(!allowed);
     }
 
     @EventHandler(priority = EventPriority.LOWEST)

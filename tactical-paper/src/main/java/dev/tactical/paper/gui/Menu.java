@@ -24,6 +24,18 @@ public abstract class Menu {
     /** Fill the view. Called on open and on every refresh. */
     public abstract void render(Player viewer, MenuView view);
 
+    /** Called right after the menu opened (after any previous menu's {@link #onClose}). */
+    public void onOpen(Player viewer) {
+    }
+
+    /**
+     * Player-inventory slots (0-8 hotbar, 9-35 main) the viewer may rearrange while this menu is open: plain
+     * pick-up / place / swap-with-cursor clicks and drags that stay inside these slots. Everything else stays blocked.
+     */
+    public boolean editablePlayerSlot(int slot) {
+        return false;
+    }
+
     /** Called when the inventory closes for any reason (including disconnect and replacement by another menu). */
     public void onClose(Player viewer) {
     }

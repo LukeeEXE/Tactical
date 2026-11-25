@@ -100,10 +100,99 @@ final class ShopMenu extends Menu {
                     else deny(viewer, "Only items bought this round can be sold back");
                     return;
                 }
+                ItemStack[] hotbarBefore = new ItemStack[9];
+                for (int h = 0; h < 9; h++) {
+                    ItemStack it = viewer.getInventory().getItem(h);
+                    hotbarBefore[h] = it == null ? null : it.clone();
+                }
                 MatchShop.BuyResult r = shop.buy(viewer, e.id());
+                if (r == MatchShop.BuyResult.OK && swapped) pullNewItemsIntoRow(viewer.getInventory(), hotbarBefore);
                 if (r == MatchShop.BuyResult.OK) viewer.playSound(viewer.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.4f);
                 else deny(viewer, message(r));
             });
+        }
+    }
+
+    // ------------------------------------------------------------------ hotbar arranging
+
+    /** Inventory row shown by the footer texture (player slots 9-17): it stands in for the hotbar while open. */
+    static final int ROW_START = 9;
+    private boolean swapped;
+
+    /** The hotbar is moved into the visible row so it can be rearranged there. */
+    @Override
+    public void onOpen(Player viewer) {
+        swapRows(viewer.getInventory());
+        swapped = true;
+    }
+
+    @Override
+    public boolean editablePlayerSlot(int slot) {
+        return swapped && slot >= ROW_START && slot < ROW_START + 9;
+    }
+
+    /** Closing puts the row, in its new order, back on the hotbar (and anything held on the cursor into it). */
+    @Override
+    public void onClose(Player viewer) {
+        if (!swapped) return;
+        swapped = false;
+        org.bukkit.inventory.PlayerInventory inv = viewer.getInventory();
+        ItemStack cursor = viewer.getItemOnCursor();
+        if (cursor != null && !cursor.getType().isAir()) {
+            viewer.setItemOnCursor(null);
+            if (!putInRow(inv, cursor)) inv.addItem(cursor).values().forEach(left -> viewer.getWorld().dropItem(viewer.getLocation(), left));
+        }
+        swapRows(inv);
+    }
+
+    private static void swapRows(org.bukkit.inventory.PlayerInventory inv) {
+        for (int i = 0; i < 9; i++) {
+            ItemStack hot = inv.getItem(i);
+            inv.setItem(i, inv.getItem(ROW_START + i));
+            inv.setItem(ROW_START + i, hot);
+        }
+    }
+
+    /** Merges into / fills the visible row; false if it does not fit. */
+    private static boolean putInRow(org.bukkit.inventory.PlayerInventory inv, ItemStack item) {
+        int left = item.getAmount();
+        for (int i = ROW_START; i < ROW_START + 9 && left > 0; i++) {
+            ItemStack s = inv.getItem(i);
+            if (s != null && s.isSimilar(item) && s.getAmount() < s.getMaxStackSize()) {
+                int add = Math.min(left, s.getMaxStackSize() - s.getAmount());
+                s.setAmount(s.getAmount() + add);
+                left -= add;
+            }
+        }
+        for (int i = ROW_START; i < ROW_START + 9 && left > 0; i++) {
+            ItemStack s = inv.getItem(i);
+            if (s == null || s.getType().isAir()) {
+                ItemStack put = item.clone();
+                put.setAmount(Math.min(left, item.getMaxStackSize()));
+                inv.setItem(i, put);
+                left -= put.getAmount();
+            }
+        }
+        item.setAmount(left);
+        return left <= 0;
+    }
+
+    /** A purchase lands where addItem puts it (often the real hotbar, hidden right now): move it into the row. */
+    private static void pullNewItemsIntoRow(org.bukkit.inventory.PlayerInventory inv, ItemStack[] hotbarBefore) {
+        for (int i = 0; i < 9; i++) {
+            ItemStack now = inv.getItem(i);
+            if (now == null || now.getType().isAir()) continue;
+            ItemStack before = hotbarBefore[i];
+            int added = before == null || before.getType().isAir() ? now.getAmount()
+                    : before.isSimilar(now) ? now.getAmount() - before.getAmount() : now.getAmount();
+            if (added <= 0) continue;
+            if (before != null && !before.getType().isAir() && !before.isSimilar(now)) continue; // not ours to move
+            ItemStack moving = now.clone();
+            moving.setAmount(added);
+            putInRow(inv, moving);
+            int stays = now.getAmount() - (added - moving.getAmount());
+            if (stays <= 0) inv.setItem(i, null);
+            else now.setAmount(stays);
         }
     }
 
