@@ -46,6 +46,8 @@ becomes your hotbar in the new order. Items bought while the shop is open appear
 inside the row are allowed (no shift-click, number keys, double-click or dropping).
 The order is remembered for the rest of the half: it is saved when the shop closes and at the end of every round you
 survive (so changes made during the round count too), and applied at the start of each round after the base kit and
-kept purchases are given. A slot whose item you lost by dying stays empty; new items fill the slots that were empty,
-then the inventory. The bomb is never part of a layout. Layouts reset at halftime and before sudden death (new kits).
+kept purchases are given. A slot whose item is gone (used up, or lost by dying) stays empty and keeps remembering that
+item: buying it again puts it straight back into that slot (in the shop row while the shop is open, and at round
+start). A slot forgets only when the item shows up in another hotbar slot or another item takes its place. Other new
+items fill the slots that were empty, then the inventory. The bomb is never part of a layout. Layouts reset at halftime and before sudden death (new kits).
 

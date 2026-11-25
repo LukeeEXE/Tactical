@@ -327,15 +327,38 @@ public final class MatchShop {
     /** Per player: what each hotbar slot held (item key, null = empty) when they last arranged / survived a round. */
     private final Map<UUID, String[]> layouts = new HashMap<>();
 
-    /** Remembers the player's current hotbar order (shop closed, or round survived). */
+    /**
+     * Remembers the player's hotbar order (shop closed, or round survived). An empty slot KEEPS the item it held
+     * before (used up or lost), unless that item is now in another hotbar slot: so a used shot or a re-bought weapon
+     * returns to its old slot.
+     */
     public void rememberLayout(Player p) {
-        String[] keys = new String[9];
+        String[] now = new String[9];
         for (int i = 0; i < 9; i++) {
             ItemStack it = p.getInventory().getItem(i);
             String k = it == null || it.getType().isAir() ? null : this.keys.keyOf(it);
-            keys[i] = BOMB_KEY.equals(k) ? null : k; // the bomb changes hands every round: never part of a layout
+            now[i] = BOMB_KEY.equals(k) ? null : k; // the bomb changes hands every round: never part of a layout
         }
-        layouts.put(p.getUniqueId(), keys);
+        String[] before = layouts.get(p.getUniqueId());
+        if (before != null) {
+            List<String> present = java.util.Arrays.asList(now.clone());
+            for (int i = 0; i < 9; i++) {
+                if (now[i] == null && before[i] != null && !present.contains(before[i])) now[i] = before[i];
+            }
+        }
+        layouts.put(p.getUniqueId(), now);
+    }
+
+    /** Hotbar slot the player keeps this item in (-1 = none remembered). */
+    public int rememberedSlot(UUID player, String key, java.util.function.IntPredicate usable) {
+        String[] layout = layouts.get(player);
+        if (layout == null || key == null) return -1;
+        for (int i = 0; i < 9; i++) if (key.equals(layout[i]) && usable.test(i)) return i;
+        return -1;
+    }
+
+    String keyOf(ItemStack item) {
+        return keys.keyOf(item);
     }
 
     /** New kits (halftime, sudden death): layouts start over. */

@@ -106,7 +106,7 @@ final class ShopMenu extends Menu {
                     hotbarBefore[h] = it == null ? null : it.clone();
                 }
                 MatchShop.BuyResult r = shop.buy(viewer, e.id());
-                if (r == MatchShop.BuyResult.OK && swapped) pullNewItemsIntoRow(viewer.getInventory(), hotbarBefore);
+                if (r == MatchShop.BuyResult.OK && swapped) pullNewItemsIntoRow(viewer, viewer.getInventory(), hotbarBefore);
                 if (r == MatchShop.BuyResult.OK) viewer.playSound(viewer.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.4f);
                 else deny(viewer, message(r));
             });
@@ -179,7 +179,7 @@ final class ShopMenu extends Menu {
     }
 
     /** A purchase lands where addItem puts it (often the real hotbar, hidden right now): move it into the row. */
-    private static void pullNewItemsIntoRow(org.bukkit.inventory.PlayerInventory inv, ItemStack[] hotbarBefore) {
+    private void pullNewItemsIntoRow(Player viewer, org.bukkit.inventory.PlayerInventory inv, ItemStack[] hotbarBefore) {
         for (int i = 0; i < 9; i++) {
             ItemStack now = inv.getItem(i);
             if (now == null || now.getType().isAir()) continue;
@@ -190,7 +190,15 @@ final class ShopMenu extends Menu {
             if (before != null && !before.getType().isAir() && !before.isSimilar(now)) continue; // not ours to move
             ItemStack moving = now.clone();
             moving.setAmount(added);
-            putInRow(inv, moving);
+            // back into the slot this item used to have, if that slot is free
+            int slot = shop.rememberedSlot(viewer.getUniqueId(), shop.keyOf(moving),
+                    s -> inv.getItem(ROW_START + s) == null || inv.getItem(ROW_START + s).getType().isAir());
+            if (slot >= 0) {
+                inv.setItem(ROW_START + slot, moving.clone());
+                moving.setAmount(0);
+            } else {
+                putInRow(inv, moving);
+            }
             int stays = now.getAmount() - (added - moving.getAmount());
             if (stays <= 0) inv.setItem(i, null);
             else now.setAmount(stays);

@@ -284,4 +284,5 @@ All positions are estimates and need a client check; every value is adjustable i
 | Default kits | 🟡 | Placeholder contents (wooden sword, pickaxe, a shot; same shop for all) until the real kit designs |
 | Arrange the hotbar in the shop: hotbar shown in the visible inventory row, reordered by plain clicks/drags, written back on close (also when the buy phase closes the shop); purchases land in that row | 🟡 | Needs a client test |
 | Remembered hotbar layout: saved on shop close and at round end (survivors), applied each round start; lost items leave their slot empty; bomb excluded; reset at halftime / sudden death | 🟡 | Match runs without errors on the server; **needs a client test** |
+| Slots remember used/lost items: a re-bought item returns to its old hotbar slot (shop row and round start) | 🟡 | Needs a client test |
 
