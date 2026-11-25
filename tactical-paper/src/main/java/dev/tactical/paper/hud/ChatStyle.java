@@ -7,6 +7,7 @@ import dev.tactical.paper.match.MatchMember;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 
 import java.util.UUID;
 
@@ -24,6 +25,19 @@ public final class ChatStyle {
 
     public static Component icon(char glyph) {
         return Component.text(String.valueOf(glyph)).font(FONT).color(NamedTextColor.WHITE);
+    }
+
+    /** Width the icon takes in chat (for pixel layouts). */
+    public static int advance(char glyph) {
+        return HudGlyphs.chatAdvance(glyph);
+    }
+
+    /** {@code [icon] body} with the icon tinted (e.g. in the message's colour). */
+    public static Component line(char glyph, TextColor iconColor, Component body) {
+        return Component.text()
+                .append(Component.text("[", NamedTextColor.WHITE)).append(icon(glyph).color(iconColor)).append(Component.text("] ", NamedTextColor.WHITE))
+                .append(body)
+                .build();
     }
 
     /** The team icon (one grey icon, tinted with the team's colour). Used everywhere a team is marked. */

@@ -90,6 +90,17 @@ public final class HudGlyphs {
     }
 
     public static List<Glyph> all() {
+        List<Glyph> out = baseGlyphs();
+        for (RectSet set : RECT_SETS) {
+            for (int w = 1; w <= RECT_MAX; w++) {
+                out.add(rect(set.name() + "_" + w, set.glyph(w), set.slot(), w, set.height(), (set.alpha() << 24) | 0xFFFFFF, set.shape()));
+            }
+        }
+        return out;
+    }
+
+    /** Every icon glyph (everything except the generated rectangles). */
+    private static List<Glyph> baseGlyphs() {
         List<Glyph> out = new ArrayList<>(List.of(
                 image("chat_kill", CHAT_KILL, Slot.CHAT, "pack/hud/skull.png"),
                 art("chat_round", CHAT_ROUND, Slot.CHAT,
@@ -138,11 +149,6 @@ public final class HudGlyphs {
         out.add(image("plant_empty", PLANT_EMPTY, Slot.PLANT_BAR, "pack/hud/plant/empty.png"));
         out.add(image("plant_half", PLANT_HALF, Slot.PLANT_BAR, "pack/hud/plant/half.png"));
         out.add(image("plant_full", PLANT_FULL, Slot.PLANT_BAR, "pack/hud/plant/full.png"));
-        for (RectSet set : RECT_SETS) {
-            for (int w = 1; w <= RECT_MAX; w++) {
-                out.add(rect(set.name() + "_" + w, set.glyph(w), set.slot(), w, set.height(), (set.alpha() << 24) | 0xFFFFFF, set.shape()));
-            }
-        }
         return out;
     }
 
@@ -172,10 +178,33 @@ public final class HudGlyphs {
         }
     }
 
+    private static volatile Map<Character, Integer> chatAdvances;
+
     /**
-     * Crops a large chat icon to its ink and centres it on a canvas that the client draws {@value #CHAT_ICON_HEIGHT} px
-     * tall and 8 px wide (14 rows = exactly 2:1). A single 1/255-alpha pixel in the last column fixes the measured
-     * width, so every chat icon advances 9 px like the 8x8 ones; it is invisible (text discards alpha below 0.1).
+     * Horizontal advance of a chat icon in GUI pixels, computed the way the client does it: the last non-empty
+     * column, scaled to the drawn height, plus 1.
+     */
+    public static int chatAdvance(char glyph) {
+        Map<Character, Integer> m = chatAdvances;
+        if (m == null) {
+            Map<Character, Integer> built = new java.util.HashMap<>();
+            for (Glyph g : baseGlyphs()) {
+                if (g.slot() != Slot.CHAT) continue;
+                int drawn = g.height() > 8 ? CHAT_ICON_HEIGHT : 8;
+                int ink = 0;
+                for (int x = g.image().getWidth() - 1; x >= 0 && ink == 0; x--) {
+                    for (int y = 0; y < g.image().getHeight(); y++) if ((g.image().getRGB(x, y) >>> 24) != 0) { ink = x + 1; break; }
+                }
+                built.put(g.ch(), (int) (0.5 + ink * (drawn / (double) g.image().getHeight())) + 1);
+            }
+            chatAdvances = m = Map.copyOf(built);
+        }
+        return m.getOrDefault(glyph, 9);
+    }
+
+    /**
+     * Crops a large chat icon to its ink and centres it on a square canvas (14 rows = exactly 2:1 at
+     * {@value #CHAT_ICON_HEIGHT} px), so every large icon is 7 px wide with a normal 1 px gap after it.
      */
     private static BufferedImage chatCanvas(BufferedImage src) {
         int minX = src.getWidth(), minY = src.getHeight(), maxX = -1, maxY = -1;
@@ -189,12 +218,12 @@ public final class HudGlyphs {
         if (maxX < 0) return src;
         int w = maxX - minX + 1, h = maxY - minY + 1;
         int canvasH = Math.max(h, 14);
-        double scale = CHAT_ICON_HEIGHT / (double) canvasH;
-        int canvasW = Math.max(w + 1, (int) Math.round(8 / scale));
+        int canvasW = Math.max(w, canvasH);
         BufferedImage out = new BufferedImage(canvasW, canvasH, BufferedImage.TYPE_INT_ARGB);
-        int ox = (canvasW - 1 - w) / 2, oy = (canvasH - h) / 2;
+        int ox = (canvasW - w) / 2, oy = (canvasH - h) / 2;
         for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) out.setRGB(ox + x, oy + y, src.getRGB(minX + x, minY + y));
-        out.setRGB(canvasW - 1, canvasH - 1, 0x01FFFFFF); // width marker, never visible
+        if (ox > 0) out.setRGB(0, 0, 0x01FFFFFF);               // keep a narrow icon centred: the client measures
+        if (canvasW - ox - w > 0) out.setRGB(canvasW - 1, 0, 0x01FFFFFF); // from column 0 to the last non-empty one
         return out;
     }
 

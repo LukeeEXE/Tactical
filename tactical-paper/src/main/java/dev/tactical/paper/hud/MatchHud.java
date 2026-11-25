@@ -199,9 +199,8 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
     }
 
     /**
-     * Fixed-width space for the timer: the panel and the 1 px timer line, both centred in it. Their width is that of
-     * the text with every digit at its widest, so "00:11" and "00:12" get the same panel; the line is exactly as wide
-     * as the text.
+     * Fixed-width space for the timer: the panel and the 1 px timer line under it, both centred in it and equally wide.
+     * The width is that of the text with every digit at its widest, so "00:11" and "00:12" get the same panel.
      */
     private Component timerSlot(Timer timer, float progress, boolean showBar) {
         HudConfig h = config.hud();
@@ -210,12 +209,12 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         int panelWidth = ink + 2 * h.panelPadding();
         TextComponent.Builder b = Component.text().append(TextOffsets.space(slot / 2))
                 .append(HudShapes.centred(HudShapes.rect(HudGlyphs.BAR_PANEL, panelWidth, "hud_bossbar", NamedTextColor.BLACK), panelWidth));
-        if (showBar) {
-            int filled = Math.max(0, Math.min(ink, (int) Math.ceil(progress * ink)));
+        if (showBar) { // as wide as the panel above it
+            int filled = Math.max(0, Math.min(panelWidth, (int) Math.ceil(progress * panelWidth)));
             TextComponent.Builder line = Component.text();
             if (filled > 0) line.append(HudShapes.rect(HudGlyphs.TIME_FILL, filled, "hud_bossbar", TIME_YELLOW));
-            if (ink - filled > 0) line.append(HudShapes.rect(HudGlyphs.TIME_EMPTY, ink - filled, "hud_bossbar", NamedTextColor.BLACK));
-            b.append(HudShapes.centred(line.build(), ink));
+            if (panelWidth - filled > 0) line.append(HudShapes.rect(HudGlyphs.TIME_EMPTY, panelWidth - filled, "hud_bossbar", NamedTextColor.BLACK));
+            b.append(HudShapes.centred(line.build(), panelWidth));
         }
         return b.append(TextOffsets.space(slot - slot / 2)).build();
     }
@@ -372,7 +371,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
             String words = " " + TeamStyle.roleName(f.sideOf(end.winner())) + " won the match!";
             headline = Component.text().append(ChatStyle.teamIcon(end.winner()))
                     .append(Component.text(words, TeamStyle.color(end.winner()))).build();
-            headlineWidth = 9 + HudText.vanillaWidth(words);
+            headlineWidth = ChatStyle.advance(HudGlyphs.CHAT_TEAM) + HudText.vanillaWidth(words);
         } else {
             String words = "The match ended without a winner";
             headline = Component.text(words, NamedTextColor.RED);
@@ -395,7 +394,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         }
         lines.add(separator());
         int postgameSecs = match.rules().postgameTicks() / ModeRules.TICKS_PER_SECOND;
-        lines.add(ChatStyle.line(HudGlyphs.CHAT_WARNING, Component.text("Returning to the lobby in " + postgameSecs + "s.", NamedTextColor.GRAY)));
+        lines.add(ChatStyle.line(HudGlyphs.CHAT_WARNING, NamedTextColor.GRAY, Component.text("Returning to the lobby in " + postgameSecs + "s.", NamedTextColor.GRAY)));
 
         for (Player p : match.onlinePlayers()) {
             for (Component l : lines) p.sendMessage(l);
@@ -446,7 +445,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
                 .append(ChatStyle.teamIcon(team))
                 .append(Component.text("] ", NamedTextColor.WHITE))
                 .append(Component.text(name, TeamStyle.color(team)).decorate(TextDecoration.BOLD));
-        int x = HudText.vanillaWidth("[") + 9 + HudText.vanillaWidth("] ") + HudText.vanillaWidth(name) + name.length(); // bold = +1 px/char
+        int x = HudText.vanillaWidth("[") + ChatStyle.advance(HudGlyphs.CHAT_TEAM) + HudText.vanillaWidth("] ") + HudText.vanillaWidth(name) + name.length(); // bold = +1 px/char
         if (winner) {
             b.append(Component.text("  WINNER", NamedTextColor.GOLD));
             x += HudText.vanillaWidth("  WINNER");
@@ -455,7 +454,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         for (int i = 0; i < icons.length; i++) {
             int target = STAT_RIGHT[i] + 1; // icon sits right after the numbers
             b.append(TextOffsets.space(Math.max(1, target - x))).append(ChatStyle.icon(icons[i]));
-            x = Math.max(x + 1, target) + 9;
+            x = Math.max(x + 1, target) + ChatStyle.advance(icons[i]);
         }
         return b.build();
     }
@@ -467,7 +466,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         TextComponent.Builder b = Component.text();
         int x = 0;
         b.append(TextOffsets.space(6)).append(ChatStyle.icon(HudGlyphs.CHAT_ARROW));
-        x += 6 + 9;
+        x += 6 + ChatStyle.advance(HudGlyphs.CHAT_ARROW);
         String r = " " + rank + ". ";
         b.append(Component.text(r, NamedTextColor.GRAY));
         x += HudText.vanillaWidth(r);
@@ -482,7 +481,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         x += HudText.vanillaWidth(" " + m.name());
         if (mvp) {
             b.append(Component.text(" ")).append(ChatStyle.icon(HudGlyphs.CHAT_MVP));
-            x += 4 + 9;
+            x += 4 + ChatStyle.advance(HudGlyphs.CHAT_MVP);
         }
         // dotted leader up to the stat columns
         b.append(Component.text(" ", NamedTextColor.DARK_GRAY));
@@ -498,7 +497,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
             int pad = Math.max(2, STAT_RIGHT[i] - w - x);
             b.append(TextOffsets.space(pad)).append(Component.text(values[i], NamedTextColor.WHITE));
             b.append(TextOffsets.space(1)).append(ChatStyle.icon(icons[i]));
-            x += pad + w + 1 + 9;
+            x += pad + w + 1 + ChatStyle.advance(icons[i]);
         }
         return b.build();
     }

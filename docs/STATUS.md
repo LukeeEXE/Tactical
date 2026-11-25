@@ -257,3 +257,11 @@ All positions are estimates and need a client check; every value is adjustable i
 | Chat icons too big | Large chat icons are drawn 7 px tall (chat capital height), cropped to their ink; each still advances 9 px so the results columns stay aligned |
 | Team chat and game chat | Planned for Phase 4 together with voice chat (roadmap updated) |
 
+### Round 13
+| Request | Change |
+|---|---|
+| Gap between the team icon and "]" | Large chat icons are now exactly 7 px wide with the usual 1 px letter gap (verified against the built pack); results layout uses each icon's real width, computed from its pixels |
+| Swap assist and bomb icons | Swapped |
+| Warning icon in the message colour | Tinted with the first colour the message template gives its own text (player/team placeholders do not count); round reward gold, lobby countdown gray |
+| Timer line too short | Now exactly as wide as the timer panel |
+

@@ -110,11 +110,40 @@ final class MatchAnnouncer {
     }
 
     private void all(GameMatch match, char icon, String key, Object... placeholders) {
-        Component line = ChatStyle.line(icon, messages.render(key, placeholders));
+        Component line = line(icon, key, placeholders);
         for (Player p : match.onlinePlayers()) p.sendMessage(line);
     }
 
     private void send(Player p, char icon, String key, Object... placeholders) {
-        p.sendMessage(ChatStyle.line(icon, messages.render(key, placeholders)));
+        p.sendMessage(line(icon, key, placeholders));
+    }
+
+    /** The warning icon takes the colour of its message's own text; other icons keep their art colours. */
+    private Component line(char icon, String key, Object... placeholders) {
+        Component body = messages.render(key, placeholders);
+        if (icon != HudGlyphs.CHAT_WARNING) return ChatStyle.line(icon, body);
+        return ChatStyle.line(icon, messageColor(key), body);
+    }
+
+    /**
+     * First colour the message template itself gives to visible text (placeholders such as {@code <player>} are left
+     * unresolved, so a player's team colour never counts). White if the template has no colour.
+     */
+    private net.kyori.adventure.text.format.TextColor messageColor(String key) {
+        net.kyori.adventure.text.format.TextColor c = firstColor(messages.render(key), null);
+        return c == null ? NamedTextColor.WHITE : c;
+    }
+
+    private static net.kyori.adventure.text.format.TextColor firstColor(Component c, net.kyori.adventure.text.format.TextColor inherited) {
+        net.kyori.adventure.text.format.TextColor color = c.color() != null ? c.color() : inherited;
+        if (c instanceof net.kyori.adventure.text.TextComponent t) {
+            String visible = t.content().replaceAll("<[^>]*>", "").trim();
+            if (!visible.isEmpty() && color != null) return color;
+        }
+        for (Component child : c.children()) {
+            net.kyori.adventure.text.format.TextColor found = firstColor(child, color);
+            if (found != null) return found;
+        }
+        return null;
     }
 }
