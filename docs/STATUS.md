@@ -314,3 +314,4 @@ All positions are estimates and need a client check; every value is adjustable i
 | Planting bar 4 px lower | PLANTING/DEFUSING widget uses its own glyph set (boss bar font), 4 px lower | 🟡 |
 | Hint box | 22 px tall (1 px more under the text), raised 3 px clear of item names | 🟡 |
 | Bomb on the ground | Each round the bomb lies at the map's bomb spawn (fallback: first attacker spawn); attackers pick it up by walking over it, it glows only for attackers. `/game map bombspawn set|clear`, orange column in the editor preview, `bomb-spawn` in the map file, shown in `/game map info` | ✅ Server-tested (BOMB_DROP reason=spawn at round start, forced plant OK) |
+| Confirm recess aligned with the slots | Footer recess (52x17 interior) and the `|||` decorations moved 6 px down: the interior now starts at the top of slots 30-32 and spans exactly their width; the button art moved with it | 🟡 needs a client test |
