@@ -56,7 +56,7 @@ public final class HudGlyphs {
     public static final char MOUSE_LEFT = '\uE224', MOUSE_RIGHT = '\uE225';
     public static final char MONEY_PANEL = '\uE240', MONEY_COIN = '\uE241';
     /** Plant/defuse progress segments (2x7): empty, half, full. */
-    public static final char PLANT_EMPTY = '\uE720', PLANT_HALF = '\uE721', PLANT_FULL = '\uE722';
+    public static final char PLANT_EMPTY = '\uE720', PLANT_HALF = '\uE721', PLANT_FULL = '\uE722', PLANT_MARK = '\uE723';
     public static final int PLANT_SEGMENT = 2;
     /** Large bomb icon on its own boss bar while the bomb is planted. */
     public static final char BAR_BOMB = '\uE710';
@@ -156,6 +156,7 @@ public final class HudGlyphs {
         out.add(image("plant_empty", PLANT_EMPTY, Slot.PLANT_BAR, "pack/hud/plant/empty.png"));
         out.add(image("plant_half", PLANT_HALF, Slot.PLANT_BAR, "pack/hud/plant/half.png"));
         out.add(image("plant_full", PLANT_FULL, Slot.PLANT_BAR, "pack/hud/plant/full.png"));
+        out.add(image("plant_mark", PLANT_MARK, Slot.PLANT_BAR, "pack/hud/plant/mark.png"));
         return out;
     }
 

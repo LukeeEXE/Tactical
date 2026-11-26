@@ -174,14 +174,20 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         MatchFlow f = match.flow();
         HudConfig h = config.hud();
         Timer timer = timer(f);
-        Component textRow = HudText.ttf(h.bossbarFont(), h.bossbarTextOffsetY() - h.rowSpacing(), timer.text())
-                .shadowColor(ShadowColor.none());
+        Component time = HudShapes.centred(HudText.ttf(h.bossbarFont(), h.bossbarTextOffsetY() - h.rowSpacing(), timer.text()),
+                width(timer.plain()));
+        var progress0 = arenas == null ? java.util.Optional.<dev.tactical.paper.arena.BombController.Progress>empty()
+                : arenas.arena(match.id()).flatMap(a -> a.bomb().progress());
         float progress = f.stateDurationTicks() <= 0 ? 1f
                 : Math.max(0f, Math.min(1f, f.stateTicksRemaining() / (float) f.stateDurationTicks()));
         int gap = h.sectionGap();
         Component timerSlot = timerSlot(progress, f.stateDurationTicks() > 0 && !f.isPaused());
-        Component bomb = bombRow(match);
+        Component bomb = bombIcon(match);
         for (TeamId viewer : TeamId.values()) {
+            // Under the timer: the plant/defuse progress for the team doing it, otherwise the bomb icon (if planted).
+            var mine = progress0.filter(p -> p.team() == viewer);
+            Component under = mine.isPresent() ? progressWidget(mine.get()) : bomb;
+            Component textRow = Component.text().append(time).append(under).build().shadowColor(ShadowColor.none());
             Component row = Component.text()
                     .append(strip(match, viewer, true)).append(TextOffsets.space(gap))
                     .append(scoreBox(f, viewer)).append(TextOffsets.space(gap))
@@ -193,7 +199,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
             BossBar[] trio = b.get(viewer);
             if (!row.equals(trio[0].name())) trio[0].name(row);
             if (!textRow.equals(trio[1].name())) trio[1].name(textRow);
-            if (!bomb.equals(trio[2].name())) trio[2].name(bomb);
+            if (!Component.empty().equals(trio[2].name())) trio[2].name(Component.empty());
         }
     }
 
@@ -310,23 +316,62 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         return line(8, max <= 0 ? 0 : health / max, health < LOW_HEALTH ? HEALTH_LOW : NamedTextColor.WHITE);
     }
 
-    /** Large bomb icon while planted: bright for a moment on every beep, dim in between. */
-    private Component bombRow(GameMatch match) {
+    /** Bomb icon (24 px, 4 px under the timer line) while planted: bright on every beep, dim in between. Zero advance. */
+    private Component bombIcon(GameMatch match) {
         if (match.state() != MatchState.BOMB_PLANTED) return Component.empty();
         long now = hudTicks.getOrDefault(match.id(), 0L);
         boolean flash = now <= bombFlashUntil.getOrDefault(match.id(), -1L);
-        return Component.text(String.valueOf(HudGlyphs.BAR_BOMB)).font(Key.key("tactical", "hud_bossbar"))
-                .color(flash ? NamedTextColor.WHITE : BOMB_DIM).shadowColor(ShadowColor.none());
+        Component icon = Component.text(String.valueOf(HudGlyphs.BAR_BOMB)).font(Key.key("tactical", "hud_bossbar"))
+                .color(flash ? NamedTextColor.WHITE : BOMB_DIM);
+        return HudShapes.centred(icon, 25);
+    }
+
+    private static final int PROGRESS_WIDTH = HudShapes.PROGRESS_SEGMENTS * HudGlyphs.PLANT_SEGMENT; // 40 px
+
+    /**
+     * "PLANTING" / "DEFUSING" in white Pinch over a white bar (20 segments, fills pixel by pixel) on a dark box, where
+     * the bomb icon is; defusing marks the checkpoint with a grey line. Zero advance, centred.
+     */
+    private Component progressWidget(dev.tactical.paper.arena.BombController.Progress p) {
+        HudConfig h = config.hud();
+        Key font = Key.key("tactical", "hud_actionbar");
+        int seg = HudGlyphs.PLANT_SEGMENT;
+        int px = (int) Math.round(Math.max(0, Math.min(1, p.fraction())) * PROGRESS_WIDTH);
+        TextComponent.Builder bar = Component.text();
+        for (int i = 0; i < HudShapes.PROGRESS_SEGMENTS; i++) {
+            int in = Math.max(0, Math.min(seg, px - i * seg));
+            char c = in >= seg ? HudGlyphs.PLANT_FULL : in > 0 ? HudGlyphs.PLANT_HALF : HudGlyphs.PLANT_EMPTY;
+            bar.append(Component.text(String.valueOf(c)).font(font)).append(TextOffsets.space(-1)); // advance 2 + 1
+        }
+        String label = p.defusing() ? "DEFUSING" : "PLANTING";
+        int labelWidth = width(label);
+        int box = PROGRESS_WIDTH + 12;
+        TextComponent.Builder w = Component.text()
+                .append(HudShapes.centred(HudShapes.rect(HudGlyphs.ACTION_PANEL, box, "hud_actionbar", NamedTextColor.BLACK), box))
+                .append(HudShapes.centred(HudText.ttf(h.bossbarFont(), -8, Component.text(label, NamedTextColor.WHITE)), labelWidth))
+                .append(HudShapes.centred(bar.build().color(NamedTextColor.WHITE), PROGRESS_WIDTH));
+        if (p.checkpoint() > 0) {
+            int mx = -PROGRESS_WIDTH / 2 + (int) Math.round(p.checkpoint() * PROGRESS_WIDTH);
+            w.append(TextOffsets.space(mx)).append(Component.text(String.valueOf(HudGlyphs.PLANT_MARK)).font(font).color(NamedTextColor.WHITE))
+                    .append(TextOffsets.space(-mx - 2)); // marker advance 1 + 1
+        }
+        return w.build();
+    }
+
+    private dev.tactical.paper.arena.ArenaService arenas;
+
+    /** Bomb state for the plant/defuse widget (set once the arena service exists). */
+    public void setArenas(dev.tactical.paper.arena.ArenaService arenas) {
+        this.arenas = arenas;
     }
 
     private record Timer(Component text, String plain) {
     }
 
-    /** Only the time ("00:18"): yellow, red while the bomb is planted or before sudden death. */
+    /** Only the time ("00:18"), in white. */
     private static Timer timer(MatchFlow f) {
         String time = clock(f.stateTicksRemaining());
-        boolean red = !f.isPaused() && (f.state() == MatchState.BOMB_PLANTED || f.state() == MatchState.SUDDEN_DEATH_KIT_SELECT);
-        return new Timer(Component.text(time, red ? NamedTextColor.RED : TIME_YELLOW), time);
+        return new Timer(Component.text(time, NamedTextColor.WHITE), time);
     }
 
     private static String clock(int ticks) {

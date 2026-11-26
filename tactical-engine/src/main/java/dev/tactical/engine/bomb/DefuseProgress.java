@@ -71,6 +71,10 @@ public final class DefuseProgress {
         return progress;
     }
 
+    public int checkpointTicks() {
+        return checkpointTicks;
+    }
+
     public int totalTicks() {
         return totalTicks;
     }

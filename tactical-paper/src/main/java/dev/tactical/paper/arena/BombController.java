@@ -319,7 +319,7 @@ public final class BombController {
                 default -> { }
             }
             if (step != PlantProgress.Step.COMPLETED) {
-                dev.tactical.paper.hud.ActionBars.progress(p, plantFraction());
+                // progress is shown on the boss bar (see progress())
             }
         } else if (plant.planter().isPresent()) {
             String why = !holding ? "released" : site.isEmpty() ? "left_site" : "not_on_ground";
@@ -428,7 +428,7 @@ public final class BombController {
             match.recorder().record(EventTypes.DEFUSE_PROGRESS, List.of(id), team(id), Map.of("progress_ticks", defuse.progressTicks()),
                     "OK", RecordingSink.Priority.LOW);
         }
-        if (p != null) dev.tactical.paper.hud.ActionBars.progress(p, defuse.fraction());
+        // progress is shown on the boss bar (see progress())
     }
 
     /** Why this defender cannot defuse right now (empty = valid stance this tick). */
@@ -547,6 +547,23 @@ public final class BombController {
     }
 
     // ------------------------------------------------------------------ queries
+
+    /** A plant or defuse in progress: fraction done, the defuse checkpoint (fraction; -1 for planting), whose team. */
+    public record Progress(boolean defusing, double fraction, double checkpoint, dev.tactical.engine.team.TeamId team) {
+    }
+
+    /** What the boss bar shows under the timer while someone plants or defuses. */
+    public Optional<Progress> progress() {
+        if (defuse != null && defuse.defuser().isPresent()) {
+            UUID id = defuse.defuser().get();
+            return Optional.of(new Progress(true, defuse.fraction(), defuse.checkpointTicks() / (double) defuse.totalTicks(), team(id)));
+        }
+        if (plant != null && plant.planter().isPresent()) {
+            UUID id = plant.planter().get();
+            return Optional.of(new Progress(false, plant.fraction(), -1, team(id)));
+        }
+        return Optional.empty();
+    }
 
     public Optional<UUID> carrier() {
         return Optional.ofNullable(carrier);

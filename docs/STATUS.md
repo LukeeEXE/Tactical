@@ -301,4 +301,5 @@ All positions are estimates and need a client check; every value is adjustable i
 | Health lines | 1 px line under every living player's head, 8 px wide = the head: health / max health (absorption ignored), white, red below 5 hearts |
 | Head spacing | Inline heads advance 8 px (verified in the client), not 9: heads no longer drift 1 px per player |
 | hud.yml | Schema 4: older files are backed up and replaced |
+| Timer white; bomb icon 24 px, 4 px under the timer line (on the time's boss bar); plant/defuse progress moved from the action bar to that spot: white Pinch "PLANTING"/"DEFUSING" over a white 40 px bar on a dark box, shown to the team doing it; grey checkpoint marker while defusing | 🟡 | Server-tested (match with a planted bomb, no errors); **needs a client test** |
 

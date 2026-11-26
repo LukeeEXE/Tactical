@@ -68,7 +68,7 @@ public final class TacticalPlugin extends JavaPlugin {
         HotbarItems hotbar = new HotbarItems(this, icons);
         // Order matters: these hooks run after ArenaService's, so they act on the freshly placed players.
         StatsTracker statsTracker = services.register(StatsTracker.class, new StatsTracker(this, matches));
-        services.register(MatchHud.class, new MatchHud(this, matches, statsTracker, config, hudText));
+        services.register(MatchHud.class, new MatchHud(this, matches, statsTracker, config, hudText)).setArenas(arena);
         KitSelectService kitSelect = services.register(KitSelectService.class, new KitSelectService(this, config, matches, menus, icons, hotbar));
         dev.tactical.paper.item.ItemService items = services.register(dev.tactical.paper.item.ItemService.class,
                 new dev.tactical.paper.item.ItemService(this, config, matches));

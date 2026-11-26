@@ -310,14 +310,14 @@ public final class PackBuilder {
             int height = switch (g.slot()) {
                 case CHAT -> g.height() > 8 ? HudGlyphs.CHAT_ICON_HEIGHT : 8; // large icons: as tall as capitals
                 case BAR_ICON, MONEY_ICON -> 8;
-                case BAR_BOMB -> 32;             // 16x16 icon drawn at 32 px (crisp 2x)
+                case BAR_BOMB -> 24;             // 16x16 icon drawn at 24 px
                 default -> g.height();
             };
             int ascent = switch (g.slot()) {
                 case CHAT -> 7;
                 case BAR_ICON -> 8;                          // same rows as an inline player head (-1..6)
                 case BAR_TIME -> 7 - hud.bossbarTimeRow();
-                case BAR_BOMB -> 7;
+                case BAR_BOMB -> 13;                         // on the time's boss bar: 4 px under the timer line
                 case PLANT_BAR -> 6;
                 case TOOLTIP_TAG -> 7;                       // rows 0..8 of a lore line: 2 px around Pinch capitals                         // rows 1..7: centred in the 13 px box (rows -2..10)
                 case BAR_STRIP -> hud.bossbarTileAscent();
