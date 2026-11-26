@@ -147,7 +147,7 @@ class PackBuilderTest {
 
     @Test
     void hudGlyphFontsUseLayout(@TempDir Path root) throws Exception {
-        PackBuilder.Result res = new PackBuilder(97, 1, "t", new HudLayout(9, 9, 9, 11, 33, 16)).build(root, List.of(), KNOWN);
+        PackBuilder.Result res = new PackBuilder(97, 1, "t", new HudLayout(9, 9, 9, 8, 33, 16)).build(root, List.of(), KNOWN);
         assertFalse(res.hasErrors(), res.issues().toString());
         Map<String, String> files = unzip(res.zip());
         JsonObject money = JsonParser.parseString(files.get("assets/tactical/font/hud_money.json")).getAsJsonObject();
@@ -156,7 +156,7 @@ class PackBuilderTest {
         assertEquals(-24, providers.get(0).getAsJsonObject().get("ascent").getAsInt(), "panel 2 px above the digits");
         assertEquals(-26, providers.get(1).getAsJsonObject().get("ascent").getAsInt());
         assertTrue(files.containsKey("assets/tactical/font/hud_chat.json"));
-        assertTrue(files.containsKey("assets/tactical/textures/hud/bar_strip_128.png"));
+        assertTrue(files.containsKey("assets/tactical/textures/hud/bar_box_128.png"));
         assertTrue(files.containsKey("assets/tactical/font/hud_actionbar.json"));
         assertFalse(files.containsKey("assets/minecraft/textures/gui/sprites/boss_bar/yellow_progress.png"));
         assertTrue(files.containsKey("assets/minecraft/textures/gui/sprites/boss_bar/white_progress.png"));
@@ -167,9 +167,9 @@ class PackBuilderTest {
         boolean timeRow = false;
         for (var e : bar.getAsJsonArray("providers")) {
             var o = e.getAsJsonObject();
-            if (o.get("file").getAsString().endsWith("time_fill_5.png")) timeRow = o.get("ascent").getAsInt() == -4 && o.get("height").getAsInt() == 1;
+            if (o.get("file").getAsString().endsWith("time_fill_5.png")) timeRow = o.get("ascent").getAsInt() == -1 && o.get("height").getAsInt() == 1;
         }
-        assertTrue(timeRow, "timer line on row 11");
+        assertTrue(timeRow, "timer line on row 8");
     }
 
     @Test

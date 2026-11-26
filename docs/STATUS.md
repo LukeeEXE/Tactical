@@ -291,3 +291,14 @@ All positions are estimates and need a client check; every value is adjustable i
 | Shop v2: new header/body/footer textures (slots one column left), absorption column (2/4/6 hearts = Absorption I-III, round only), arrows slot, money "$" in Pinch in the header box and on the action bar, supplied confirm button art; coin and door removed; kits schema 3 | 🟡 | Server-tested (kits migrate, pack builds, match runs); **needs a client test**. The supplied hover/disabled button textures are not used: item models cannot react to the mouse |
 | Money in the header bar as ONE item: composite item model of up to 8 Pinch characters, each picked from custom_model_data (strings = character, floats = pixel offset), drawn from row 0 column 8 up into the bar; updates live | 🟡 | Layout verified against the built pack for $0 to $999,999 (every character resolves to its model); **needs a client test** |
 
+### Boss bar v3
+| Request | Change |
+|---|---|
+| Heads as big as the score | Not possible: the 26.3 client draws inline player heads at a fixed 8x8 (PlayerGlyphProvider, GlyphInfo.simple(8)). Only a core text-shader override could enlarge them. As agreed, the whole boss bar is now sized to the heads instead (no scale switch) |
+| Time only | The box shows just "00:18" (yellow; red while planted / before sudden death) |
+| White timer line | 1 px line under the timer box, white, as wide as the box |
+| Closer together | 2 px between strip, score and timer; boxes and strip all 10 px tall (rows -2..7) |
+| Health lines | 1 px line under every living player's head, 8 px wide = the head: health / max health (absorption ignored), white, red below 5 hearts |
+| Head spacing | Inline heads advance 8 px (verified in the client), not 9: heads no longer drift 1 px per player |
+| hud.yml | Schema 4: older files are backed up and replaced |
+

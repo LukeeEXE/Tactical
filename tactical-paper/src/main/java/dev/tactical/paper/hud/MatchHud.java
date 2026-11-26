@@ -149,25 +149,24 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
     }
 
     // ------------------------------------------------------------------ boss bar
-    /** Every label the timer can show (with a worst-case time), for the space reserved for the timer panel. */
-    private static final List<String> TIMER_LABELS = List.of("SELECT YOUR KIT: 00:00", "STARTING IN: 00:00",
-            "ROUND 88: 00:00", "SUDDEN DEATH: 00:00", "00:00",
-            "ROUND 88 OVER", "HALFTIME: 00:00", "SUDDEN DEATH IN: 00:00", "MATCH PAUSED", "MATCH OVER", "MATCH ENDED");
     /** Same yellow as the timer bar segments. */
     static final TextColor TIME_YELLOW = TextColor.color(0xFFFF00);
     private static final TextColor BOMB_DIM = TextColor.color(0x707070);
+    private static final TextColor HEALTH_LOW = TextColor.color(0xE03C3C);
+    /** Below this many health points (5 hearts) a player's line turns red. */
+    private static final double LOW_HEALTH = 10.0;
 
     /**
      * Three boss bars per team perspective, all with the invisible WHITE bar sprite:
      * <ol>
-     *   <li>the content row at the top of the screen: [team strip] [score] [timer panel + timer line] [score]
-     *       [team strip]. Every section reserves a fixed width, so heads and scores never move; the panel fits the
-     *       text (with the widest digits, so it does not twitch while counting) and is centred in its space;</li>
-     *   <li>the timer text, moved UP one boss-bar row onto the panel; drawn after the panel, so on top of it, and
-     *       centred on the screen by the client;</li>
+     *   <li>the content row at the top of the screen, sized to the 8 px inline player heads (the client draws them
+     *       at a fixed size): [team strip + health lines] [score] [timer box + timer line] [score] [team strip].
+     *       Every section reserves a fixed width, so heads and scores never move;</li>
+     *   <li>the time, moved UP one boss-bar row onto its box; drawn after the box, so on top of it, and centred on the
+     *       screen by the client;</li>
      *   <li>the large bomb icon while the bomb is planted (flashes with every beep), empty otherwise.</li>
      * </ol>
-     * Inline player heads cannot be moved vertically, so everything is centred on them (rows 0-7). No text shadows.
+     * Boxes and strip cover rows -2..7 (heads -1..6), the 1 px lines row 8. No text shadows.
      */
     private void update(GameMatch match) {
         EnumMap<TeamId, BossBar[]> b = bars.get(match.id());
@@ -180,7 +179,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         float progress = f.stateDurationTicks() <= 0 ? 1f
                 : Math.max(0f, Math.min(1f, f.stateTicksRemaining() / (float) f.stateDurationTicks()));
         int gap = h.sectionGap();
-        Component timerSlot = timerSlot(timer, progress, f.stateDurationTicks() > 0 && !f.isPaused());
+        Component timerSlot = timerSlot(progress, f.stateDurationTicks() > 0 && !f.isPaused());
         Component bomb = bombRow(match);
         for (TeamId viewer : TeamId.values()) {
             Component row = Component.text()
@@ -198,31 +197,30 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         }
     }
 
-    /**
-     * Fixed-width space for the timer: the panel and the 1 px timer line under it, both centred in it and equally wide.
-     * The width is that of the text with every digit at its widest, so "00:11" and "00:12" get the same panel.
-     */
-    private Component timerSlot(Timer timer, float progress, boolean showBar) {
+    /** Width of the timer box: "00:00" (widest digits, so the box never changes) plus padding. */
+    private int timerBoxWidth() {
         HudConfig h = config.hud();
-        int slot = h.timerSlotWidth() > 0 ? h.timerSlotWidth() : autoTimerSlot();
-        int ink = Math.max(1, width(timer.plain().replaceAll("[0-9]", "0")) - 1); // Pinch advance = ink + 1
-        int panelWidth = ink + 2 * h.panelPadding();
-        TextComponent.Builder b = Component.text().append(TextOffsets.space(slot / 2))
-                .append(HudShapes.centred(HudShapes.rect(HudGlyphs.BAR_PANEL, panelWidth, "hud_bossbar", NamedTextColor.BLACK), panelWidth));
-        if (showBar) { // as wide as the panel above it
-            int filled = Math.max(0, Math.min(panelWidth, (int) Math.ceil(progress * panelWidth)));
-            TextComponent.Builder line = Component.text();
-            if (filled > 0) line.append(HudShapes.rect(HudGlyphs.TIME_FILL, filled, "hud_bossbar", TIME_YELLOW));
-            if (panelWidth - filled > 0) line.append(HudShapes.rect(HudGlyphs.TIME_EMPTY, panelWidth - filled, "hud_bossbar", NamedTextColor.BLACK));
-            b.append(HudShapes.centred(line.build(), panelWidth));
-        }
-        return b.append(TextOffsets.space(slot - slot / 2)).build();
+        if (h.timerSlotWidth() > 0) return h.timerSlotWidth();
+        return Math.max(1, width("00:00") - 1) + 2 * h.panelPadding(); // Pinch advance = ink + 1
     }
 
-    private int autoTimerSlot() {
-        int max = 0;
-        for (String l : TIMER_LABELS) max = Math.max(max, width(l));
-        return max - 1 + 2 * config.hud().panelPadding();
+    /** The timer box and, under it, a white 1 px line as wide as the box showing the time left. */
+    private Component timerSlot(float progress, boolean showLine) {
+        int box = timerBoxWidth();
+        TextComponent.Builder b = Component.text().append(HudShapes.rect(HudGlyphs.BAR_BOX, box, "hud_bossbar", NamedTextColor.BLACK));
+        if (showLine) {
+            b.append(TextOffsets.space(-box)).append(line(box, progress, NamedTextColor.WHITE));
+        }
+        return b.build();
+    }
+
+    /** 1 px line of {@code width}: the first {@code fraction} in {@code color}, the rest dark. Advance = width. */
+    private static Component line(int width, double fraction, TextColor color) {
+        int filled = Math.max(0, Math.min(width, (int) Math.ceil(fraction * width)));
+        TextComponent.Builder line = Component.text();
+        if (filled > 0) line.append(HudShapes.rect(HudGlyphs.TIME_FILL, filled, "hud_bossbar", color));
+        if (width - filled > 0) line.append(HudShapes.rect(HudGlyphs.TIME_EMPTY, width - filled, "hud_bossbar", NamedTextColor.BLACK));
+        return line.build();
     }
 
     private int width(String s) {
@@ -230,18 +228,17 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         return w == 0 ? HudText.vanillaWidth(s) : w;
     }
 
-    /** Big white score (double-size font) centred in a square dark box. */
+    /** White score in Pinch centred in a dark box as tall as the team strip. */
     private Component scoreBox(MatchFlow f, TeamId team) {
         HudConfig h = config.hud();
-        int box = HudGlyphs.BAR_SCORE.height(); // square
         String value = String.valueOf(f.scoreOf(team));
-        int advance = 2 * text.ttfWidth(h.bossbarFont(), value);
-        if (advance == 0) advance = HudText.vanillaWidth(value);
-        int ink = Math.max(1, advance - 2); // the x2 font's advance ends with 2 px of spacing
-        int left = Math.round((box - ink) / 2f);
-        Component score = HudText.ttf(h.bossbarFont() + "_x2", h.scoreOffsetY(), Component.text(value, NamedTextColor.WHITE));
+        int advance = width(value);
+        int ink = Math.max(1, advance - 1);
+        int box = Math.max(HudGlyphs.BAR_BOX.height(), width("88") - 1 + 4); // square for one digit, never resizes
+        int left = (box - ink) / 2;
+        Component score = HudText.ttf(h.bossbarFont(), h.scoreOffsetY(), Component.text(value, NamedTextColor.WHITE));
         return Component.text()
-                .append(HudShapes.rect(HudGlyphs.BAR_SCORE, box, "hud_bossbar", NamedTextColor.BLACK))
+                .append(HudShapes.rect(HudGlyphs.BAR_BOX, box, "hud_bossbar", NamedTextColor.BLACK))
                 .append(TextOffsets.space(-box + left)).append(score).append(TextOffsets.space(box - left - advance))
                 .build();
     }
@@ -258,7 +255,9 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
 
     /**
      * One translucent team-coloured rectangle around the team's heads (a skull when dead), sized for the players the
-     * team actually has and placed against the centre of the screen within the team's fixed space.
+     * team actually has and placed against the centre of the screen within the team's fixed space. Under every living
+     * player a 1 px line as wide as the head shows their health in % of their maximum (absorption ignored): white,
+     * red below 5 hearts.
      */
     private Component strip(GameMatch match, TeamId team, boolean leftSide) {
         HudConfig h = config.hud();
@@ -281,13 +280,15 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
             if (!active) {
                 row.append(Component.text(String.valueOf(HudGlyphs.BAR_SKULL)).font(font).color(NamedTextColor.WHITE));
                 iconAdvance = 9;
-            } else if (m.virtual()) {
-                // test players: a 5 px dot centred in the 8 px head cell
-                row.append(TextOffsets.space(2)).append(Component.text("o", NamedTextColor.WHITE));
-                iconAdvance = 2 + 6;
             } else {
-                row.append(Heads.text(m.uuid(), m.name()));
-                iconAdvance = h.headAdvance();
+                row.append(healthLine(m)).append(TextOffsets.space(-8)); // under the head, zero advance
+                if (m.virtual()) { // test players: a 5 px dot centred in the 8 px head cell
+                    row.append(TextOffsets.space(2)).append(Component.text("o", NamedTextColor.WHITE));
+                    iconAdvance = 2 + 6;
+                } else {
+                    row.append(Heads.text(m.uuid(), m.name()));
+                    iconAdvance = h.headAdvance();
+                }
             }
             int step = i < members.size() - 1 ? h.headSlot() : 8;
             row.append(TextOffsets.space(step - iconAdvance));
@@ -295,6 +296,18 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         }
         row.append(TextOffsets.space(width - used + (slot - width - lead))); // ends exactly at the slot's edge
         return row.build();
+    }
+
+    /** 8 px health line: health / max health (absorption does not count), red below 5 hearts. */
+    private static Component healthLine(MatchMember m) {
+        Player p = Bukkit.getPlayer(m.uuid());
+        double health = 20, max = 20;
+        if (p != null) {
+            health = p.getHealth();
+            var attr = p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+            max = attr == null ? 20 : attr.getValue();
+        }
+        return line(8, max <= 0 ? 0 : health / max, health < LOW_HEALTH ? HEALTH_LOW : NamedTextColor.WHITE);
     }
 
     /** Large bomb icon while planted: bright for a moment on every beep, dim in between. */
@@ -309,32 +322,11 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
     private record Timer(Component text, String plain) {
     }
 
-    /** {@code LABEL: 00:10} (white label, yellow time), drawn over the panel. Only the red time while planted. */
+    /** Only the time ("00:18"): yellow, red while the bomb is planted or before sudden death. */
     private static Timer timer(MatchFlow f) {
-        String label;
-        String value = "";
-        TextColor valueColor = TIME_YELLOW;
         String time = clock(f.stateTicksRemaining());
-        if (f.isPaused()) {
-            label = "MATCH PAUSED";
-        } else {
-            switch (f.state()) {
-                case KIT_SELECT -> { label = "SELECT YOUR KIT:"; value = time; }
-                case BUY_PHASE -> { label = "STARTING IN:"; value = time; }
-                case ROUND_LIVE -> { label = f.isSuddenDeathRound() ? "SUDDEN DEATH:" : "ROUND " + f.round() + ":"; value = time; }
-                case BOMB_PLANTED -> { label = ""; value = time; valueColor = NamedTextColor.RED; }
-                case ROUND_END -> label = "ROUND " + f.round() + " OVER";
-                case HALFTIME -> { label = "HALFTIME:"; value = time; }
-                case SUDDEN_DEATH_KIT_SELECT -> { label = "SUDDEN DEATH IN:"; value = time; valueColor = NamedTextColor.RED; }
-                case MATCH_END, POSTGAME, CLEANUP, CLOSED -> label = "MATCH OVER";
-                case ABORTED -> label = "MATCH ENDED";
-                default -> label = "LOADING";
-            }
-        }
-        if (label.isEmpty()) return new Timer(Component.text(value, valueColor), value);
-        Component words = Component.text(label, NamedTextColor.WHITE);
-        if (!value.isEmpty()) words = words.append(Component.text(" " + value, valueColor));
-        return new Timer(words, value.isEmpty() ? label : label + " " + value);
+        boolean red = !f.isPaused() && (f.state() == MatchState.BOMB_PLANTED || f.state() == MatchState.SUDDEN_DEATH_KIT_SELECT);
+        return new Timer(Component.text(time, red ? NamedTextColor.RED : TIME_YELLOW), time);
     }
 
     private static String clock(int ticks) {
