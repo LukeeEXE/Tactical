@@ -51,6 +51,9 @@ final class ShopMenu extends Menu {
     static final int[] RANGED_SLOTS = {46, 47, 48, 49, 50};     // row 5, columns 1-5
     static final int[] ABSORPTION_SLOTS = {16, 25, 34};         // column 7, rows 1-3 (top = fewest hearts)
     static final int[] ARROW_SLOTS = {52};                      // row 5, column 7
+    /** Slot of the money item (row 0, column 8: item x 152). It draws "$1,234" up into the header bar, right-aligned. */
+    static final int MONEY_SLOT = 8;
+    private static final int MONEY_SLOT_X = 152, MONEY_RIGHT = 155; // text ends (incl. Pinch's trailing 1 px) at x 155
     private static final net.kyori.adventure.text.format.TextColor HEADER_TEXT = net.kyori.adventure.text.format.TextColor.color(0xE4E8FA);
 
     /**
@@ -81,6 +84,7 @@ final class ShopMenu extends Menu {
     @Override
     public void render(Player viewer, MenuView view) {
         int money = shop.economy().balance(viewer.getUniqueId());
+        view.set(MONEY_SLOT, moneyItem(money));
         ShopDefinition def = shop.shopOf(viewer.getUniqueId());
         place(viewer, view, def.entries(ShopDefinition.Category.MELEE), MELEE_SLOTS, money);
         place(viewer, view, def.entries(ShopDefinition.Category.UTILITY), UTILITY_SLOTS, money);
@@ -149,6 +153,31 @@ final class ShopMenu extends Menu {
         viewer.playSound(viewer.getLocation(), Sound.UI_BUTTON_CLICK, 0.6f, 1.2f);
         viewer.closeInventory(); // onClose applies the hotbar
         return true;
+    }
+
+    /**
+     * The money as ONE item (pack model {@code tactical:money}): k-th character from the right in strings[k], its x
+     * offset from this slot in floats[k], laid out with Pinch's real advances.
+     */
+    private static ItemStack moneyItem(int money) {
+        String text = "$" + String.format("%,d", money);
+        if (text.length() > dev.tactical.engine.pack.PackBuilder.MONEY_PARTS) text = text.substring(0, dev.tactical.engine.pack.PackBuilder.MONEY_PARTS);
+        int[] left = new int[text.length()];
+        int x = MONEY_RIGHT - dev.tactical.paper.item.ItemLore.pinchWidth(text);
+        for (int i = 0; i < text.length(); i++) {
+            left[i] = x;
+            x += dev.tactical.paper.item.ItemLore.pinchWidth(String.valueOf(text.charAt(i)));
+        }
+        CustomModelData.Builder data = CustomModelData.customModelData();
+        for (int k = 0; k < text.length(); k++) {
+            int i = text.length() - 1 - k;
+            data.addString(dev.tactical.engine.pack.PackBuilder.moneyCharName(text.charAt(i)));
+            data.addFloat(left[i] - MONEY_SLOT_X);
+        }
+        ItemStack item = model("tactical:money");
+        item.setData(DataComponentTypes.CUSTOM_MODEL_DATA, data.build());
+        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, io.papermc.paper.datacomponent.item.TooltipDisplay.tooltipDisplay().hideTooltip(true).build());
+        return item;
     }
 
     /** An item drawn with one of the pack's item models (plain paper underneath). */

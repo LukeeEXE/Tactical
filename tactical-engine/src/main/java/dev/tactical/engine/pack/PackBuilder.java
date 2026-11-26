@@ -423,6 +423,7 @@ public final class PackBuilder {
         display.add("gui", gui);
         menuItem(files, "shop_confirm", bundled("pack/gui/shop_confirm.png"), display);
         menuItem(files, "blank", HudGlyphs.png(new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)), null);
+        generateMoneyItem(files);
         // The vanilla chest background is made invisible: the custom screens draw their own.
         files.put("assets/minecraft/textures/gui/container/generic_54.png",
                 HudGlyphs.png(new java.awt.image.BufferedImage(256, 256, java.awt.image.BufferedImage.TYPE_INT_ARGB)));
@@ -430,6 +431,87 @@ public final class PackBuilder {
         for (String code : new String(bundled("pack/lang_codes.txt"), java.nio.charset.StandardCharsets.UTF_8).split("\\s+")) {
             if (!code.isBlank()) files.put("assets/minecraft/lang/" + code.trim() + ".json", blank);
         }
+    }
+
+    /** Money characters in the shop header: name in the item's data, its Pinch advance, and the texture name. */
+    public static final String MONEY_CHARS = "$,0123456789";
+    public static final int MONEY_PARTS = 8, MONEY_DY = 24, MONEY_DX_MIN = -45;
+
+    public static String moneyCharName(char c) {
+        return c == '$' ? "dollar" : c == ',' ? "comma" : String.valueOf(c);
+    }
+
+    /**
+     * {@code tactical:money}: ONE item that draws up to {@value #MONEY_PARTS} Pinch characters, each with its own pixel
+     * offset, so a whole amount can be placed anywhere near its slot (the shop puts it into the header bar).
+     * Part k (k-th character from the right) reads its character from {@code custom_model_data.strings[k]} and its x
+     * offset from {@code floats[k]}; every (character, offset) is a tiny model that only moves the 16x16 glyph texture
+     * (display translation: 1 unit = 1 GUI pixel). Part k can only be at offsets -3-6k .. -3k, which keeps this small.
+     */
+    private static void generateMoneyItem(Map<String, byte[]> files) throws IOException {
+        for (char c : MONEY_CHARS.toCharArray()) {
+            String n = moneyCharName(c);
+            files.put("assets/tactical/textures/item/money/" + n + ".png", bundled("pack/money/" + n + ".png"));
+            JsonObject base = new JsonObject();
+            base.addProperty("parent", "minecraft:item/generated");
+            JsonObject tex = new JsonObject();
+            tex.addProperty("layer0", "tactical:item/money/" + n);
+            base.add("textures", tex);
+            files.put("assets/tactical/models/item/money/" + n + ".json", json(base));
+            for (int dx = MONEY_DX_MIN; dx <= 0; dx++) {
+                JsonObject m = new JsonObject();
+                m.addProperty("parent", "tactical:item/money/" + n);
+                JsonObject gui = new JsonObject();
+                com.google.gson.JsonArray tr = new com.google.gson.JsonArray(); tr.add(dx); tr.add(MONEY_DY); tr.add(0);
+                gui.add("translation", tr);
+                JsonObject display = new JsonObject();
+                display.add("gui", gui);
+                m.add("display", display);
+                files.put("assets/tactical/models/item/money/" + n + "_" + (dx < 0 ? "m" + (-dx) : String.valueOf(dx)) + ".json", json(m));
+            }
+        }
+        JsonObject empty = new JsonObject();
+        empty.addProperty("type", "minecraft:empty");
+        com.google.gson.JsonArray parts = new com.google.gson.JsonArray();
+        for (int k = 0; k < MONEY_PARTS; k++) {
+            com.google.gson.JsonArray cases = new com.google.gson.JsonArray();
+            for (char c : MONEY_CHARS.toCharArray()) {
+                String n = moneyCharName(c);
+                com.google.gson.JsonArray entries = new com.google.gson.JsonArray();
+                for (int dx = Math.max(MONEY_DX_MIN, -3 - 6 * k); dx <= -3 * k; dx++) {
+                    JsonObject model = new JsonObject();
+                    model.addProperty("type", "minecraft:model");
+                    model.addProperty("model", "tactical:item/money/" + n + "_" + (dx < 0 ? "m" + (-dx) : String.valueOf(dx)));
+                    JsonObject entry = new JsonObject();
+                    entry.addProperty("threshold", dx - 0.5);
+                    entry.add("model", model);
+                    entries.add(entry);
+                }
+                JsonObject range = new JsonObject();
+                range.addProperty("type", "minecraft:range_dispatch");
+                range.addProperty("property", "minecraft:custom_model_data");
+                range.addProperty("index", k);
+                range.add("entries", entries);
+                range.add("fallback", empty);
+                JsonObject cs = new JsonObject();
+                cs.addProperty("when", n);
+                cs.add("model", range);
+                cases.add(cs);
+            }
+            JsonObject select = new JsonObject();
+            select.addProperty("type", "minecraft:select");
+            select.addProperty("property", "minecraft:custom_model_data");
+            select.addProperty("index", k);
+            select.add("cases", cases);
+            select.add("fallback", empty);
+            parts.add(select);
+        }
+        JsonObject composite = new JsonObject();
+        composite.addProperty("type", "minecraft:composite");
+        composite.add("models", parts);
+        JsonObject def = new JsonObject();
+        def.add("model", composite);
+        files.put("assets/tactical/items/money.json", json(def));
     }
 
     private static void menuItem(Map<String, byte[]> files, String id, byte[] texture, JsonObject display) {
