@@ -17,8 +17,8 @@ import java.util.regex.Pattern;
 public record KitDefinition(String id, String name, String description, boolean enabled, String iconMaterial,
                             List<KitItem> baseKit, ShopDefinition shop) {
 
-    /** 2: base-kit and shop sections (older placeholder kit files are replaced by the new defaults, with a backup). */
-    public static final int SCHEMA_VERSION = 2;
+    /** 3: shop categories absorption + arrows (older placeholder kit files are replaced by the new defaults, with a backup). */
+    public static final int SCHEMA_VERSION = 3;
     public static final Pattern ID = Pattern.compile("[a-z0-9_]{1,32}");
 
     /**

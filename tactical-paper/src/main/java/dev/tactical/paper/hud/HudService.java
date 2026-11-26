@@ -167,26 +167,21 @@ public final class HudService implements Service {
                 .shadowColor(ShadowColor.none());
     }
 
-    /** Zero-advance money widget on the hunger-bar row: panel, coin, and the amount right-aligned in Pinch. */
+    /** Zero-advance money widget on the hunger-bar row: panel with "$1,234" right-aligned in Pinch. */
     public Component moneyWidget(int balance) {
         HudConfig h = config.hud();
-        String amount = String.format("%,d", balance);
+        String amount = "$" + String.format("%,d", balance);
         int amountAdvance = pinchWidth(amount);
         int panel = HudGlyphs.MONEY_PANEL_WIDTH;
-        int coinX = 2;
-        int coinAdvance = 9;
         int rightPad = 3;
         Key hudFont = Key.key("tactical", "hud_money");
         Component panelGlyph = Component.text(String.valueOf(HudGlyphs.MONEY_PANEL)).font(hudFont).color(NamedTextColor.WHITE);
-        Component coin = Component.text(String.valueOf(HudGlyphs.MONEY_COIN)).font(hudFont).color(NamedTextColor.WHITE);
         Component number = pinch(Component.text(amount, NamedTextColor.WHITE), h.moneyTextOffset());
         int numberX = panel - rightPad - (amountAdvance - 1); // right-aligned on the ink, not the trailing spacing
-        int afterCoin = coinX + coinAdvance;
         return Component.text()
                 .append(TextOffsets.space(h.moneyLeft()))
                 .append(panelGlyph).append(TextOffsets.space(-(panel + 1)))
-                .append(TextOffsets.space(coinX)).append(coin)
-                .append(TextOffsets.space(numberX - afterCoin)).append(number)
+                .append(TextOffsets.space(numberX)).append(number)
                 .append(TextOffsets.space(-(h.moneyLeft() + numberX + amountAdvance)))
                 .build()
                 .shadowColor(ShadowColor.none());

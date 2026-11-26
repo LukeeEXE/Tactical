@@ -22,7 +22,8 @@ public record ShopDefinition(String id, Map<String, String> categories, Map<Stri
 
     /** Category id, display name and how many slots the shop screen has for it. */
     public enum Category {
-        MELEE("melee", "Melee", 5), UTILITY("utility", "Utility", 3), RANGED("ranged", "Ranged", 5);
+        MELEE("melee", "Melee", 5), UTILITY("utility", "Utility", 3), RANGED("ranged", "Ranged", 5),
+        ABSORPTION("absorption", "Absorption", 3), ARROWS("arrows", "Arrows", 1);
 
         public final String id;
         public final String display;
@@ -58,7 +59,7 @@ public record ShopDefinition(String id, Map<String, String> categories, Map<Stri
      * {@code enchant: { enchantment, level, applies-to }}.
      */
     public static ShopDefinition parseKitShop(ConfigNode shop, String kitId) {
-        shop.warnUnknownKeys(List.of("melee", "utility", "ranged"));
+        shop.warnUnknownKeys(List.of("melee", "utility", "ranged", "absorption", "arrows"));
         Map<String, ShopEntry> entries = new LinkedHashMap<>();
         for (Category cat : Category.values()) {
             ConfigNode c = shop.child(cat.id);
@@ -79,14 +80,27 @@ public record ShopDefinition(String id, Map<String, String> categories, Map<Stri
     }
 
     private static Optional<ShopEntry> parseEntry(String id, String category, ConfigNode n) {
-        n.warnUnknownKeys(List.of("name", "price", "max", "enabled", "give", "enchant"));
+        n.warnUnknownKeys(List.of("name", "price", "max", "enabled", "give", "enchant", "absorption", "model"));
         int price = n.integer("price", 0, 0, 1_000_000);
         int max = n.integer("max", 1, 1, 64);
         boolean enabled = n.bool("enabled", true);
         String name = n.string("name", id);
-        if (n.has("give") == n.has("enchant")) {
-            n.error("needs exactly one of 'give' or 'enchant'");
+        String model = n.has("model") ? n.string("model", null) : null; // icon item model in the shop, e.g. tactical:absorption_1
+        int kinds = (n.has("give") ? 1 : 0) + (n.has("enchant") ? 1 : 0) + (n.has("absorption") ? 1 : 0);
+        if (kinds != 1) {
+            n.error("needs exactly one of 'give', 'enchant' or 'absorption'");
             return Optional.empty();
+        }
+        if (n.has("absorption")) {
+            ConfigNode a = n.child("absorption");
+            a.warnUnknownKeys(List.of("hearts"));
+            int hearts = a.integer("hearts", 2, 2, 6);
+            if (hearts % 2 != 0) {
+                a.child("hearts").error("hearts must be 2, 4 or 6 (Absorption I, II or III)");
+                return Optional.empty();
+            }
+            return Optional.of(new ShopEntry(id, category, name, ShopEntry.Kind.ABSORPTION, price, 1, enabled,
+                    null, 1, null, hearts, List.of(), null, model));
         }
         if (n.has("give")) {
             ConfigNode g = n.child("give");
@@ -99,7 +113,7 @@ public record ShopDefinition(String id, Map<String, String> categories, Map<Stri
             if (g.has("item")) {
                 String custom = g.requireString("item");
                 return custom == null ? Optional.empty() : Optional.of(new ShopEntry(id, category, name, ShopEntry.Kind.ITEM, price, max,
-                        enabled, null, amount, null, 0, List.of(), custom.toLowerCase(Locale.ROOT)));
+                        enabled, null, amount, null, 0, List.of(), custom.toLowerCase(Locale.ROOT), model));
             }
             String mat = g.requireString("material");
             Material m = mat == null ? null : Material.matchMaterial(mat);
@@ -108,7 +122,7 @@ public record ShopDefinition(String id, Map<String, String> categories, Map<Stri
                 return Optional.empty();
             }
             return m == null ? Optional.empty() : Optional.of(new ShopEntry(id, category, name, ShopEntry.Kind.ITEM, price, max,
-                    enabled, m.getKey().asString(), amount, null, 0, List.of(), null));
+                    enabled, m.getKey().asString(), amount, null, 0, List.of(), null, model));
         }
         ConfigNode en = n.child("enchant");
         en.warnUnknownKeys(List.of("enchantment", "level", "applies-to"));
@@ -131,6 +145,6 @@ public record ShopDefinition(String id, Map<String, String> categories, Map<Stri
             return Optional.empty();
         }
         return Optional.of(new ShopEntry(id, category, name, ShopEntry.Kind.ENCHANT, price, max, enabled,
-                null, 1, k.asString(), level, applies, null));
+                null, 1, k.asString(), level, applies, null, model));
     }
 }

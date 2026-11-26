@@ -10,6 +10,7 @@ public enum ItemCategory {
     ARMOR("ARMOR", 0x8CC4D6),
     ENCHANT("ENCHANT", 0xC08CD6),
     AMMO("AMMO", 0xD6C48C),
+    ABSORPTION("ABSORPTION", 0xE8C84A),
     ITEM("ITEM", 0xA0A0A8);
 
     private final String label;

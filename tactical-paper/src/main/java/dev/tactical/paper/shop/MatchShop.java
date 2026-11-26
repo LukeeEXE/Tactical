@@ -46,7 +46,7 @@ public final class MatchShop {
     public record Purchase(String entryId, int round, int amount) {
     }
 
-    public enum BuyResult { OK, NOT_BUY_PHASE, DEAD, DISABLED, UNKNOWN, TOO_POOR, MAX_CARRY, NOTHING_TO_ENCHANT, ALREADY_ENCHANTED, INVENTORY_FULL }
+    public enum BuyResult { OK, NOT_BUY_PHASE, DEAD, DISABLED, UNKNOWN, TOO_POOR, MAX_CARRY, NOTHING_TO_ENCHANT, ALREADY_ENCHANTED, INVENTORY_FULL, ALREADY_OWNED }
 
     private final GameMatch match;
     private final MatchEconomy economy;
@@ -112,7 +112,9 @@ public final class MatchShop {
         if (match.state() != MatchState.BUY_PHASE || match.flow().isPaused()) return BuyResult.NOT_BUY_PHASE;
         if (!match.flow().participant(p.getUniqueId()).map(Participant::active).orElse(false)) return BuyResult.DEAD;
         if (!e.enabled()) return BuyResult.DISABLED;
-        if (e.kind() == ShopEntry.Kind.ENCHANT) {
+        if (e.kind() == ShopEntry.Kind.ABSORPTION) {
+            if (absorptionLevel(p) >= e.level() / 2 - 1) return BuyResult.ALREADY_OWNED; // same or more hearts already
+        } else if (e.kind() == ShopEntry.Kind.ENCHANT) {
             // Limited by the ITEM, not by past purchases: a new item can always be enchanted again.
             ItemStack target = enchantTarget(p.getInventory(), e, true);
             if (target == null) {
@@ -156,7 +158,10 @@ public final class MatchShop {
         for (int i = list.size() - 1; i >= 0; i--) {
             Purchase pu = list.get(i);
             if (!pu.entryId().equals(entryId) || pu.round() != match.flow().round()) continue;
-            if (e.kind() == ShopEntry.Kind.ITEM) {
+            if (e.kind() == ShopEntry.Kind.ABSORPTION) {
+                if (absorptionLevel(p) != e.level() / 2 - 1) continue;
+                p.removePotionEffect(org.bukkit.potion.PotionEffectType.ABSORPTION);
+            } else if (e.kind() == ShopEntry.Kind.ITEM) {
                 String k = e.itemKey();
                 if (k == null || count(p.getInventory(), k) - baseCount.applyAsInt(p.getUniqueId(), k) < pu.amount()) continue;
                 remove(p.getInventory(), k, pu.amount());
@@ -197,6 +202,7 @@ public final class MatchShop {
                         Map.of("entry", pu.entryId(), "bought_round", pu.round()));
                 continue;
             }
+            if (e.kind() == ShopEntry.Kind.ABSORPTION) continue; // hearts last one round
             if (e.kind() == ShopEntry.Kind.ENCHANT) enchants.add(pu);
             else if (apply(p, e, pu.amount())) kept.add(pu);
         }
@@ -218,6 +224,10 @@ public final class MatchShop {
             ShopEntry e = entry(p.getUniqueId(), pu.entryId());
             if (e == null) {
                 out.remove(i);
+                continue;
+            }
+            if (e.kind() == ShopEntry.Kind.ABSORPTION) {
+                out.remove(i); // used for this round only
                 continue;
             }
             if (e.kind() == ShopEntry.Kind.ENCHANT) {
@@ -245,8 +255,20 @@ public final class MatchShop {
 
     // ------------------------------------------------------------------ item helpers
 
+    /** Amplifier of the player's absorption (0 = Absorption I = 2 hearts), -1 if none. */
+    static int absorptionLevel(Player p) {
+        var effect = p.getPotionEffect(org.bukkit.potion.PotionEffectType.ABSORPTION);
+        return effect == null ? -1 : effect.getAmplifier();
+    }
+
     private boolean apply(Player p, ShopEntry e, int amount) {
         PlayerInventory inv = p.getInventory();
+        if (e.kind() == ShopEntry.Kind.ABSORPTION) { // Absorption I/II/III = 2/4/6 hearts, until used up or the round ends
+            p.removePotionEffect(org.bukkit.potion.PotionEffectType.ABSORPTION);
+            p.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.ABSORPTION,
+                    org.bukkit.potion.PotionEffect.INFINITE_DURATION, e.level() / 2 - 1, false, false, true));
+            return true;
+        }
         if (e.kind() == ShopEntry.Kind.ENCHANT) {
             ItemStack target = enchantTarget(inv, e, true);
             Enchantment ench = enchantment(e);

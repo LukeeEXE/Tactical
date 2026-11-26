@@ -1,10 +1,13 @@
 # Kit "Warden". PLACEHOLDER CONTENT: replace the base kit and shop with the real design.
 # base-kit: given at the start of EVERY round (not purchases, never lost). slot: 0-8 hotbar, 9-35 inventory,
 #           helmet/chestplate/leggings/boots/offhand, or auto. Each entry: material (vanilla) or item (items/*.yml).
-# shop:     this kit's own shop, the same on every map. Three categories with fixed places in the shop screen:
-#           melee (up to 5), utility (up to 3), ranged (up to 5). Entries: name, price, max (how many a player may
-#           carry), and give: { material | item, amount } or enchant: { enchantment, level, applies-to }.
-schema-version: 2
+# shop:     this kit's own shop, the same on every map. Categories and their places in the shop screen:
+#             melee (5, top row), utility (3, middle), ranged (5, bottom row),
+#             absorption (3, right column, top to bottom), arrows (1, bottom right).
+#           Entries: name, price, max (how many a player may carry), and one of
+#             give: { material | item, amount }   enchant: { enchantment, level, applies-to }
+#             absorption: { hearts: 2 | 4 | 6 }  (Absorption I/II/III for the round; model: shop icon item model)
+schema-version: 3
 id: warden
 name: "Warden"
 description: "Area denial."
@@ -30,5 +33,10 @@ shop:
   ranged:
     bow: { name: "Bow", price: 500, max: 1, give: { material: bow } }
     crossbow: { name: "Crossbow", price: 700, max: 1, give: { material: crossbow } }
-    arrows: { name: "Arrows x8", price: 100, max: 3, give: { material: arrow, amount: 8 } }
     power: { name: "Power I", price: 600, max: 1, enchant: { enchantment: power, level: 1, applies-to: [bow] } }
+  absorption:
+    absorption_1: { name: "2 Absorption Hearts", price: 300, absorption: { hearts: 2 }, model: "tactical:absorption_1" }
+    absorption_2: { name: "4 Absorption Hearts", price: 550, absorption: { hearts: 4 }, model: "tactical:absorption_2" }
+    absorption_3: { name: "6 Absorption Hearts", price: 800, absorption: { hearts: 6 }, model: "tactical:absorption_3" }
+  arrows:
+    arrows: { name: "Arrows x8", price: 100, max: 3, give: { material: arrow, amount: 8 } }

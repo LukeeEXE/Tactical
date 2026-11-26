@@ -5,8 +5,11 @@ Each kit is one file, `plugins/Tactical/kits/<id>.yml`, holding:
   sold). `slot`: 0-8 hotbar, 9-35 inventory, `helmet`/`chestplate`/`leggings`/`boots`/`offhand`, or `auto`. Each
   item is either `material:` (vanilla, made unbreakable with standard lore) or `item:` (custom item from items/*.yml).
 - **shop**: the kit's own shop, the same on every map (map shops no longer exist; a map's `shop:` key is ignored).
-  Three categories with fixed places in the shop screen: `melee` (up to 5 entries, row 1), `utility` (up to 3, row 3),
-  `ranged` (up to 5, row 5). Fewer entries are centred in their row.
+  Categories with fixed places in the shop screen: `melee` (up to 5 entries, row 1), `utility` (up to 3, row 3),
+  `ranged` (up to 5, row 5), `absorption` (up to 3, right column, top to bottom) and `arrows` (1, bottom right).
+  Fewer entries are centred in their row. Entries give an item (`give:`), enchant a held item (`enchant:`) or give
+  absorption hearts for the round (`absorption: { hearts: 2 | 4 | 6 }` = Absorption I/II/III; a lower or equal tier
+  cannot be bought on top of a higher one). `model:` sets the icon's item model, e.g. `tactical:absorption_1`.
 
 ```yaml
 schema-version: 2
@@ -35,8 +38,9 @@ players pick their second-half kit; the shop always follows the player's current
 The shop is drawn with three background textures and an icon (in the resource pack under
 `assets/tactical/textures/gui/`: `shop_header.png`, `shop_body.png`, `shop_footer.png`, `shop_icon.png`; put your
 own PNG at the same path under `resourcepack/` to replace one, same size). The header shows the icon and "SHOP" in
-Pinch. Row 0 holds the money (coin, hover for the balance). The CONFIRM button over the footer's recess (drawn 3 slots
-wide from inventory row 3, column 4) closes the shop and applies the hotbar; Escape does the same. The vanilla chest
+Pinch, and your money ("$1,234" in Pinch) in the header's right-hand box; the shop reopens in place after every buy or
+sell-back to update it (a title cannot change while open). The CONFIRM button over the footer's recess (drawn 3 slots
+wide from inventory row 3, column 4, onto the recess) closes the shop and applies the hotbar; Escape does the same. The vanilla chest
 background is invisible (transparent `gui/container/generic_54.png`) and the "Inventory" label of chest screens is
 blanked in every language, so only the custom screen shows.
 

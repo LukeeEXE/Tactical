@@ -56,6 +56,15 @@ public final class ItemLore {
     private ItemLore() {
     }
 
+    /** Width of a Pinch text in GUI pixels (advance, includes the trailing 1 px). */
+    public static int pinchWidth(String text) {
+        return pinchWidth.applyAsInt(text);
+    }
+
+    public static String pinchFont() {
+        return pinchFont;
+    }
+
     /** Called once at startup with the HUD's TTF measurement. */
     public static void install(ToIntFunction<String> width, String font) {
         pinchWidth = width;

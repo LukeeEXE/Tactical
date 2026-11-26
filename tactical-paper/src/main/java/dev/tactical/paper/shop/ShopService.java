@@ -373,7 +373,7 @@ public final class ShopService implements Service, Listener, MatchLifecycleHook 
     }
 
     private void openShop(Player p, MatchShop shop) {
-        menus.open(p, new ShopMenu(shop, icons, this::createItem));
+        menus.open(p, new ShopMenu(shop, icons, this::createItem, menus));
     }
 
     /** Items whose right-click does something on its own (vanilla items without a component that says so). */

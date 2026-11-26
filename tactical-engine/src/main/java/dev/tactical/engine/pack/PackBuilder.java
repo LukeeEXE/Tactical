@@ -360,7 +360,7 @@ public final class PackBuilder {
     public static final char GUI_SHOP_HEADER = '\uED00', GUI_SHOP_BODY = '\uED01', GUI_SHOP_FOOTER = '\uED02', GUI_SHOP_ICON = '\uED03';
 
     /** Item models used by menus: {@code tactical:<id>} via the item_model component. */
-    public static final String MODEL_SHOP_COIN = "tactical:shop_coin", MODEL_SHOP_CONFIRM = "tactical:shop_confirm",
+    public static final String MODEL_SHOP_CONFIRM = "tactical:shop_confirm",
             MODEL_BLANK = "tactical:blank";
 
     /**
@@ -408,9 +408,10 @@ public final class PackBuilder {
         JsonObject font = new JsonObject();
         font.add("providers", providers);
         files.put("assets/tactical/font/gui_shop.json", json(font));
-        // Menu items: the money coin, the 3-slot-wide confirm button (52x16 art on a 52x52 canvas drawn at 3.25x, so one
-        // texel = one GUI pixel, centred on its slot) and an invisible item that keeps purchases out of slots under it.
-        menuItem(files, "shop_coin", bundled("pack/gui/shop_coin.png"), null);
+        // Menu items: absorption icons (tactical:absorption_1..3), the 3-slot-wide confirm button (52x17 art on a 52x52
+        // canvas drawn at 3.25x, so one texel = one GUI pixel, centred on its slot and placed on the footer's recess) and
+        // an invisible item that keeps purchases out of the slots under it.
+        for (int i = 1; i <= 3; i++) menuItem(files, "absorption_" + i, bundled("pack/gui/absorption_" + i + ".png"), null);
         JsonObject gui = new JsonObject();
         com.google.gson.JsonArray rot = new com.google.gson.JsonArray(); rot.add(0); rot.add(0); rot.add(0);
         com.google.gson.JsonArray tr = new com.google.gson.JsonArray(); tr.add(0); tr.add(0); tr.add(0);

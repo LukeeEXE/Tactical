@@ -9,16 +9,17 @@ import java.util.List;
  *       {@code customItem} from items/*.yml.</li>
  *   <li>{@code ENCHANT}: adds {@code enchantment} at {@code level} to the first held item whose type is in
  *       {@code appliesTo}.</li>
+ *   <li>{@code ABSORPTION}: {@code level} absorption hearts (2, 4 or 6) right away, for this round.</li>
  * </ul>
  */
 public record ShopEntry(String id, String category, String name, Kind kind, int price, int maxCarry, boolean enabled,
                         String material, int amount, String enchantment, int level, List<String> appliesTo,
-                        String customItem) {
+                        String customItem, String iconModel) {
 
     /** What identifies this entry's items in an inventory: {@code tactical:<id>} or the material key. */
     public String itemKey() {
         return customItem != null ? "tactical:" + customItem : material;
     }
 
-    public enum Kind { ITEM, ENCHANT }
+    public enum Kind { ITEM, ENCHANT, ABSORPTION }
 }
