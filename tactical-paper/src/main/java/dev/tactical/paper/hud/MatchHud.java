@@ -368,10 +368,15 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
     private record Timer(Component text, String plain) {
     }
 
-    /** Only the time ("00:18"), in white. */
+    /** Red once less than this is left to plant (live round) or until the bomb explodes. */
+    private static final int URGENT_TICKS = 20 * ModeRules.TICKS_PER_SECOND;
+
+    /** Only the time ("00:18"): white, red in the last 20 seconds of a live round or of a planted bomb. */
     private static Timer timer(MatchFlow f) {
         String time = clock(f.stateTicksRemaining());
-        return new Timer(Component.text(time, NamedTextColor.WHITE), time);
+        boolean urgent = (f.state() == MatchState.ROUND_LIVE || f.state() == MatchState.BOMB_PLANTED)
+                && f.stateTicksRemaining() < URGENT_TICKS;
+        return new Timer(Component.text(time, urgent ? NamedTextColor.RED : NamedTextColor.WHITE), time);
     }
 
     private static String clock(int ticks) {
