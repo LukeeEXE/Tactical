@@ -516,6 +516,7 @@ public final class PackBuilder {
         composite.add("models", parts);
         JsonObject def = new JsonObject();
         def.add("model", composite);
+        def.addProperty("oversized_in_gui", true); // drawn up in the header, far outside its slot
         files.put("assets/tactical/items/money.json", json(def));
     }
 
@@ -536,6 +537,7 @@ public final class PackBuilder {
         m.addProperty("type", "minecraft:model");
         m.addProperty("model", "tactical:item/" + id);
         def.add("model", m);
+        def.addProperty("oversized_in_gui", true); // otherwise the client clips it to the 16x16 slot
         files.put("assets/tactical/items/" + id + ".json", json(def));
     }
 

@@ -141,8 +141,11 @@ final class ShopMenu extends Menu {
         for (int i = 0; i < 3; i++) underButton[i] = inv.getItem(CONFIRM_LEFT + i);
         // The button is drawn 3 slots wide from the middle slot; invisible items keep purchases out of the side slots.
         inv.setItem(CONFIRM_LEFT, blank());
-        inv.setItem(CONFIRM_SLOT, named(model(dev.tactical.engine.pack.PackBuilder.MODEL_SHOP_CONFIRM),
-                Component.text("Confirm", NamedTextColor.GREEN), List.of(Component.text("Close the shop and keep this hotbar", NamedTextColor.GRAY))));
+        // Display only: one item whose model covers all 3 slots; it cannot be taken, a click on any of the 3 confirms.
+        ItemStack button = model(dev.tactical.engine.pack.PackBuilder.MODEL_SHOP_CONFIRM);
+        button.setData(io.papermc.paper.datacomponent.DataComponentTypes.TOOLTIP_DISPLAY,
+                io.papermc.paper.datacomponent.item.TooltipDisplay.tooltipDisplay().hideTooltip(true).build());
+        inv.setItem(CONFIRM_SLOT, button);
         inv.setItem(CONFIRM_RIGHT, blank());
         swapped = true;
     }
