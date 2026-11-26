@@ -38,8 +38,7 @@ players pick their second-half kit; the shop always follows the player's current
 The shop is drawn with three background textures and an icon (in the resource pack under
 `assets/tactical/textures/gui/`: `shop_header.png`, `shop_body.png`, `shop_footer.png`, `shop_icon.png`; put your
 own PNG at the same path under `resourcepack/` to replace one, same size). The header shows the icon and "SHOP" in
-Pinch, and your money ("$1,234" in Pinch) in the header's right-hand box; the shop reopens in place after every buy or
-sell-back to update it (a title cannot change while open). The CONFIRM button over the footer's recess (drawn 3 slots
+Pinch. Your money is on the action bar ("$1,234" in Pinch). The CONFIRM button over the footer's recess (drawn 3 slots
 wide from inventory row 3, column 4, onto the recess) closes the shop and applies the hotbar; Escape does the same. The vanilla chest
 background is invisible (transparent `gui/container/generic_54.png`) and the "Inventory" label of chest screens is
 blanked in every language, so only the custom screen shows.

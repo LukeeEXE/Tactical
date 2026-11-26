@@ -51,9 +51,6 @@ final class ShopMenu extends Menu {
     static final int[] RANGED_SLOTS = {46, 47, 48, 49, 50};     // row 5, columns 1-5
     static final int[] ABSORPTION_SLOTS = {16, 25, 34};         // column 7, rows 1-3 (top = fewest hearts)
     static final int[] ARROW_SLOTS = {52};                      // row 5, column 7
-    /** Header box for the money (x 123-169 of the header). */
-    private static final int MONEY_BOX_LEFT = 123, MONEY_BOX_WIDTH = 47;
-    private static final net.kyori.adventure.text.format.TextColor MONEY_TEXT = net.kyori.adventure.text.format.TextColor.color(0xFFD23F);
     private static final net.kyori.adventure.text.format.TextColor HEADER_TEXT = net.kyori.adventure.text.format.TextColor.color(0xE4E8FA);
 
     /**
@@ -76,29 +73,9 @@ final class ShopMenu extends Menu {
                 .append(glyph.apply(dev.tactical.engine.pack.PackBuilder.GUI_SHOP_ICON))              // 16 + 1
                 .append(dev.tactical.paper.hud.TextOffsets.space(37 - 7 - 17))                        // x 37: 3 px into the bar
                 .append(Component.text("SHOP", HEADER_TEXT).font(net.kyori.adventure.key.Key.key("tactical", "pinch_up_14")))
-                .append(dev.tactical.paper.hud.TextOffsets.space(-37 - dev.tactical.paper.item.ItemLore.pinchWidth("SHOP")))  // x 0
-                .append(moneyText(viewer))
                 .build()
                 .color(NamedTextColor.WHITE)
                 .shadowColor(net.kyori.adventure.text.format.ShadowColor.none());
-    }
-
-    /** "$1,234" in Pinch, centred in the header's money box (the title is rebuilt when the money changes). */
-    private Component moneyText(Player viewer) {
-        String text = "$" + String.format("%,d", shop.economy().balance(viewer.getUniqueId()));
-        int ink = dev.tactical.paper.item.ItemLore.pinchWidth(text) - 1;
-        int x = MONEY_BOX_LEFT + (MONEY_BOX_WIDTH - ink) / 2;
-        return Component.text().append(dev.tactical.paper.hud.TextOffsets.space(x))
-                .append(Component.text(text, MONEY_TEXT).font(net.kyori.adventure.key.Key.key("tactical",
-                        dev.tactical.paper.item.ItemLore.pinchFont() + "_up_14")))
-                .build();
-    }
-
-    /** The title shows the money, and titles cannot change in place: reopen (next tick) to redraw it. */
-    private void reopen(Player viewer) {
-        org.bukkit.Bukkit.getScheduler().runTask(org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(ShopMenu.class), () -> {
-            if (menus.openMenu(viewer).orElse(null) == this) menus.open(viewer, this);
-        });
     }
 
     @Override
@@ -122,7 +99,6 @@ final class ShopMenu extends Menu {
                 if (click == ClickType.RIGHT || click == ClickType.SHIFT_RIGHT) {
                     if (shop.sellBack(viewer, e.id())) {
                         viewer.playSound(viewer.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 0.7f);
-                        reopen(viewer);
                     } else {
                         deny(viewer, "Only items bought this round can be sold back");
                     }
@@ -137,7 +113,6 @@ final class ShopMenu extends Menu {
                 if (r == MatchShop.BuyResult.OK && swapped) pullNewItemsIntoRow(viewer, viewer.getInventory(), hotbarBefore);
                 if (r == MatchShop.BuyResult.OK) {
                     viewer.playSound(viewer.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.4f);
-                    reopen(viewer);
                 } else {
                     deny(viewer, message(r));
                 }
