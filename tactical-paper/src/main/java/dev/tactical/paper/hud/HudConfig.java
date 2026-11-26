@@ -36,12 +36,12 @@ public record HudConfig(
         int moneyTextOffset,
         int moneyLeft
 ) {
-    /** 4: boss bar sized to the heads (older files are replaced by the new defaults, with a backup). */
-    public static final int SCHEMA_VERSION = 4;
+    /** 5: hint box re-centred and raised, boss bar text 1 px lower (older files are replaced by the new defaults, with a backup). */
+    public static final int SCHEMA_VERSION = 5;
 
     public static HudConfig defaults() {
-        return new HudConfig("pinch", -2, 9, 9, 9, 8, 8, 10, 2, 2, 3, 19, -2, 0,
-                16, 160, -7, 2, true, 33, 32, 45);
+        return new HudConfig("pinch", -1, 9, 9, 9, 8, 8, 10, 2, 2, 3, 19, -1, 0,
+                19, 160, -10, -1, true, 33, 32, 45);
     }
 
     public HudLayout layout() {
@@ -74,7 +74,7 @@ public record HudConfig(
                 b.integer("row-spacing", d.rowSpacing(), 1, 64),
                 b.integer("score-offset-y", d.scoreOffsetY(), -32, 32),
                 b.integer("timer-width", d.timerSlotWidth(), 0, 256),
-                ab.integer("panel-ascent", d.actionPanelAscent(), -64, 21),
+                ab.integer("panel-ascent", d.actionPanelAscent(), -64, 22),
                 ab.integer("hint-width", d.actionHintWidth(), 0, 256),
                 ab.integer("line1-offset-y", d.actionLine1Offset(), -64, 64),
                 ab.integer("line2-offset-y", d.actionLine2Offset(), -64, 64),

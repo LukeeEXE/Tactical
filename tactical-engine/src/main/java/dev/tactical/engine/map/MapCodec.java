@@ -22,7 +22,7 @@ public final class MapCodec {
     public static final Pattern SITE_ID = Pattern.compile("[A-Za-z0-9_]{1,16}");
 
     private static final List<String> KEYS = List.of("schema-version", "id", "name", "author", "enabled", "version",
-            "status", "modes", "bounds", "void-y", "spawns", "bomb-sites", "barriers", "construction", "pickups", "kits", "shop",
+            "status", "modes", "bounds", "void-y", "spawns", "bomb-sites", "barriers", "construction", "pickups", "bomb-spawn", "kits", "shop",
             "updated-at");
 
     private MapCodec() {
@@ -82,6 +82,13 @@ public final class MapCodec {
                     n.number("z", 0, -3e7, 3e7)));
         }
 
+        SpawnPoint bombSpawn = null;
+        if (root.has("bomb-spawn")) {
+            ConfigNode b = root.child("bomb-spawn");
+            b.warnUnknownKeys(List.of("x", "y", "z"));
+            bombSpawn = new SpawnPoint(b.number("x", 0, -3e7, 3e7), b.number("y", 0, -2048, 2048), b.number("z", 0, -3e7, 3e7), 0, 0);
+        }
+
         ConfigNode k = root.child("kits");
         k.warnUnknownKeys(List.of("mode", "list"));
         KitRestriction kits = new KitRestriction(k.enumValue("mode", KitRestriction.Mode.class, KitRestriction.Mode.ALL),
@@ -91,7 +98,7 @@ public final class MapCodec {
 
         if (root.report().errors().size() > before) return Optional.empty();
         return Optional.of(new MapDefinition(id, name, author, enabled, version, status, modes, bounds, atk, def, sites,
-                barriers, construction, pickups, kits, shop, voidY, updated));
+                barriers, construction, pickups, bombSpawn, kits, shop, voidY, updated));
     }
 
     /** Serialises to plain maps/lists for YAML dumping. */
@@ -139,6 +146,13 @@ public final class MapCodec {
             pickups.add(po);
         }
         o.put("pickups", pickups);
+        if (m.bombSpawn() != null) {
+            Map<String, Object> bs = new LinkedHashMap<>();
+            bs.put("x", round(m.bombSpawn().x()));
+            bs.put("y", round(m.bombSpawn().y()));
+            bs.put("z", round(m.bombSpawn().z()));
+            o.put("bomb-spawn", bs);
+        }
         Map<String, Object> kits = new LinkedHashMap<>();
         kits.put("mode", m.kits().mode().name().toLowerCase(Locale.ROOT));
         kits.put("list", m.kits().kits().stream().sorted().toList());

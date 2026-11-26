@@ -247,6 +247,7 @@ public final class MapEditorService implements Service, Listener {
             s.selection().ifPresent(r -> outline(p, r, Color.YELLOW, 0.5, budget));
             for (SpawnPoint sp : def.attackerSpawns()) column(p, sp, Color.fromRGB(255, 60, 60));
             for (SpawnPoint sp : def.defenderSpawns()) column(p, sp, Color.fromRGB(60, 120, 255));
+            if (def.bombSpawn() != null) column(p, def.bombSpawn(), Color.fromRGB(255, 170, 0)); // bomb spawn: orange
             for (var k : def.pickups()) {
                 if (p.getLocation().distanceSquared(new org.bukkit.Location(p.getWorld(), k.x(), k.y(), k.z())) < 64 * 64) {
                     p.spawnParticle(Particle.HAPPY_VILLAGER, k.x(), k.y() + 0.3, k.z(), 2, 0.15, 0.15, 0.15, 0);

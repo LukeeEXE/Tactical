@@ -84,7 +84,11 @@ public final class BombController {
     private final Map<UUID, Long> lastDamaged = new HashMap<>();
     private long ticks;
 
-    BombController(GameMatch match, World world, Map<String, BombSite> sites, NamespacedKey itemKey) {
+    /** Where the bomb lies on the ground at the start of every round (the map's bomb spawn). */
+    private final Location spawn;
+
+    BombController(GameMatch match, World world, Map<String, BombSite> sites, NamespacedKey itemKey, Location spawn) {
+        this.spawn = spawn;
         this.match = match;
         this.flow = match.flow();
         this.world = world;
@@ -130,18 +134,8 @@ public final class BombController {
         plant = new PlantProgress(mode.plantTicks());
         defuse = null;
         lastPositions.clear();
-        List<Participant> attackers = new ArrayList<>();
-        List<Participant> realAttackers = new ArrayList<>();
-        for (Participant p : flow.participants()) {
-            if (p.active() && flow.sideOf(p.team()) == Side.ATTACKERS) {
-                attackers.add(p);
-                if (Bukkit.getPlayer(p.id()) != null) realAttackers.add(p);
-            }
-        }
-        List<Participant> pool = realAttackers.isEmpty() ? attackers : realAttackers;
-        if (pool.isEmpty()) return;
-        Participant chosen = pool.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(pool.size()));
-        giveTo(chosen.id(), "assigned");
+        // The bomb starts on the ground at the map's bomb spawn; an attacker picks it up by walking over it.
+        dropAt(spawn.clone(), null, "spawn");
     }
 
     void onRoundEnd() {
@@ -265,7 +259,8 @@ public final class BombController {
         syncGlow();
         Map<String, Object> data = loc(ground);
         data.put("reason", reason);
-        match.recorder().record(EventTypes.BOMB_DROP, List.of(by), match.member(by).map(m -> m.team()).orElse(null), data);
+        match.recorder().record(EventTypes.BOMB_DROP, by == null ? List.of() : List.of(by),
+                by == null ? null : match.member(by).map(m -> m.team()).orElse(null), data);
     }
 
     // ------------------------------------------------------------------ per tick

@@ -19,7 +19,7 @@ import java.util.Map;
 public final class HudGlyphs {
 
     /** Where a glyph is drawn; decides its font and vertical placement. */
-    public enum Slot { CHAT, BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB, PLANT_BAR, MONEY_PANEL, MONEY_ICON, ACTION_PANEL, TOOLTIP_TAG }
+    public enum Slot { CHAT, BAR_STRIP, BAR_ICON, BAR_PANEL, BAR_SCORE, BAR_TIME, BAR_BOMB, PLANT_BAR, MONEY_PANEL, MONEY_ICON, ACTION_PANEL, TOOLTIP_TAG, BAR_PROGRESS }
 
     public record Glyph(String name, char ch, Slot slot, int width, int height, BufferedImage image) {
     }
@@ -72,14 +72,16 @@ public final class HudGlyphs {
     /** Score and timer boxes (tinted black): 10 px, as tall as the team strip behind the heads. */
     public static final RectSet BAR_BOX = new RectSet("bar_box", '\uE500', Slot.BAR_SCORE, 10, 0x8C);
     /** Two-line action-bar hint box (tinted black). */
-    public static final RectSet ACTION_PANEL = new RectSet("action_panel", '\uE600', Slot.ACTION_PANEL, 21, 0x8C);
+    public static final RectSet ACTION_PANEL = new RectSet("action_panel", '\uE600', Slot.ACTION_PANEL, 22, 0x8C);
+    /** Dark box behind PLANTING / DEFUSING and their bar on the boss bar (under the timer). */
+    public static final RectSet PROGRESS_BOX = new RectSet("progress_box", '\uF000', Slot.BAR_PROGRESS, 21, 0x8C);
     /** 1 px lines under the boss bar (timer, players' health), any width: filled part (tinted) and empty part (black, 50 %). */
     public static final RectSet TIME_FILL = new RectSet("time_fill", '\uE800', Slot.BAR_TIME, 1, 0xFF);
     public static final RectSet TIME_EMPTY = new RectSet("time_empty", '\uE900', Slot.BAR_TIME, 1, 0x80);
     /** Item category tag in lore ("UTILITY"): bright 1 px border, translucent fill, tinted per category. */
     public static final RectSet TOOLTIP_TAG = new RectSet("tooltip_tag", '\uEC00', Slot.TOOLTIP_TAG, 9, 0x60, Shape.BOXED);
     public static final List<RectSet> RECT_SETS = List.of(TOOLTIP_TAG, STRIP_POINT_LEFT, STRIP_POINT_RIGHT, BAR_PANEL,
-            BAR_BOX, ACTION_PANEL, TIME_FILL, TIME_EMPTY);
+            BAR_BOX, ACTION_PANEL, PROGRESS_BOX, TIME_FILL, TIME_EMPTY);
 
     public static final int MONEY_PANEL_WIDTH = 46, MONEY_PANEL_HEIGHT = 11;
 

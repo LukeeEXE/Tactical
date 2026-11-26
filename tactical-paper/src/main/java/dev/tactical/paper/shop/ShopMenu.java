@@ -51,9 +51,9 @@ final class ShopMenu extends Menu {
     static final int[] RANGED_SLOTS = {46, 47, 48, 49, 50};     // row 5, columns 1-5
     static final int[] ABSORPTION_SLOTS = {16, 25, 34};         // column 7, rows 1-3 (top = fewest hearts)
     static final int[] ARROW_SLOTS = {52};                      // row 5, column 7
-    /** Slot of the money item (row 0, column 8: item x 152). It draws "$1,234" up into the header bar, right-aligned. */
+    /** Slot of the money item (row 0, column 8: item x 152). It draws "$1,234" up into the header's right box, right-aligned. */
     static final int MONEY_SLOT = 8;
-    private static final int MONEY_SLOT_X = 152, MONEY_RIGHT = 155; // text ends (incl. Pinch's trailing 1 px) at x 155
+    private static final int MONEY_SLOT_X = 152, MONEY_RIGHT = 167; // text ends (incl. Pinch's trailing 1 px) at x 167, box interior 138..169
     private static final net.kyori.adventure.text.format.TextColor HEADER_TEXT = net.kyori.adventure.text.format.TextColor.color(0xE4E8FA);
 
     /**

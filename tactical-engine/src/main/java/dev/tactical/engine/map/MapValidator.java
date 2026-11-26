@@ -66,6 +66,11 @@ public final class MapValidator {
         for (Region r : m.constructionRegions()) {
             if (m.bounds() != null && !m.bounds().contains(r)) p.add(err("A construction region is outside the map boundaries."));
         }
+        if (m.bombSpawn() == null) {
+            p.add(warn("No bomb spawn set (/game map bombspawn): the bomb starts at the first attacker spawn."));
+        } else if (m.bounds() != null && !m.bounds().contains(m.bombSpawn().x(), m.bombSpawn().y(), m.bombSpawn().z())) {
+            p.add(err("The bomb spawn is outside the map boundaries."));
+        }
         for (Pickup pk : m.pickups()) {
             if (m.bounds() != null && !m.bounds().contains(pk.x(), pk.y(), pk.z())) {
                 p.add(err("Pickup '" + pk.item() + "' at " + Math.round(pk.x()) + "," + Math.round(pk.y()) + "," + Math.round(pk.z())

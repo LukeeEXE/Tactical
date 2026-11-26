@@ -319,7 +319,8 @@ public final class PackBuilder {
                 case BAR_TIME -> 7 - hud.bossbarTimeRow();
                 case BAR_BOMB -> 13;                         // on the time's boss bar: 4 px under the timer line
                 case PLANT_BAR -> 6;
-                case TOOLTIP_TAG -> 7;                       // rows 0..8 of a lore line: 2 px around Pinch capitals                         // rows 1..7: centred in the 13 px box (rows -2..10)
+                case TOOLTIP_TAG -> 7;
+                case BAR_PROGRESS -> PROGRESS_ASCENT;                       // plant/defuse box under the timer
                 case BAR_STRIP -> hud.bossbarTileAscent();
                 case BAR_PANEL -> hud.bossbarPanelAscent();
                 case BAR_SCORE -> hud.bossbarScoreAscent();
@@ -333,6 +334,7 @@ public final class PackBuilder {
                 case MONEY_PANEL, MONEY_ICON -> "hud_money";
                 case ACTION_PANEL, PLANT_BAR -> "hud_actionbar";
                 case TOOLTIP_TAG -> "hud_tooltip";
+                case BAR_PROGRESS -> "hud_bossbar";
             };
             JsonObject p = new JsonObject();
             p.addProperty("type", "bitmap");
@@ -343,6 +345,12 @@ public final class PackBuilder {
             chars.add(String.valueOf(g.ch()));
             p.add("chars", chars);
             providers.computeIfAbsent(font, k -> new com.google.gson.JsonArray()).add(p);
+            if (g.slot() == HudGlyphs.Slot.PLANT_BAR) {
+                // the same bar pieces in the boss bar font, for the PLANTING / DEFUSING widget under the timer
+                JsonObject q = p.deepCopy();
+                q.addProperty("ascent", PROGRESS_BAR_ASCENT);
+                providers.computeIfAbsent("hud_bossbar", k -> new com.google.gson.JsonArray()).add(q);
+            }
         }
         for (Map.Entry<String, com.google.gson.JsonArray> e : providers.entrySet()) {
             JsonObject font = new JsonObject();
@@ -358,6 +366,12 @@ public final class PackBuilder {
 
     /** Characters of the {@code tactical:gui_shop} font (custom shop screen drawn through the container title). */
     public static final char GUI_SHOP_HEADER = '\uED00', GUI_SHOP_BODY = '\uED01', GUI_SHOP_FOOTER = '\uED02', GUI_SHOP_ICON = '\uED03';
+
+    /**
+     * PLANTING / DEFUSING widget on the time's boss bar (whose text line is 19 px below the first one): box rows
+     * -5..15 (= 14..34 below the top boss bar line), bar rows 5..11.
+     */
+    public static final int PROGRESS_ASCENT = 12, PROGRESS_BAR_ASCENT = 2;
 
     /** Item models used by menus: {@code tactical:<id>} via the item_model component. */
     public static final String MODEL_SHOP_CONFIRM = "tactical:shop_confirm",
@@ -412,16 +426,7 @@ public final class PackBuilder {
         // canvas drawn at 3.25x, so one texel = one GUI pixel, centred on its slot and placed on the footer's recess) and
         // an invisible item that keeps purchases out of the slots under it.
         for (int i = 1; i <= 3; i++) menuItem(files, "absorption_" + i, bundled("pack/gui/absorption_" + i + ".png"), null);
-        JsonObject gui = new JsonObject();
-        com.google.gson.JsonArray rot = new com.google.gson.JsonArray(); rot.add(0); rot.add(0); rot.add(0);
-        com.google.gson.JsonArray tr = new com.google.gson.JsonArray(); tr.add(0); tr.add(0); tr.add(0);
-        com.google.gson.JsonArray sc = new com.google.gson.JsonArray(); sc.add(3.25); sc.add(3.25); sc.add(3.25);
-        gui.add("rotation", rot);
-        gui.add("translation", tr);
-        gui.add("scale", sc);
-        JsonObject display = new JsonObject();
-        display.add("gui", gui);
-        menuItem(files, "shop_confirm", bundled("pack/gui/shop_confirm.png"), display);
+        flatIcon(files, "shop_confirm", bundled("pack/gui/shop_confirm.png"));
         menuItem(files, "blank", HudGlyphs.png(new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)), null);
         generateMoneyItem(files);
         // The vanilla chest background is made invisible: the custom screens draw their own.
@@ -435,7 +440,7 @@ public final class PackBuilder {
 
     /** Money characters in the shop header: name in the item's data, its Pinch advance, and the texture name. */
     public static final String MONEY_CHARS = "$,0123456789";
-    public static final int MONEY_PARTS = 8, MONEY_DY = 24, MONEY_DX_MIN = -45;
+    public static final int MONEY_PARTS = 8, MONEY_DY = 24, MONEY_DX_MAX = 15, MONEY_DX_MIN = MONEY_DX_MAX - 7 * MONEY_PARTS;
 
     public static String moneyCharName(char c) {
         return c == '$' ? "dollar" : c == ',' ? "comma" : String.valueOf(c);
@@ -446,7 +451,7 @@ public final class PackBuilder {
      * offset, so a whole amount can be placed anywhere near its slot (the shop puts it into the header bar).
      * Part k (k-th character from the right) reads its character from {@code custom_model_data.strings[k]} and its x
      * offset from {@code floats[k]}; every (character, offset) is a tiny model that only moves the 16x16 glyph texture
-     * (display translation: 1 unit = 1 GUI pixel). Part k can only be at offsets -3-6k .. -3k, which keeps this small.
+     * (display translation: 1 unit = 1 GUI pixel). Part k can only be at offsets MAX-7-7k .. MAX-3-3k, which keeps this small.
      */
     private static void generateMoneyItem(Map<String, byte[]> files) throws IOException {
         for (char c : MONEY_CHARS.toCharArray()) {
@@ -458,7 +463,7 @@ public final class PackBuilder {
             tex.addProperty("layer0", "tactical:item/money/" + n);
             base.add("textures", tex);
             files.put("assets/tactical/models/item/money/" + n + ".json", json(base));
-            for (int dx = MONEY_DX_MIN; dx <= 0; dx++) {
+            for (int dx = MONEY_DX_MIN; dx <= MONEY_DX_MAX; dx++) {
                 JsonObject m = new JsonObject();
                 m.addProperty("parent", "tactical:item/money/" + n);
                 JsonObject gui = new JsonObject();
@@ -478,7 +483,7 @@ public final class PackBuilder {
             for (char c : MONEY_CHARS.toCharArray()) {
                 String n = moneyCharName(c);
                 com.google.gson.JsonArray entries = new com.google.gson.JsonArray();
-                for (int dx = Math.max(MONEY_DX_MIN, -3 - 6 * k); dx <= -3 * k; dx++) {
+                for (int dx = Math.max(MONEY_DX_MIN, MONEY_DX_MAX - 7 - 7 * k); dx <= MONEY_DX_MAX - 3 - 3 * k; dx++) {
                     JsonObject model = new JsonObject();
                     model.addProperty("type", "minecraft:model");
                     model.addProperty("model", "tactical:item/money/" + n + "_" + (dx < 0 ? "m" + (-dx) : String.valueOf(dx)));
@@ -512,6 +517,26 @@ public final class PackBuilder {
         JsonObject def = new JsonObject();
         def.add("model", composite);
         files.put("assets/tactical/items/money.json", json(def));
+    }
+
+    /**
+     * A big flat menu icon as ONE item: a single plane 48x48 model units (from -16 to 32) scaled 1.333 in the GUI, so its
+     * 64x64 texture maps 1:1 to GUI pixels over x/y -24..39 around the slot's top-left (the Blockbench "54x18 icon" parent).
+     */
+    private static void flatIcon(Map<String, byte[]> files, String id, byte[] texture) {
+        files.put("assets/tactical/textures/item/" + id + ".png", texture);
+        String json = "{\"textures\":{\"texture\":\"tactical:item/" + id + "\",\"particle\":\"tactical:item/" + id + "\"},"
+                + "\"elements\":[{\"from\":[-16,-16,15.9375],\"to\":[32,32,16],\"faces\":{"
+                + "\"north\":{\"uv\":[0,0,16,16],\"texture\":\"#texture\"},\"south\":{\"uv\":[0,0,16,16],\"texture\":\"#texture\"}}}],"
+                + "\"display\":{\"firstperson_lefthand\":{\"scale\":[0.0001,0.0001,0.0001]},"
+                + "\"gui\":{\"translation\":[0,0,0],\"scale\":[1.333,1.333,1]}},\"gui_light\":\"front\"}";
+        files.put("assets/tactical/models/item/" + id + ".json", json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        JsonObject def = new JsonObject();
+        JsonObject m = new JsonObject();
+        m.addProperty("type", "minecraft:model");
+        m.addProperty("model", "tactical:item/" + id);
+        def.add("model", m);
+        files.put("assets/tactical/items/" + id + ".json", json(def));
     }
 
     private static void menuItem(Map<String, byte[]> files, String id, byte[] texture, JsonObject display) {

@@ -147,7 +147,7 @@ class PackBuilderTest {
 
     @Test
     void hudGlyphFontsUseLayout(@TempDir Path root) throws Exception {
-        PackBuilder.Result res = new PackBuilder(97, 1, "t", new HudLayout(9, 9, 9, 8, 33, 16)).build(root, List.of(), KNOWN);
+        PackBuilder.Result res = new PackBuilder(97, 1, "t", new HudLayout(9, 9, 9, 8, 33, 19)).build(root, List.of(), KNOWN);
         assertFalse(res.hasErrors(), res.issues().toString());
         Map<String, String> files = unzip(res.zip());
         JsonObject money = JsonParser.parseString(files.get("assets/tactical/font/hud_money.json")).getAsJsonObject();

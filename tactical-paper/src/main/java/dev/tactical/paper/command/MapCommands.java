@@ -152,6 +152,9 @@ public final class MapCommands {
                         }, "ADD_CONSTRUCTION_REGION"))))
                         .then(Commands.literal("clear").executes(ctx -> edit(ctx, m -> m.withConstructionRegions(List.of(), now()),
                                 "CLEAR_CONSTRUCTION_REGIONS"))))
+                .then(Commands.literal("bombspawn")
+                        .then(Commands.literal("set").executes(this::bombSpawnSet))
+                        .then(Commands.literal("clear").executes(ctx -> edit(ctx, m -> m.withBombSpawn(null, now()), "CLEAR_BOMB_SPAWN"))))
                 .then(Commands.literal("pickup")
                         .then(Commands.literal("add").then(Commands.argument("item", StringArgumentType.word())
                                 .suggests((c, b) -> {
@@ -243,6 +246,8 @@ public final class MapCommands {
         for (BombSite s : m.sites().values()) reply(ctx, "site " + s.id() + ": " + s.region(), NamedTextColor.GRAY);
         for (Barrier b : m.barriers()) reply(ctx, "barrier " + b.name() + ": " + b.region()
                 + (b.onlyMaterials().isEmpty() ? "" : " only " + b.onlyMaterials()), NamedTextColor.GRAY);
+        reply(ctx, "bomb spawn " + (m.bombSpawn() == null ? "NOT SET (first attacker spawn is used)"
+                : m.bombSpawn().x() + " " + m.bombSpawn().y() + " " + m.bombSpawn().z()), NamedTextColor.GRAY);
         for (var k : m.pickups()) reply(ctx, "pickup " + k.amount() + "x " + k.item() + " at " + k.x() + " " + k.y() + " " + k.z(), NamedTextColor.GRAY);
         reply(ctx, "construction regions: " + m.constructionRegions().size() + ", kits: " + m.kits().mode()
                 + (m.kits().kits().isEmpty() ? "" : " " + m.kits().kits()), NamedTextColor.GRAY);
@@ -268,6 +273,18 @@ public final class MapCommands {
         String team = s(ctx, "team");
         return edit(ctx, m -> isAttackers(team) ? m.withSpawns(List.of(), m.defenderSpawns(), now())
                 : m.withSpawns(m.attackerSpawns(), List.of(), now()), "CLEAR_SPAWNS");
+    }
+
+    /** The bomb lies here (block centre, on the ground below) at the start of every round. */
+    private int bombSpawnSet(CommandContext<CommandSourceStack> ctx) {
+        Player p = player(ctx).orElse(null);
+        if (p == null) return 0;
+        Location l = p.getLocation();
+        SpawnPoint sp = new SpawnPoint(l.getBlockX() + 0.5, l.getBlockY(), l.getBlockZ() + 0.5, 0, 0);
+        return edit(ctx, m -> {
+            requireInTemplate(p, m);
+            return m.withBombSpawn(sp, now());
+        }, "SET_BOMB_SPAWN");
     }
 
     private int pickupAdd(CommandContext<CommandSourceStack> ctx, int amount) {

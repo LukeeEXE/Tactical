@@ -303,3 +303,14 @@ All positions are estimates and need a client check; every value is adjustable i
 | hud.yml | Schema 4: older files are backed up and replaced |
 | Timer white; bomb icon 24 px, 4 px under the timer line (on the time's boss bar); plant/defuse progress moved from the action bar to that spot: white Pinch "PLANTING"/"DEFUSING" over a white 40 px bar on a dark box, shown to the team doing it; grey checkpoint marker while defusing | 🟡 | Server-tested (match with a planted bomb, no errors); **needs a client test** |
 
+
+### Round: shop money box, timer centring, bomb on the ground
+| Request | Change | Status |
+|---|---|---|
+| Confirm button as one item | Flat plane model (the user's 54x18 parent: one 48x48-unit plane, GUI scale 1.333) with the whole button in a 64x64 texture | 🟡 needs a client test |
+| Money in the header's right box | Header redrawn: the long bar ends earlier and a separate recessed box (interior x 138..169) replaces the decoration; the money item draws "$1,234" right-aligned in it | 🟡 needs a client test |
+| Square score boxes | 10x10, the same height as the strip | 🟡 |
+| Timer centred | Text 1 px lower (text/score offset -1); the colon is pinned to the screen centre and the digits are laid out around it, so the time never shifts when digit widths change; the 27 px box is centred on the same pixel | 🟡 |
+| Planting bar 4 px lower | PLANTING/DEFUSING widget uses its own glyph set (boss bar font), 4 px lower | 🟡 |
+| Hint box | 22 px tall (1 px more under the text), raised 3 px clear of item names | 🟡 |
+| Bomb on the ground | Each round the bomb lies at the map's bomb spawn (fallback: first attacker spawn); attackers pick it up by walking over it, it glows only for attackers. `/game map bombspawn set|clear`, orange column in the editor preview, `bomb-spawn` in the map file, shown in `/game map info` | ✅ Server-tested (BOMB_DROP reason=spawn at round start, forced plant OK) |

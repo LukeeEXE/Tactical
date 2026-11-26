@@ -27,6 +27,7 @@ public record MapDefinition(
         List<Barrier> barriers,
         List<Region> constructionRegions,
         List<Pickup> pickups,
+        SpawnPoint bombSpawn,
         KitRestriction kits,
         String shop,
         int voidY,
@@ -46,7 +47,7 @@ public record MapDefinition(
 
     public static MapDefinition blank(String id, String author, long now) {
         return new MapDefinition(id, id, author, false, 1, MapStatus.DRAFT, Set.of("quickplay", "competitive"),
-                null, List.of(), List.of(), Map.of(), List.of(), List.of(), List.of(), KitRestriction.ALL, "default", -64, now);
+                null, List.of(), List.of(), Map.of(), List.of(), List.of(), List.of(), null, KitRestriction.ALL, "default", -64, now);
     }
 
     /** Template world key path ({@code tactical:map_<id>}). */
@@ -63,12 +64,18 @@ public record MapDefinition(
                                  List<SpawnPoint> def, Map<String, BombSite> sites, List<Barrier> barriers,
                                  List<Region> construction, KitRestriction kits, String shop, int voidY, long now) {
         return new MapDefinition(id, name, author, enabled, version + 1, MapStatus.DRAFT, modes, bounds, atk, def,
-                sites, barriers, construction, pickups, kits, shop, voidY, now);
+                sites, barriers, construction, pickups, bombSpawn, kits, shop, voidY, now);
+    }
+
+    /** Where the bomb lies on the ground at the start of every round (null = at the first attacker spawn). */
+    public MapDefinition withBombSpawn(SpawnPoint b, long now) {
+        return new MapDefinition(id, name, author, enabled, version + 1, MapStatus.DRAFT, modes, bounds, attackerSpawns,
+                defenderSpawns, sites, barriers, constructionRegions, pickups, b, kits, shop, voidY, now);
     }
 
     public MapDefinition withPickups(List<Pickup> p, long now) {
         return new MapDefinition(id, name, author, enabled, version + 1, MapStatus.DRAFT, modes, bounds, attackerSpawns,
-                defenderSpawns, sites, barriers, constructionRegions, p, kits, shop, voidY, now);
+                defenderSpawns, sites, barriers, constructionRegions, p, bombSpawn, kits, shop, voidY, now);
     }
 
     public MapDefinition withName(String n, long now) {
@@ -110,11 +117,11 @@ public record MapDefinition(
     /** Enabling/disabling and status changes do NOT bump the layout version. */
     public MapDefinition withEnabled(boolean e, long now) {
         return new MapDefinition(id, name, author, e, version, status, modes, bounds, attackerSpawns, defenderSpawns,
-                sites, barriers, constructionRegions, pickups, kits, shop, voidY, now);
+                sites, barriers, constructionRegions, pickups, bombSpawn, kits, shop, voidY, now);
     }
 
     public MapDefinition withStatus(MapStatus s, long now) {
         return new MapDefinition(id, name, author, enabled, version, s, modes, bounds, attackerSpawns, defenderSpawns,
-                sites, barriers, constructionRegions, pickups, kits, shop, voidY, now);
+                sites, barriers, constructionRegions, pickups, bombSpawn, kits, shop, voidY, now);
     }
 }

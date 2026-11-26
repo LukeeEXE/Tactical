@@ -174,8 +174,13 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         MatchFlow f = match.flow();
         HudConfig h = config.hud();
         Timer timer = timer(f);
-        Component time = HudShapes.centred(HudText.ttf(h.bossbarFont(), h.bossbarTextOffsetY() - h.rowSpacing(), timer.text()),
-                width(timer.plain()));
+        // The colon is pinned to the screen centre (the timer box's middle pixel): the digits are laid out around it,
+        // so the time never shifts when digit widths change ('1' is narrower).
+        int beforeColon = width(timer.plain().substring(0, timer.plain().indexOf(':')));
+        int all = width(timer.plain());
+        Component time = Component.text().append(TextOffsets.space(-beforeColon))
+                .append(HudText.ttf(h.bossbarFont(), h.bossbarTextOffsetY() - h.rowSpacing(), timer.text()))
+                .append(TextOffsets.space(beforeColon - all)).build();
         var progress0 = arenas == null ? java.util.Optional.<dev.tactical.paper.arena.BombController.Progress>empty()
                 : arenas.arena(match.id()).flatMap(a -> a.bomb().progress());
         float progress = f.stateDurationTicks() <= 0 ? 1f
@@ -240,7 +245,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         String value = String.valueOf(f.scoreOf(team));
         int advance = width(value);
         int ink = Math.max(1, advance - 1);
-        int box = Math.max(HudGlyphs.BAR_BOX.height(), width("88") - 1 + 4); // square for one digit, never resizes
+        int box = HudGlyphs.BAR_BOX.height(); // square, as tall as the strip
         int left = (box - ink) / 2;
         Component score = HudText.ttf(h.bossbarFont(), h.scoreOffsetY(), Component.text(value, NamedTextColor.WHITE));
         return Component.text()
@@ -334,7 +339,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
      */
     private Component progressWidget(dev.tactical.paper.arena.BombController.Progress p) {
         HudConfig h = config.hud();
-        Key font = Key.key("tactical", "hud_actionbar");
+        Key font = Key.key("tactical", "hud_bossbar");
         int seg = HudGlyphs.PLANT_SEGMENT;
         int px = (int) Math.round(Math.max(0, Math.min(1, p.fraction())) * PROGRESS_WIDTH);
         TextComponent.Builder bar = Component.text();
@@ -347,8 +352,8 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         int labelWidth = width(label);
         int box = PROGRESS_WIDTH + 12;
         TextComponent.Builder w = Component.text()
-                .append(HudShapes.centred(HudShapes.rect(HudGlyphs.ACTION_PANEL, box, "hud_actionbar", NamedTextColor.BLACK), box))
-                .append(HudShapes.centred(HudText.ttf(h.bossbarFont(), -8, Component.text(label, NamedTextColor.WHITE)), labelWidth))
+                .append(HudShapes.centred(HudShapes.rect(HudGlyphs.PROGRESS_BOX, box, "hud_bossbar", NamedTextColor.BLACK), box))
+                .append(HudShapes.centred(HudText.ttf(h.bossbarFont(), -4, Component.text(label, NamedTextColor.WHITE)), labelWidth))
                 .append(HudShapes.centred(bar.build().color(NamedTextColor.WHITE), PROGRESS_WIDTH));
         if (p.checkpoint() > 0) {
             int mx = -PROGRESS_WIDTH / 2 + (int) Math.round(p.checkpoint() * PROGRESS_WIDTH);
