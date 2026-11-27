@@ -366,6 +366,8 @@ public final class PackBuilder {
 
     /** Characters of the {@code tactical:gui_shop} font (custom shop screen drawn through the container title). */
     public static final char GUI_SHOP_HEADER = '\uED00', GUI_SHOP_BODY = '\uED01', GUI_SHOP_FOOTER = '\uED02', GUI_SHOP_ICON = '\uED03';
+    /** Kit menu: header 176x31 at y -17, body 164x162 at (6, 16), footer 176x65 at y 174 (same font as the shop). */
+    public static final char GUI_KIT_HEADER = '\uED10', GUI_KIT_BODY = '\uED11', GUI_KIT_FOOTER = '\uED12';
 
     /**
      * PLANTING / DEFUSING widget on the time's boss bar (whose text line is 19 px below the first one): box rows
@@ -374,7 +376,8 @@ public final class PackBuilder {
     public static final int PROGRESS_ASCENT = 12, PROGRESS_BAR_ASCENT = 2;
 
     /** Item models used by menus: {@code tactical:<id>} via the item_model component. */
-    public static final String MODEL_SHOP_CONFIRM = "tactical:shop_confirm",
+    public static final String MODEL_SHOP_CONFIRM = "tactical:shop_confirm", MODEL_KIT_LOCK_IN = "tactical:kit_lock_in",
+            MODEL_KIT_LOCKED = "tactical:kit_locked",
             MODEL_BLANK = "tactical:blank";
 
     /**
@@ -393,7 +396,9 @@ public final class PackBuilder {
         record G(String name, char ch, int ascent, int height) { }
         com.google.gson.JsonArray providers = new com.google.gson.JsonArray();
         for (G g : List.of(new G("shop_header", GUI_SHOP_HEADER, 30, 31), new G("shop_body", GUI_SHOP_BODY, -1, 120),
-                new G("shop_footer", GUI_SHOP_FOOTER, -121, 88), new G("shop_icon", GUI_SHOP_ICON, 24, 24))) {
+                new G("shop_footer", GUI_SHOP_FOOTER, -121, 88), new G("shop_icon", GUI_SHOP_ICON, 24, 24),
+                new G("kit_header", GUI_KIT_HEADER, 30, 31), new G("kit_body", GUI_KIT_BODY, -3, 162),
+                new G("kit_footer", GUI_KIT_FOOTER, -161, 65))) {
             byte[] png = bundled("pack/gui/" + g.name() + ".png");
             if (g.name().equals("shop_icon")) { // icon on a 16x24 canvas (a glyph may not rise above its height)
                 java.awt.image.BufferedImage src = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(png));
@@ -427,6 +432,10 @@ public final class PackBuilder {
         // an invisible item that keeps purchases out of the slots under it.
         for (int i = 1; i <= 3; i++) menuItem(files, "absorption_" + i, bundled("pack/gui/absorption_" + i + ".png"), null);
         flatIcon(files, "shop_confirm", bundled("pack/gui/shop_confirm.png"));
+        // Kit menu: category icons and the lock button (lock in / locked), drawn from hotbar slot 5 over the footer's recess.
+        for (String c : List.of("defense", "damage", "support")) menuItem(files, "kit_" + c, bundled("pack/gui/kit_" + c + ".png"), null);
+        flatIcon(files, "kit_lock_in", bundled("pack/gui/kit_lock_in.png"));
+        flatIcon(files, "kit_locked", bundled("pack/gui/kit_locked.png"));
         menuItem(files, "blank", HudGlyphs.png(new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)), null);
         generateMoneyItem(files);
         // The vanilla chest background is made invisible: the custom screens draw their own.

@@ -11,6 +11,7 @@ schema-version: 3
 id: sentinel
 name: "Sentinel"
 description: "Holds sites and angles."
+category: defense          # kit menu row: defense, damage or support
 enabled: true
 # Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/sentinel" for a resource-pack logo.
 icon:

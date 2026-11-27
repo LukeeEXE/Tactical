@@ -11,6 +11,7 @@ schema-version: 3
 id: medic
 name: "Medic"
 description: "Keeps the team alive."
+category: support          # kit menu row: defense, damage or support
 enabled: true
 # Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/medic" for a resource-pack logo.
 icon:

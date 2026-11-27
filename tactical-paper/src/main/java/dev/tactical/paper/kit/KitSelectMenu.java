@@ -4,7 +4,8 @@ import dev.tactical.engine.kit.KitSelection;
 import dev.tactical.engine.kit.KitSelectionPhase;
 import dev.tactical.engine.kit.KitSelectionResult;
 import dev.tactical.engine.match.MatchFlow;
-import dev.tactical.engine.mode.ModeRules;
+import dev.tactical.engine.pack.PackBuilder;
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import dev.tactical.engine.team.TeamId;
 import dev.tactical.paper.config.ConfigService;
 import dev.tactical.paper.config.KitDefinition;
@@ -15,6 +16,10 @@ import dev.tactical.paper.match.GameMatch;
 import dev.tactical.paper.match.MatchMember;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -25,19 +30,32 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Kit selection (match start, halftime, sudden death). Layout:
- * row 0 header, row 1 your team's picks, rows 2-3 the kits, row 4 the enemy team's picks (kits are public),
- * row 5 lock / skip buttons. Left-click a kit to select it (click again to lock), right-click to lock directly.
+ * Kit selection (match start, halftime, sudden death), drawn like the shop: the whole screen is the title (header,
+ * body and footer glyphs of {@code tactical:gui_shop}), the slots sit on its frames.
+ * <ul>
+ *   <li>red box (chest row 1, cols 2-6): the red team's picks; blue box (the viewer's top inventory row, cols 2-6):
+ *       the blue team's picks (kits are public)</li>
+ *   <li>rows 3-5: one category per row (Defense, Damage, Support): its icon in col 1, up to six kits in cols 2-7</li>
+ *   <li>footer: skip vote in hotbar slot 2, the lock button (one item drawn over hotbar slots 4-6)</li>
+ * </ul>
+ * The viewer's inventory is put aside while the menu is open (it shows the blue team and the buttons) and given back
+ * when it closes. Left-click a kit to select it (click again to lock), right-click to lock directly.
  */
 final class KitSelectMenu extends Menu {
 
-    private static final int[] TEAM_SLOTS = {11, 12, 13, 14, 15};
-    private static final int[] ENEMY_SLOTS = {38, 39, 40, 41, 42};
-    private static final int KIT_START = 18;
+    private static final int[] RED_SLOTS = {11, 12, 13, 14, 15};
+    /** Player-inventory slots of the blue box (top inventory row, cols 2-6). */
+    private static final int[] BLUE_SLOTS = {11, 12, 13, 14, 15};
+    private static final int[] CATEGORY_SLOTS = {28, 37, 46};
+    private static final int KITS_PER_ROW = 6;
+    /** Hotbar slots: skip vote (in the footer's square) and the lock button (drawn from slot 5 over slots 4-6). */
+    static final int SKIP_SLOT = 2, LOCK_SLOT = 5, LOCK_LEFT = 4, LOCK_RIGHT = 6;
 
     private final GameMatch match;
     private final ConfigService config;
     private final Icons icons;
+    /** The viewer's inventory (0-35) while the menu is open. */
+    private ItemStack[] stash;
 
     KitSelectMenu(GameMatch match, ConfigService config, Icons icons) {
         this.match = match;
@@ -51,113 +69,208 @@ final class KitSelectMenu extends Menu {
 
     @Override
     public Component title(Player viewer) {
-        return Component.text("Kit selection");
+        net.kyori.adventure.key.Key font = net.kyori.adventure.key.Key.key("tactical", "gui_shop");
+        java.util.function.Function<Character, Component> glyph = c -> Component.text(String.valueOf(c)).font(font);
+        return Component.text()
+                .append(dev.tactical.paper.hud.TextOffsets.space(-8))                         // x 0
+                .append(glyph.apply(PackBuilder.GUI_KIT_HEADER))                               // 176 + 1
+                .append(dev.tactical.paper.hud.TextOffsets.space(-177 + 6))                   // x 6
+                .append(glyph.apply(PackBuilder.GUI_KIT_BODY))                                 // 164 + 1
+                .append(dev.tactical.paper.hud.TextOffsets.space(-165 - 6))                   // x 0
+                .append(glyph.apply(PackBuilder.GUI_KIT_FOOTER))                               // 176 + 1
+                .append(dev.tactical.paper.hud.TextOffsets.space(-177 + 37))                  // x 37: 3 px into the bar
+                .append(Component.text(match.flow().kitSelection().map(k -> phaseName(k.phase())).orElse("KITS"), TextColor.color(0xE4E8FA)).font(net.kyori.adventure.key.Key.key("tactical", "pinch_up_14")))
+                .build()
+                .color(NamedTextColor.WHITE)
+                .shadowColor(net.kyori.adventure.text.format.ShadowColor.none());
+    }
+
+    @Override
+    public void onOpen(Player viewer) {
+        PlayerInventory inv = viewer.getInventory();
+        stash = new ItemStack[36];
+        for (int i = 0; i < 36; i++) {
+            stash[i] = inv.getItem(i);
+            inv.setItem(i, null);
+        }
+        renderInventory(viewer);
+    }
+
+    @Override
+    public void onClose(Player viewer) {
+        if (stash == null) return;
+        PlayerInventory inv = viewer.getInventory();
+        for (int i = 0; i < 36; i++) if (isDisplay(inv.getItem(i))) inv.setItem(i, null); // heads and buttons go away
+        if (isDisplay(viewer.getItemOnCursor())) viewer.setItemOnCursor(null);
+        // Anything given while the menu was open (e.g. a base kit) stays; the put-aside items fill around it.
+        for (int i = 0; i < 36; i++) {
+            ItemStack it = stash[i];
+            if (it == null || it.getType().isAir()) continue;
+            ItemStack cur = inv.getItem(i);
+            if (cur == null || cur.getType().isAir()) inv.setItem(i, it);
+            else inv.addItem(it).values().forEach(left -> viewer.getWorld().dropItem(viewer.getLocation(), left));
+        }
+        stash = null;
+    }
+
+    @Override
+    public boolean onPlayerSlotClick(Player viewer, int slot, ClickType click) {
+        MatchFlow flow = match.flow();
+        UUID me = viewer.getUniqueId();
+        if (slot == SKIP_SLOT && flow.skipVoteAvailable()) {
+            if (flow.voteSkip(me)) viewer.playSound(viewer.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+            return true;
+        }
+        if (slot >= LOCK_LEFT && slot <= LOCK_RIGHT) {
+            Optional<KitSelection> sel = flow.kitSelection();
+            if (sel.isEmpty() || sel.get().lockedBy(me).isPresent()) return true;
+            String hovered = sel.get().hoveredBy(me).orElse(null);
+            if (hovered == null) {
+                feedbackText(viewer, "Select a kit first");
+                return true;
+            }
+            feedback(viewer, flow.lockKit(me, hovered), true);
+            return true;
+        }
+        return false;
     }
 
     @Override
     public void render(Player viewer, MenuView view) {
         MatchFlow flow = match.flow();
         Optional<KitSelection> selOpt = flow.kitSelection();
-        if (selOpt.isEmpty()) {
-            view.set(22, icons.icon("ui.info", Component.text("Kit selection is closed", NamedTextColor.GRAY), List.of()));
-            return;
-        }
+        if (selOpt.isEmpty()) return;
         KitSelection sel = selOpt.get();
         UUID me = viewer.getUniqueId();
         TeamId myTeam = match.member(me).map(MatchMember::team).orElse(TeamId.A);
 
-        for (int i = 0; i < 9; i++) view.set(i, icons.icon("ui.filler", Component.empty(), List.of()));
-        int secs = (flow.stateTicksRemaining() + ModeRules.TICKS_PER_SECOND - 1) / ModeRules.TICKS_PER_SECOND;
-        view.set(4, icons.icon("ui.timer", Component.text(phaseName(sel.phase()) + " - " + secs + "s", NamedTextColor.GOLD),
-                List.of(Component.text(phaseHint(sel.phase()), NamedTextColor.GRAY),
-                        Component.text("Teammates cannot pick the same kit.", NamedTextColor.GRAY),
-                        Component.text("Your team plays " + flow.sideOf(myTeam).name().toLowerCase(), NamedTextColor.YELLOW))));
+        renderTeam(view, sel, TeamId.A, RED_SLOTS, NamedTextColor.RED);
+        if (stash != null) renderInventory(viewer);
 
-        renderTeam(view, sel, myTeam, TEAM_SLOTS, NamedTextColor.GREEN);
-        renderTeam(view, sel, myTeam.other(), ENEMY_SLOTS, NamedTextColor.RED);
-
-        // kits
-        int slot = KIT_START;
         String hovered = sel.hoveredBy(me).orElse(null);
         String locked = sel.lockedBy(me).orElse(null);
-        for (String kitId : flow.kitPool()) {
-            if (slot > 35) break;
-            KitDefinition def = config.kits().get(kitId);
-            if (def == null) continue;
-            List<Component> lore = new ArrayList<>();
-            if (!def.description().isEmpty()) lore.add(Component.text(def.description(), NamedTextColor.GRAY));
-            String state;
-            boolean glow = false;
-            KitSelectionResult can = sel.canLock(me, kitId);
-            String takenBy = teammateLocking(sel, myTeam, me, kitId);
-            if (kitId.equals(locked)) {
-                state = "locked";
-                glow = true;
-                lore.add(Component.text("LOCKED IN", NamedTextColor.GREEN));
-            } else if (takenBy != null) {
-                state = "taken";
-                lore.add(Component.text("Locked by teammate " + takenBy, NamedTextColor.RED));
-            } else if (!sel.optionsOf(me).contains(kitId)) {
-                state = "unavailable";
-                lore.add(Component.text(sel.phase() == KitSelectionPhase.SUDDEN_DEATH
-                        ? "Sudden death: only your first- or second-half kit" : "Not available on this map", NamedTextColor.DARK_GRAY));
-            } else if (can == KitSelectionResult.WOULD_STRAND_TEAMMATE) {
-                state = "unavailable";
-                lore.add(Component.text("A teammate needs this kit", NamedTextColor.DARK_GRAY));
-            } else if (kitId.equals(hovered)) {
-                state = "selected";
-                glow = true;
-                lore.add(Component.text(locked == null ? "Selected - click again to lock" : "Selected", NamedTextColor.YELLOW));
-            } else {
-                state = "available";
-                if (locked == null) lore.add(Component.text("Click to select, right-click to lock", NamedTextColor.GRAY));
-            }
-            List<String> hovering = teammatesHovering(sel, myTeam, me, kitId);
-            if (!hovering.isEmpty()) lore.add(Component.text("Selected by: " + String.join(", ", hovering), NamedTextColor.AQUA));
-            NamedTextColor nameColor = switch (state) {
-                case "taken", "unavailable" -> NamedTextColor.DARK_GRAY;
-                case "locked" -> NamedTextColor.GREEN;
-                case "selected" -> NamedTextColor.YELLOW;
-                default -> NamedTextColor.WHITE;
-            };
-            final String id = kitId;
-            view.set(slot++, icons.kit(def, state, Component.text(def.name(), nameColor), lore, glow), click -> {
-                if (locked != null) return;
-                if (click == ClickType.RIGHT || click == ClickType.SHIFT_RIGHT || id.equals(sel.hoveredBy(me).orElse(null))) {
-                    feedback(viewer, flow.lockKit(me, id), true);
+        KitDefinition.Category[] cats = KitDefinition.Category.values();
+        for (int row = 0; row < cats.length; row++) {
+            KitDefinition.Category cat = cats[row];
+            view.set(CATEGORY_SLOTS[row], categoryIcon(cat));
+            int col = 0;
+            for (String kitId : flow.kitPool()) {
+                KitDefinition def = config.kits().get(kitId);
+                if (def == null || def.category() != cat) continue;
+                if (col >= KITS_PER_ROW) break;
+                int slot = CATEGORY_SLOTS[row] + 1 + col++;
+                List<Component> lore = new ArrayList<>();
+                if (!def.description().isEmpty()) lore.add(Component.text(def.description(), NamedTextColor.GRAY));
+                String state;
+                boolean glow = false;
+                KitSelectionResult can = sel.canLock(me, kitId);
+                String takenBy = teammateLocking(sel, myTeam, me, kitId);
+                if (kitId.equals(locked)) {
+                    state = "locked";
+                    glow = true;
+                    lore.add(Component.text("LOCKED IN", NamedTextColor.GREEN));
+                } else if (takenBy != null) {
+                    state = "taken";
+                    lore.add(Component.text("Locked by teammate " + takenBy, NamedTextColor.RED));
+                } else if (!sel.optionsOf(me).contains(kitId)) {
+                    state = "unavailable";
+                    lore.add(Component.text(sel.phase() == KitSelectionPhase.SUDDEN_DEATH
+                            ? "Sudden death: only your first- or second-half kit" : "Not available on this map", NamedTextColor.DARK_GRAY));
+                } else if (can == KitSelectionResult.WOULD_STRAND_TEAMMATE) {
+                    state = "unavailable";
+                    lore.add(Component.text("A teammate needs this kit", NamedTextColor.DARK_GRAY));
+                } else if (kitId.equals(hovered)) {
+                    state = "selected";
+                    glow = true;
+                    lore.add(Component.text(locked == null ? "Selected - click again or press LOCK IN" : "Selected", NamedTextColor.YELLOW));
                 } else {
-                    feedback(viewer, flow.hoverKit(me, id), false);
+                    state = "available";
+                    if (locked == null) lore.add(Component.text("Click to select, right-click to lock", NamedTextColor.GRAY));
                 }
-            });
-        }
-
-        // footer
-        for (int i = 45; i < 54; i++) view.set(i, icons.icon("ui.filler", Component.empty(), List.of()));
-        if (locked != null) {
-            view.set(49, icons.icon("kit.lock_disabled", Component.text("Locked: " + kitName(locked), NamedTextColor.GREEN), List.of()));
-        } else if (hovered != null && sel.canLock(me, hovered) == KitSelectionResult.OK) {
-            view.set(49, icons.icon("kit.lock", Component.text("Lock in " + kitName(hovered), NamedTextColor.GREEN), List.of()),
-                    c -> feedback(viewer, flow.lockKit(me, hovered), true));
-        } else {
-            view.set(49, icons.icon("kit.lock_disabled", Component.text("Select a kit first", NamedTextColor.GRAY), List.of()));
-        }
-        if (flow.skipVoteAvailable()) {
-            boolean voted = flow.hasVotedSkip(me);
-            List<Component> lore = List.of(
-                    Component.text("Your team: " + (flow.teamAgreesToSkip(myTeam) ? "agrees" : "not yet"), NamedTextColor.GRAY),
-                    Component.text("Enemy team: " + (flow.teamAgreesToSkip(myTeam.other()) ? "agrees" : "not yet"), NamedTextColor.GRAY),
-                    Component.text("Starts early once everyone is locked and both teams agree.", NamedTextColor.DARK_GRAY));
-            view.set(51, icons.icon(voted ? "kit.skip_voted" : "kit.skip",
-                    Component.text(voted ? "You voted to skip" : "Vote to skip the break", NamedTextColor.AQUA), lore), c -> {
-                if (flow.voteSkip(me)) viewer.playSound(viewer.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
-            });
+                List<String> hovering = teammatesHovering(sel, myTeam, me, kitId);
+                if (!hovering.isEmpty()) lore.add(Component.text("Selected by: " + String.join(", ", hovering), NamedTextColor.AQUA));
+                NamedTextColor nameColor = switch (state) {
+                    case "taken", "unavailable" -> NamedTextColor.DARK_GRAY;
+                    case "locked" -> NamedTextColor.GREEN;
+                    case "selected" -> NamedTextColor.YELLOW;
+                    default -> NamedTextColor.WHITE;
+                };
+                final String id = kitId;
+                view.set(slot, icons.kit(def, state, Component.text(def.name(), nameColor), lore, glow), click -> {
+                    if (locked != null) return;
+                    if (click == ClickType.RIGHT || click == ClickType.SHIFT_RIGHT || id.equals(sel.hoveredBy(me).orElse(null))) {
+                        feedback(viewer, flow.lockKit(me, id), true);
+                    } else {
+                        feedback(viewer, flow.hoverKit(me, id), false);
+                    }
+                });
+            }
         }
     }
 
+    /** The parts of the screen that live in the viewer's own inventory: the blue box, skip and lock buttons. */
+    private void renderInventory(Player viewer) {
+        Optional<KitSelection> selOpt = match.flow().kitSelection();
+        if (selOpt.isEmpty()) return;
+        KitSelection sel = selOpt.get();
+        UUID me = viewer.getUniqueId();
+        PlayerInventory inv = viewer.getInventory();
+        ItemStack[] blue = teamItems(sel, TeamId.B, NamedTextColor.BLUE, BLUE_SLOTS.length);
+        for (int i = 0; i < BLUE_SLOTS.length; i++) setIfChanged(inv, BLUE_SLOTS[i], blue[i]);
+        MatchFlow flow = match.flow();
+        ItemStack skip = null;
+        if (flow.skipVoteAvailable()) {
+            boolean voted = flow.hasVotedSkip(me);
+            TeamId myTeam = match.member(me).map(MatchMember::team).orElse(TeamId.A);
+            skip = icons.icon(voted ? "kit.skip_voted" : "kit.skip",
+                    Component.text(voted ? "You voted to skip" : "Vote to skip the break", NamedTextColor.AQUA), List.of(
+                            Component.text("Your team: " + (flow.teamAgreesToSkip(myTeam) ? "agrees" : "not yet"), NamedTextColor.GRAY),
+                            Component.text("Enemy team: " + (flow.teamAgreesToSkip(myTeam.other()) ? "agrees" : "not yet"), NamedTextColor.GRAY),
+                            Component.text("Starts early once everyone is locked and both teams agree.", NamedTextColor.DARK_GRAY)));
+        }
+        setIfChanged(inv, SKIP_SLOT, skip);
+        ItemStack lock = new ItemStack(Material.PAPER);
+        lock.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key(
+                sel.lockedBy(me).isPresent() ? PackBuilder.MODEL_KIT_LOCKED : PackBuilder.MODEL_KIT_LOCK_IN));
+        lock.setData(DataComponentTypes.TOOLTIP_DISPLAY,
+                io.papermc.paper.datacomponent.item.TooltipDisplay.tooltipDisplay().hideTooltip(true).build());
+        setIfChanged(inv, LOCK_SLOT, lock);
+    }
+
+    private static final org.bukkit.NamespacedKey DISPLAY_KEY = new org.bukkit.NamespacedKey("tactical", "menu_display");
+
+    private static boolean isDisplay(ItemStack item) {
+        return item != null && !item.getType().isAir()
+                && item.getPersistentDataContainer().has(DISPLAY_KEY, org.bukkit.persistence.PersistentDataType.BYTE);
+    }
+
+    private static void setIfChanged(PlayerInventory inv, int slot, ItemStack item) {
+        if (item != null) item.editPersistentDataContainer(pdc -> pdc.set(DISPLAY_KEY, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1));
+        ItemStack cur = inv.getItem(slot);
+        boolean curEmpty = cur == null || cur.getType().isAir();
+        if (item == null ? curEmpty : item.equals(cur)) return;
+        inv.setItem(slot, item);
+    }
+
+    private ItemStack categoryIcon(KitDefinition.Category cat) {
+        ItemStack item = new ItemStack(Material.PAPER);
+        item.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key("tactical", "kit_" + cat.id()));
+        item.editMeta(m -> m.displayName(Component.text(cat.displayName(), NamedTextColor.WHITE)
+                .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)));
+        return item;
+    }
+
     private void renderTeam(MenuView view, KitSelection sel, TeamId team, int[] slots, NamedTextColor color) {
+        ItemStack[] items = teamItems(sel, team, color, slots.length);
+        for (int i = 0; i < slots.length; i++) if (items[i] != null) view.set(slots[i], items[i]);
+    }
+
+    /** Heads of the team's players with what they picked (null where the team has fewer players). */
+    private ItemStack[] teamItems(KitSelection sel, TeamId team, NamedTextColor color, int max) {
+        ItemStack[] out = new ItemStack[max];
         int i = 0;
         for (MatchMember m : match.members()) {
-            if (m.team() != team || i >= slots.length) continue;
+            if (m.team() != team || i >= max) continue;
             List<Component> lore = new ArrayList<>();
             String l = sel.lockedBy(m.uuid()).orElse(null);
             String h = sel.hoveredBy(m.uuid()).orElse(null);
@@ -165,8 +278,9 @@ final class KitSelectMenu extends Menu {
             else if (h != null) lore.add(Component.text("Selecting: " + kitName(h), NamedTextColor.YELLOW));
             else lore.add(Component.text("Choosing...", NamedTextColor.GRAY));
             if (m.virtual()) lore.add(Component.text("(virtual test player)", NamedTextColor.DARK_GRAY));
-            view.set(slots[i++], icons.head(m.uuid(), m.name(), !m.virtual(), Component.text(m.name(), color), lore));
+            out[i++] = icons.head(m.uuid(), m.name(), !m.virtual(), Component.text(m.name(), color), lore);
         }
+        return out;
     }
 
     private String teammateLocking(KitSelection sel, TeamId team, UUID me, String kit) {
@@ -190,6 +304,11 @@ final class KitSelectMenu extends Menu {
         return d == null ? id : d.name();
     }
 
+    private static void feedbackText(Player p, String text) {
+        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.6f);
+        dev.tactical.paper.hud.ActionBars.status(p, Component.text(text, NamedTextColor.RED));
+    }
+
     private static void feedback(Player p, KitSelectionResult r, boolean lock) {
         if (r == KitSelectionResult.OK) {
             p.playSound(p.getLocation(), lock ? Sound.BLOCK_NOTE_BLOCK_PLING : Sound.UI_BUTTON_CLICK, 1f, lock ? 1.6f : 1f);
@@ -208,17 +327,9 @@ final class KitSelectMenu extends Menu {
 
     private static String phaseName(KitSelectionPhase p) {
         return switch (p) {
-            case MATCH_START -> "Pick your kit";
-            case SECOND_HALF -> "Halftime - second-half kit";
-            case SUDDEN_DEATH -> "Sudden death kit";
-        };
-    }
-
-    private static String phaseHint(KitSelectionPhase p) {
-        return switch (p) {
-            case MATCH_START -> "Locked kits are used for the first half.";
-            case SECOND_HALF -> "Teams have switched sides.";
-            case SUDDEN_DEATH -> "Choose your first- or second-half kit.";
+            case MATCH_START -> "PICK YOUR KIT";
+            case SECOND_HALF -> "HALFTIME KIT";
+            case SUDDEN_DEATH -> "SUDDEN DEATH KIT";
         };
     }
 }

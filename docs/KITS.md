@@ -16,6 +16,7 @@ schema-version: 2
 id: medic
 name: "Medic"
 description: "Keeps the team alive."
+category: support      # kit menu row: defense, damage or support (bundled kits default to their own)
 enabled: true
 icon: { material: golden_apple }
 base-kit:
@@ -57,3 +58,12 @@ item: buying it again puts it straight back into that slot (in the shop row whil
 start). A slot forgets only when the item shows up in another hotbar slot or another item takes its place. Other new
 items fill the slots that were empty, then the inventory. The bomb is never part of a layout. Layouts reset at halftime and before sudden death (new kits).
 
+
+## Kit menu
+
+The kit selection screen is drawn like the shop (title glyphs + slots on the frames):
+
+- Red box (chest row 1): the red team's picks. Blue box (your inventory's top row): the blue team's picks.
+- Rows 3-5: one row per `category` (Defense, Damage, Support): the category icon in column 1, up to six kits.
+- Footer: vote to skip in the small square (hotbar slot 2) and the LOCK IN / LOCKED button (hotbar slots 4-6).
+- Your inventory is put aside while the menu is open and given back when it closes.

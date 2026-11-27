@@ -15,7 +15,26 @@ import java.util.regex.Pattern;
  * and the kit's own SHOP (the same on every map).
  */
 public record KitDefinition(String id, String name, String description, boolean enabled, String iconMaterial,
-                            List<KitItem> baseKit, ShopDefinition shop) {
+                            Category category, List<KitItem> baseKit, ShopDefinition shop) {
+
+    /** Row of the kit menu the kit is listed in. */
+    public enum Category {
+        DEFENSE("Defense"), DAMAGE("Damage"), SUPPORT("Support");
+
+        private final String displayName;
+
+        Category(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String displayName() {
+            return displayName;
+        }
+
+        public String id() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+    }
 
     /** 3: shop categories absorption + arrows (older placeholder kit files are replaced by the new defaults, with a backup). */
     public static final int SCHEMA_VERSION = 3;
@@ -32,7 +51,7 @@ public record KitDefinition(String id, String name, String description, boolean 
 
     public static Optional<KitDefinition> parse(ConfigNode root, String expectedId) {
         int before = root.report().errors().size();
-        root.warnUnknownKeys(List.of("schema-version", "id", "name", "description", "enabled", "icon", "base-kit", "shop"));
+        root.warnUnknownKeys(List.of("schema-version", "id", "name", "description", "enabled", "icon", "category", "base-kit", "shop"));
         String id = root.string("id", expectedId);
         if (!id.equals(expectedId)) root.child("id").error("must match the file name '" + expectedId + "'");
         if (!ID.matcher(id).matches()) root.child("id").error("must be 1-32 chars of a-z, 0-9, _");
@@ -40,6 +59,13 @@ public record KitDefinition(String id, String name, String description, boolean 
         String description = root.string("description", "");
         boolean enabled = root.bool("enabled", true);
         String icon = root.child("icon").string("material", "iron_sword");
+        Category category = Category.DAMAGE;
+        String cat = root.string("category", defaultCategory(id)).toUpperCase(Locale.ROOT);
+        try {
+            category = Category.valueOf(cat);
+        } catch (IllegalArgumentException e) {
+            root.child("category").error("must be defense, damage or support");
+        }
         List<KitItem> base = new ArrayList<>();
         for (ConfigNode n : root.child("base-kit").list()) {
             n.warnUnknownKeys(List.of("slot", "material", "item", "amount"));
@@ -69,6 +95,15 @@ public record KitDefinition(String id, String name, String description, boolean 
         }
         ShopDefinition shop = ShopDefinition.parseKitShop(root.child("shop"), id);
         if (root.report().errors().size() > before) return Optional.empty();
-        return Optional.of(new KitDefinition(id, name, description, enabled, icon, List.copyOf(base), shop));
+        return Optional.of(new KitDefinition(id, name, description, enabled, icon, category, List.copyOf(base), shop));
+    }
+
+    /** Category of the bundled kits when their file has no {@code category} yet. */
+    private static String defaultCategory(String id) {
+        return switch (id) {
+            case "vanguard", "sentinel", "warden" -> "defense";
+            case "medic" -> "support";
+            default -> "damage";
+        };
     }
 }

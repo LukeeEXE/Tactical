@@ -11,6 +11,7 @@ schema-version: 3
 id: striker
 name: "Striker"
 description: "Duelist with a big entry."
+category: damage          # kit menu row: defense, damage or support
 enabled: true
 # Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/striker" for a resource-pack logo.
 icon:

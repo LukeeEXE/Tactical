@@ -315,3 +315,13 @@ All positions are estimates and need a client check; every value is adjustable i
 | Hint box | 22 px tall (1 px more under the text), raised 3 px clear of item names | 🟡 |
 | Bomb on the ground | Each round the bomb lies at the map's bomb spawn (fallback: first attacker spawn); attackers pick it up by walking over it, it glows only for attackers. `/game map bombspawn set|clear`, orange column in the editor preview, `bomb-spawn` in the map file, shown in `/game map info` | ✅ Server-tested (BOMB_DROP reason=spawn at round start, forced plant OK) |
 | Confirm recess aligned with the slots | Footer recess (52x17 interior) and the `|||` decorations moved 6 px down: the interior now starts at the top of slots 30-32 and spans exactly their width; the button art moved with it | 🟡 needs a client test |
+
+### Kit menu textures
+| Request | Change | Status |
+|---|---|---|
+| Kit menu like the shop | Header / body / footer glyphs from the new textures; header bar shows PICK YOUR KIT / HALFTIME KIT / SUDDEN DEATH KIT | 🟡 needs a client test |
+| Red / blue boxes | Red team picks in chest row 1; blue team picks in the inventory's top row (the blue box was moved up 3 px so it sits exactly on that row) | 🟡 |
+| Categories | Defense, Damage, Support rows with the new icons; `category` in kits/*.yml (vanguard, sentinel, warden = defense; striker, phantom = damage; medic = support) | ✅ loads |
+| Lock button | One item (flat plane model, like the shop confirm) stretched to fill the 60x22 recess; LOCK IN / LOCKED textures; clicking hotbar slots 4-6 locks the selected kit | 🟡 |
+| Skip | Vote to skip in the square left of the lock button (hotbar slot 2) | 🟡 |
+| Inventory | Put aside while the menu is open, given back on close (items received meanwhile are kept) | 🟡 |
