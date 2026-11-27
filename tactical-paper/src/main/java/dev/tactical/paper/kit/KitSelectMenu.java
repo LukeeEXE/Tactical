@@ -48,8 +48,13 @@ final class KitSelectMenu extends Menu {
     private static final int[] BLUE_SLOTS = {11, 12, 13, 14, 15};
     private static final int[] CATEGORY_SLOTS = {28, 37, 46};
     private static final int KITS_PER_ROW = 6;
-    /** Hotbar slots: skip vote (in the footer's square) and the lock button (drawn from slot 5 over slots 4-6). */
-    static final int SKIP_SLOT = 2, LOCK_SLOT = 5, LOCK_LEFT = 4, LOCK_RIGHT = 6;
+    /**
+     * Clickable hotbar slots under the footer: skip vote (the square) and the lock button (slots 4-6). The button items
+     * themselves sit in the 3rd inventory row, hidden under the footer, and are drawn 22 px lower onto these slots, so
+     * the in-game hotbar (visible behind the screen) never shows them.
+     */
+    static final int SKIP_SLOT = 2, LOCK_LEFT = 4, LOCK_RIGHT = 6;
+    static final int SKIP_ITEM_SLOT = 29, LOCK_ITEM_SLOT = 32;
 
     private final GameMatch match;
     private final ConfigService config;
@@ -78,7 +83,9 @@ final class KitSelectMenu extends Menu {
                 .append(glyph.apply(PackBuilder.GUI_KIT_BODY))                                 // 164 + 1
                 .append(dev.tactical.paper.hud.TextOffsets.space(-165 - 6))                   // x 0
                 .append(glyph.apply(PackBuilder.GUI_KIT_FOOTER))                               // 176 + 1
-                .append(dev.tactical.paper.hud.TextOffsets.space(-177 + 37))                  // x 37: 3 px into the bar
+                .append(dev.tactical.paper.hud.TextOffsets.space(-177 + 7))                   // x 7: icon box
+                .append(glyph.apply(PackBuilder.GUI_KIT_ICON))                                 // 16 + 1
+                .append(dev.tactical.paper.hud.TextOffsets.space(37 - 7 - 17))                // x 37: 3 px into the bar
                 .append(Component.text(match.flow().kitSelection().map(k -> phaseName(k.phase())).orElse("KITS"), TextColor.color(0xE4E8FA)).font(net.kyori.adventure.key.Key.key("tactical", "pinch_up_14")))
                 .build()
                 .color(NamedTextColor.WHITE)
@@ -117,11 +124,11 @@ final class KitSelectMenu extends Menu {
     public boolean onPlayerSlotClick(Player viewer, int slot, ClickType click) {
         MatchFlow flow = match.flow();
         UUID me = viewer.getUniqueId();
-        if (slot == SKIP_SLOT && flow.skipVoteAvailable()) {
+        if ((slot == SKIP_SLOT || slot == SKIP_ITEM_SLOT) && flow.skipVoteAvailable()) {
             if (flow.voteSkip(me)) viewer.playSound(viewer.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
             return true;
         }
-        if (slot >= LOCK_LEFT && slot <= LOCK_RIGHT) {
+        if ((slot >= LOCK_LEFT && slot <= LOCK_RIGHT) || slot == LOCK_ITEM_SLOT) {
             Optional<KitSelection> sel = flow.kitSelection();
             if (sel.isEmpty() || sel.get().lockedBy(me).isPresent()) return true;
             String hovered = sel.get().hoveredBy(me).orElse(null);
@@ -160,6 +167,9 @@ final class KitSelectMenu extends Menu {
                 if (col >= KITS_PER_ROW) break;
                 int slot = CATEGORY_SLOTS[row] + 1 + col++;
                 List<Component> lore = new ArrayList<>();
+                lore.add(dev.tactical.paper.item.ItemLore.tag(cat.displayName().toUpperCase(java.util.Locale.ROOT),
+                        TextColor.color(cat.color())));
+                lore.add(Component.empty());
                 if (!def.description().isEmpty()) lore.add(Component.text(def.description(), NamedTextColor.GRAY));
                 String state;
                 boolean glow = false;
@@ -196,7 +206,9 @@ final class KitSelectMenu extends Menu {
                     default -> NamedTextColor.WHITE;
                 };
                 final String id = kitId;
-                view.set(slot, icons.kit(def, state, Component.text(def.name(), nameColor), lore, glow), click -> {
+                view.set(slot, icons.kit(def, state, Component.text(def.name(), nameColor).decoration(
+                        net.kyori.adventure.text.format.TextDecoration.ITALIC, false), lore.stream().map(c -> c.decoration(
+                        net.kyori.adventure.text.format.TextDecoration.ITALIC, false)).toList(), glow), click -> {
                     if (locked != null) return;
                     if (click == ClickType.RIGHT || click == ClickType.SHIFT_RIGHT || id.equals(sel.hoveredBy(me).orElse(null))) {
                         feedback(viewer, flow.lockKit(me, id), true);
@@ -220,21 +232,19 @@ final class KitSelectMenu extends Menu {
         MatchFlow flow = match.flow();
         ItemStack skip = null;
         if (flow.skipVoteAvailable()) {
-            boolean voted = flow.hasVotedSkip(me);
-            TeamId myTeam = match.member(me).map(MatchMember::team).orElse(TeamId.A);
-            skip = icons.icon(voted ? "kit.skip_voted" : "kit.skip",
-                    Component.text(voted ? "You voted to skip" : "Vote to skip the break", NamedTextColor.AQUA), List.of(
-                            Component.text("Your team: " + (flow.teamAgreesToSkip(myTeam) ? "agrees" : "not yet"), NamedTextColor.GRAY),
-                            Component.text("Enemy team: " + (flow.teamAgreesToSkip(myTeam.other()) ? "agrees" : "not yet"), NamedTextColor.GRAY),
-                            Component.text("Starts early once everyone is locked and both teams agree.", NamedTextColor.DARK_GRAY)));
+            skip = new ItemStack(Material.PAPER);
+            skip.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key("tactical",
+                    flow.hasVotedSkip(me) ? "kit_skip_pressed" : "kit_skip"));
+            skip.setData(DataComponentTypes.TOOLTIP_DISPLAY,
+                    io.papermc.paper.datacomponent.item.TooltipDisplay.tooltipDisplay().hideTooltip(true).build());
         }
-        setIfChanged(inv, SKIP_SLOT, skip);
+        setIfChanged(inv, SKIP_ITEM_SLOT, skip);
         ItemStack lock = new ItemStack(Material.PAPER);
         lock.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key(
                 sel.lockedBy(me).isPresent() ? PackBuilder.MODEL_KIT_LOCKED : PackBuilder.MODEL_KIT_LOCK_IN));
         lock.setData(DataComponentTypes.TOOLTIP_DISPLAY,
                 io.papermc.paper.datacomponent.item.TooltipDisplay.tooltipDisplay().hideTooltip(true).build());
-        setIfChanged(inv, LOCK_SLOT, lock);
+        setIfChanged(inv, LOCK_ITEM_SLOT, lock);
     }
 
     private static final org.bukkit.NamespacedKey DISPLAY_KEY = new org.bukkit.NamespacedKey("tactical", "menu_display");
@@ -278,7 +288,12 @@ final class KitSelectMenu extends Menu {
             else if (h != null) lore.add(Component.text("Selecting: " + kitName(h), NamedTextColor.YELLOW));
             else lore.add(Component.text("Choosing...", NamedTextColor.GRAY));
             if (m.virtual()) lore.add(Component.text("(virtual test player)", NamedTextColor.DARK_GRAY));
-            out[i++] = icons.head(m.uuid(), m.name(), !m.virtual(), Component.text(m.name(), color), lore);
+            // Once a player picks a kit, their slot shows that kit's logo instead of their head.
+            String pick = l != null ? l : h;
+            KitDefinition picked = pick == null ? null : config.kits().get(pick);
+            out[i++] = picked != null
+                    ? icons.kit(picked, "available", Component.text(m.name(), color), lore, false)
+                    : icons.head(m.uuid(), m.name(), !m.virtual(), Component.text(m.name(), color), lore);
         }
         return out;
     }

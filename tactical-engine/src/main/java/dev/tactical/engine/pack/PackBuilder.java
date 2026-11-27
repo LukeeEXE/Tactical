@@ -367,7 +367,7 @@ public final class PackBuilder {
     /** Characters of the {@code tactical:gui_shop} font (custom shop screen drawn through the container title). */
     public static final char GUI_SHOP_HEADER = '\uED00', GUI_SHOP_BODY = '\uED01', GUI_SHOP_FOOTER = '\uED02', GUI_SHOP_ICON = '\uED03';
     /** Kit menu: header 176x31 at y -17, body 164x162 at (6, 16), footer 176x65 at y 174 (same font as the shop). */
-    public static final char GUI_KIT_HEADER = '\uED10', GUI_KIT_BODY = '\uED11', GUI_KIT_FOOTER = '\uED12';
+    public static final char GUI_KIT_HEADER = '\uED10', GUI_KIT_BODY = '\uED11', GUI_KIT_FOOTER = '\uED12', GUI_KIT_ICON = '\uED13';
 
     /**
      * PLANTING / DEFUSING widget on the time's boss bar (whose text line is 19 px below the first one): box rows
@@ -376,6 +376,9 @@ public final class PackBuilder {
     public static final int PROGRESS_ASCENT = 12, PROGRESS_BAR_ASCENT = 2;
 
     /** Kit logos shipped with the plugin: item model {@code tactical:kit_icon_<id>} (kits/<id>.yml icon.model). */
+    /** Kit menu buttons: drawn this many px below their slot (3rd inventory row -> hotbar row). */
+    public static final int KIT_BUTTON_DROP = 22;
+
     public static final List<String> BUNDLED_KIT_ICONS = List.of("bruiser", "tactician", "initiator", "marksman", "recon",
             "medic", "specialist");
 
@@ -402,12 +405,12 @@ public final class PackBuilder {
         for (G g : List.of(new G("shop_header", GUI_SHOP_HEADER, 30, 31), new G("shop_body", GUI_SHOP_BODY, -1, 120),
                 new G("shop_footer", GUI_SHOP_FOOTER, -121, 88), new G("shop_icon", GUI_SHOP_ICON, 24, 24),
                 new G("kit_header", GUI_KIT_HEADER, 30, 31), new G("kit_body", GUI_KIT_BODY, -3, 162),
-                new G("kit_footer", GUI_KIT_FOOTER, -161, 65))) {
+                new G("kit_footer", GUI_KIT_FOOTER, -161, 65), new G("kit_icon", GUI_KIT_ICON, 24, 24))) {
             byte[] png = bundled("pack/gui/" + g.name() + ".png");
-            if (g.name().equals("shop_icon")) { // icon on a 16x24 canvas (a glyph may not rise above its height)
+            if (g.name().equals("shop_icon") || g.name().equals("kit_icon")) { // icon on a 16x24 canvas (a glyph may not rise above its height)
                 java.awt.image.BufferedImage src = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(png));
                 java.awt.image.BufferedImage tall = new java.awt.image.BufferedImage(16, 24, java.awt.image.BufferedImage.TYPE_INT_ARGB);
-                int top = src.getHeight(); // first row with ink: the icon is placed by its ink, not its empty margin
+                int top = g.name().equals("kit_icon") ? 0 : src.getHeight(); // shop: placed by its ink, not its empty margin
                 for (int y = 0; y < src.getHeight() && top == src.getHeight(); y++) {
                     for (int x = 0; x < src.getWidth(); x++) if ((src.getRGB(x, y) >>> 24) != 0) { top = y; break; }
                 }
@@ -438,9 +441,24 @@ public final class PackBuilder {
         flatIcon(files, "shop_confirm", bundled("pack/gui/shop_confirm.png"));
         // Kit menu: category icons and the lock button (lock in / locked), drawn from hotbar slot 5 over the footer's recess.
         for (String c : List.of("defense", "damage", "support")) menuItem(files, "kit_" + c, bundled("pack/gui/kit_" + c + ".png"), null);
-        for (String k : BUNDLED_KIT_ICONS) menuItem(files, "kit_icon_" + k, bundled("pack/kits/" + k + ".png"), null);
-        flatIcon(files, "kit_lock_in", bundled("pack/gui/kit_lock_in.png"));
-        flatIcon(files, "kit_locked", bundled("pack/gui/kit_locked.png"));
+        for (String k : BUNDLED_KIT_ICONS) {
+            byte[] icon = bundled("pack/kits/" + k + ".png");
+            menuItem(files, "kit_icon_" + k, icon, null);
+            menuItem(files, "kit_icon_" + k + "_gray", KitIconVariants.gray(icon), null);       // taken / not available
+            menuItem(files, "kit_icon_" + k + "_selected", KitIconVariants.selected(icon), null); // grey shine, animated
+            files.put("assets/tactical/textures/item/kit_icon_" + k + "_selected.png.mcmeta", KitIconVariants.SELECTED_MCMETA);
+        }
+        // The kit menu's own buttons live in the 3rd inventory row (hidden under the footer) and are drawn 22 px lower,
+        // onto the footer's recesses over the hotbar row, so the in-game hotbar never shows them.
+        flatIcon(files, "kit_lock_in", bundled("pack/gui/kit_lock_in.png"), KIT_BUTTON_DROP);
+        flatIcon(files, "kit_locked", bundled("pack/gui/kit_locked.png"), KIT_BUTTON_DROP);
+        JsonObject drop = new JsonObject();
+        JsonObject gui = new JsonObject();
+        com.google.gson.JsonArray tr = new com.google.gson.JsonArray(); tr.add(0); tr.add(-KIT_BUTTON_DROP); tr.add(0);
+        gui.add("translation", tr);
+        drop.add("gui", gui);
+        menuItem(files, "kit_skip", bundled("pack/gui/kit_skip.png"), drop, true);
+        menuItem(files, "kit_skip_pressed", bundled("pack/gui/kit_skip_pressed.png"), drop, true);
         menuItem(files, "blank", HudGlyphs.png(new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)), null);
         generateMoneyItem(files);
         // The vanilla chest background is made invisible: the custom screens draw their own.
@@ -539,12 +557,17 @@ public final class PackBuilder {
      * 64x64 texture maps 1:1 to GUI pixels over x/y -24..39 around the slot's top-left (the Blockbench "54x18 icon" parent).
      */
     private static void flatIcon(Map<String, byte[]> files, String id, byte[] texture) {
+        flatIcon(files, id, texture, 0);
+    }
+
+    /** Same, drawn {@code down} GUI pixels lower than its slot (display translation is not scaled: 1 unit = 1 px). */
+    private static void flatIcon(Map<String, byte[]> files, String id, byte[] texture, int down) {
         files.put("assets/tactical/textures/item/" + id + ".png", texture);
         String json = "{\"textures\":{\"texture\":\"tactical:item/" + id + "\",\"particle\":\"tactical:item/" + id + "\"},"
                 + "\"elements\":[{\"from\":[-16,-16,15.9375],\"to\":[32,32,16],\"faces\":{"
                 + "\"north\":{\"uv\":[0,0,16,16],\"texture\":\"#texture\"},\"south\":{\"uv\":[0,0,16,16],\"texture\":\"#texture\"}}}],"
                 + "\"display\":{\"firstperson_lefthand\":{\"scale\":[0.0001,0.0001,0.0001]},"
-                + "\"gui\":{\"translation\":[0,0,0],\"scale\":[1.333,1.333,1]}},\"gui_light\":\"front\"}";
+                + "\"gui\":{\"translation\":[0," + (-down) + ",0],\"scale\":[1.333,1.333,1]}},\"gui_light\":\"front\"}";
         files.put("assets/tactical/models/item/" + id + ".json", json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         JsonObject def = new JsonObject();
         JsonObject m = new JsonObject();
@@ -556,6 +579,10 @@ public final class PackBuilder {
     }
 
     private static void menuItem(Map<String, byte[]> files, String id, byte[] texture, JsonObject display) {
+        menuItem(files, id, texture, display, false);
+    }
+
+    private static void menuItem(Map<String, byte[]> files, String id, byte[] texture, JsonObject display, boolean oversized) {
         files.put("assets/tactical/textures/item/" + id + ".png", texture);
         JsonObject model = new JsonObject();
         model.addProperty("parent", "minecraft:item/generated");
@@ -569,6 +596,7 @@ public final class PackBuilder {
         m.addProperty("type", "minecraft:model");
         m.addProperty("model", "tactical:item/" + id);
         def.add("model", m);
+        if (oversized) def.addProperty("oversized_in_gui", true);
         files.put("assets/tactical/items/" + id + ".json", json(def));
     }
 

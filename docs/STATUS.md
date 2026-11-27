@@ -330,3 +330,17 @@ All positions are estimates and need a client check; every value is adjustable i
 | Request | Change | Status |
 |---|---|---|
 | Replace all kits | Bruiser, Tactician (Defense), Initiator, Marksman, Recon (Damage), Medic, Specialist (Support) with the new icons as item models; placeholder base kit and shop (copied from the old Medic) | ✅ Server-tested: old files backed up and removed, 7 kits loaded and in the match kit pool |
+
+### Kit menu v2
+| Request | Change | Status |
+|---|---|---|
+| LOCK IN showing on the hotbar | The lock and skip items now sit in the 3rd inventory row (hidden under the footer) and their models are drawn 22 px lower onto the hotbar-row recesses; the hotbar itself stays empty | 🟡 needs a client test |
+| New Medic / Specialist / Bruiser logos | Replaced | ✅ |
+| Grey kits | Generated grey logo when a teammate locked the kit or it is not available to you | 🟡 |
+| Selected glow | Animated light-grey shine baked into a "selected" logo (no purple enchantment glint) | 🟡 |
+| Team boxes | A player's slot shows the logo of the kit they selected / locked instead of their head | 🟡 |
+| Category tag | DEFENSE (blue) / DAMAGE (red) / SUPPORT (green) tag in the kit tooltip, same style as item tags | 🟡 |
+| Skip button | New skip / skip pressed textures | 🟡 |
+| Header icon | Player icon in the header box | 🟡 |
+| HUD icons | New kills, deaths, assists (match results), bomb timer icon and team banner | 🟡 |
+| Player head model | Not added: the file only points at models (custom/entities/player/*) that were not included, and uses the pre-1.21.4 "overrides" format the 26.3 client ignores | ❌ needs the model files |

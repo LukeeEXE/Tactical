@@ -19,12 +19,19 @@ public record KitDefinition(String id, String name, String description, boolean 
 
     /** Row of the kit menu the kit is listed in. */
     public enum Category {
-        DEFENSE("Defense"), DAMAGE("Damage"), SUPPORT("Support");
+        DEFENSE("Defense", 0x5B8CE6), DAMAGE("Damage", 0xE05A5A), SUPPORT("Support", 0x5BC46B);
 
         private final String displayName;
+        private final int color;
 
-        Category(String displayName) {
+        Category(String displayName, int color) {
             this.displayName = displayName;
+            this.color = color;
+        }
+
+        /** Tag colour: defense blue, damage red, support green. */
+        public int color() {
+            return color;
         }
 
         public String displayName() {

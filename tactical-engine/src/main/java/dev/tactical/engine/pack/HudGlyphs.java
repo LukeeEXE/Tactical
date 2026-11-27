@@ -130,7 +130,7 @@ public final class HudGlyphs {
                 art("chat_arrow", CHAT_ARROW, Slot.CHAT,
                         "........", "g.......", "g.......", "g.......", "g....g..", "ggggggg.", ".....g..", "........"),
                 image("stat_kills", STAT_KILLS, Slot.CHAT, "pack/hud/stat_kills.png"),
-                image("stat_deaths", STAT_DEATHS, Slot.CHAT, "pack/hud/skull.png"),
+                image("stat_deaths", STAT_DEATHS, Slot.CHAT, "pack/hud/stat_deaths.png"),
                 image("stat_assists", STAT_ASSISTS, Slot.CHAT, "pack/hud/stat_assists.png"),
                 art("stat_damage", STAT_DAMAGE, Slot.CHAT,
                         "........", ".rr.rr..", "rrrrrrr.", "rrrrrrr.", ".rrrrr..", "..rrr...", "...r....", "........"),

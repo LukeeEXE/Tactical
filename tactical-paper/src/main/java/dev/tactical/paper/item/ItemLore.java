@@ -73,12 +73,16 @@ public final class ItemLore {
 
     /** The category tag: Pinch capitals centred on a bordered box (zero net surprises: advance = box width). */
     public static Component tag(ItemCategory category) {
-        String label = category.label();
+        return tag(category.label(), category.color());
+    }
+
+    /** A tag in the same style with any label and box colour (e.g. a kit's category). */
+    public static Component tag(String label, TextColor color) {
         int advance = pinchWidth.applyAsInt(label);
         int box = Math.max(1, advance - 1) + 2 * TAG_PADDING;
         Component text = Component.text(label, TAG_TEXT).font(Key.key("tactical", pinchFont));
         return Component.text()
-                .append(HudShapes.rect(HudGlyphs.TOOLTIP_TAG, box, "hud_tooltip", category.color()))
+                .append(HudShapes.rect(HudGlyphs.TOOLTIP_TAG, box, "hud_tooltip", color))
                 .append(TextOffsets.space(-box + TAG_PADDING)).append(text)
                 .append(TextOffsets.space(box - TAG_PADDING - advance))
                 .build().shadowColor(ShadowColor.none());

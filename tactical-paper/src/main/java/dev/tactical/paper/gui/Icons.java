@@ -95,10 +95,18 @@ public final class Icons {
 
     public ItemStack kit(KitDefinition kit, String state, Component name, List<Component> lore, boolean glow) {
         Material m = material(kit.iconMaterial(), Material.IRON_SWORD);
-        ItemStack item = build(m, name, lore, List.of("tactical:kit/" + kit.id(), "state:" + state), glow);
-        if (kit.iconModel() != null && !kit.iconModel().isBlank()) {
-            item.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key(kit.iconModel()));
-        }
+        String model = kit.iconModel();
+        boolean logo = model != null && !model.isBlank();
+        // Bundled logos have generated variants: grey when taken / not available, an animated grey shine when picked
+        // (instead of the enchantment glint).
+        boolean variants = logo && model.startsWith("tactical:kit_icon_");
+        String suffix = !variants ? "" : switch (state) {
+            case "taken", "unavailable" -> "_gray";
+            case "selected", "locked" -> "_selected";
+            default -> "";
+        };
+        ItemStack item = build(m, name, lore, List.of("tactical:kit/" + kit.id(), "state:" + state), glow && !variants);
+        if (logo) item.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key(model + suffix));
         return item;
     }
 
