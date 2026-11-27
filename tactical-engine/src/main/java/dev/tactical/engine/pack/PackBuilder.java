@@ -444,7 +444,8 @@ public final class PackBuilder {
         for (String k : BUNDLED_KIT_ICONS) {
             byte[] icon = bundled("pack/kits/" + k + ".png");
             menuItem(files, "kit_icon_" + k, icon, null);
-            menuItem(files, "kit_icon_" + k + "_gray", KitIconVariants.gray(icon), null);       // taken / not available
+            menuItem(files, "kit_icon_" + k + "_gray", KitIconVariants.gray(icon), null);       // not available to you
+            menuItem(files, "kit_icon_" + k + "_locked", bundled("pack/kits/locked_" + k + ".png"), null); // locked by a teammate
             menuItem(files, "kit_icon_" + k + "_selected", KitIconVariants.selected(icon), null); // grey shine, animated
             files.put("assets/tactical/textures/item/kit_icon_" + k + "_selected.png.mcmeta", KitIconVariants.SELECTED_MCMETA);
         }

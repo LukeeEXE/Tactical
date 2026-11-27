@@ -72,9 +72,21 @@ public final class BombController {
     private UUID carrier;
     private Location carrierLast;
     private Location dropped;
-    private ItemDisplay droppedDisplay;
-    /** Glowing copies, visible only to the attacking team (the plain ones are shown to everyone else). */
-    private ItemDisplay droppedGlow;
+    /**
+     * The bomb on the ground: a real dropped item, frozen (no gravity, never picked up or merged by the game; pickup is
+     * handled here). Two copies: the glowing one is shown only to the attacking team, the plain one to everyone else.
+     */
+    private org.bukkit.entity.Item droppedDisplay;
+    private org.bukkit.entity.Item droppedGlow;
+    /** Name label above the dropped bomb (billboard centre). */
+    private org.bukkit.entity.TextDisplay droppedLabel;
+    /** Last place the carrier stood on solid ground well inside the map: where an out-of-bounds bomb ends up. */
+    private Location lastSafe;
+    private final dev.tactical.engine.geo.Region bounds;
+    private final int voidY;
+    /** How far inside the map border a rescued bomb must lie. */
+    private static final double BORDER_MARGIN = 1.5;
+    /** Glowing copy of the planted bomb, visible only to the attacking team. */
     private ItemDisplay plantedGlow;
     private Location planted;
     private ItemDisplay plantedDisplay;
@@ -87,8 +99,11 @@ public final class BombController {
     /** Where the bomb lies on the ground at the start of every round (the map's bomb spawn). */
     private final Location spawn;
 
-    BombController(GameMatch match, World world, Map<String, BombSite> sites, NamespacedKey itemKey, Location spawn) {
+    BombController(GameMatch match, World world, Map<String, BombSite> sites, NamespacedKey itemKey, Location spawn,
+                   dev.tactical.engine.geo.Region bounds, int voidY) {
         this.spawn = spawn;
+        this.bounds = bounds;
+        this.voidY = voidY;
         this.match = match;
         this.flow = match.flow();
         this.world = world;
@@ -130,6 +145,7 @@ public final class BombController {
         removeEntities();
         carrier = null;
         dropped = null;
+        lastSafe = null;
         planted = null;
         plant = new PlantProgress(mode.plantTicks());
         defuse = null;
@@ -152,8 +168,10 @@ public final class BombController {
     private void removeDropped() {
         if (droppedDisplay != null) droppedDisplay.remove();
         if (droppedGlow != null) droppedGlow.remove();
+        if (droppedLabel != null) droppedLabel.remove();
         droppedDisplay = null;
         droppedGlow = null;
+        droppedLabel = null;
     }
 
     private void removePlanted() {
@@ -184,10 +202,10 @@ public final class BombController {
         dev.tactical.engine.team.TeamId attackers = flow.teamOn(dev.tactical.engine.team.Side.ATTACKERS);
         for (Player p : world.getPlayers()) {
             boolean attacker = match.member(p.getUniqueId()).map(m -> m.team() == attackers).orElse(false);
-            for (ItemDisplay[] pair : new ItemDisplay[][]{{droppedDisplay, droppedGlow}, {plantedDisplay, plantedGlow}}) {
+            for (org.bukkit.entity.Entity[] pair : new org.bukkit.entity.Entity[][]{{droppedDisplay, droppedGlow}, {plantedDisplay, plantedGlow}}) {
                 if (pair[0] == null || pair[1] == null) continue;
-                ItemDisplay shown = attacker ? pair[1] : pair[0];
-                ItemDisplay hidden = attacker ? pair[0] : pair[1];
+                org.bukkit.entity.Entity shown = attacker ? pair[1] : pair[0];
+                org.bukkit.entity.Entity hidden = attacker ? pair[0] : pair[1];
                 if (!p.canSee(shown)) p.showEntity(plugin, shown);
                 if (p.canSee(hidden)) p.hideEntity(plugin, hidden);
             }
@@ -205,6 +223,7 @@ public final class BombController {
             if (existing != null && !existing.getType().isAir()) p.getInventory().addItem(existing);
             p.getInventory().setItem(BOMB_SLOT, createItem());
             carrierLast = p.getLocation();
+            if (dropped == null && safeGround(groundBelow(p.getLocation()))) lastSafe = p.getLocation();
             p.playSound(p.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 0.8f);
         }
         match.recorder().record(reason.equals("assigned") ? EventTypes.BOMB_ASSIGN : EventTypes.BOMB_PICKUP, List.of(id),
@@ -252,15 +271,61 @@ public final class BombController {
 
     private void dropAt(Location at, UUID by, String reason) {
         Location ground = groundBelow(at);
+        if (!safeGround(ground)) {
+            // Out of bounds, over the void or with nothing under it: it would be lost. Put it back where the carrier last
+            // stood safely (at least BORDER_MARGIN inside the border), or at the bomb spawn.
+            Location fallback = lastSafe != null ? groundBelow(lastSafe) : null;
+            ground = fallback != null && safeGround(fallback) ? fallback : groundBelow(spawn);
+            reason = reason + "_rescued";
+        }
         dropped = ground;
         removeDropped();
-        droppedDisplay = bombDisplay(ground.clone().add(0, 0.25, 0), 0.5f, false);
-        droppedGlow = bombDisplay(ground.clone().add(0, 0.25, 0), 0.5f, true);
+        Location itemAt = ground.clone().add(0, 0.05, 0);
+        droppedDisplay = droppedItem(itemAt, false);
+        droppedGlow = droppedItem(itemAt, true);
+        droppedLabel = world.spawn(ground.clone().add(0, 0.85, 0), org.bukkit.entity.TextDisplay.class, t -> {
+            t.text(Component.text("Bomb", NamedTextColor.RED));
+            t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+            t.setPersistent(false);
+            t.setShadowed(true);
+            t.setDefaultBackground(false);
+            t.setBackgroundColor(Color.fromARGB(0x40000000));
+        });
         syncGlow();
         Map<String, Object> data = loc(ground);
         data.put("reason", reason);
         match.recorder().record(EventTypes.BOMB_DROP, by == null ? List.of() : List.of(by),
                 by == null ? null : match.member(by).map(m -> m.team()).orElse(null), data);
+    }
+
+    /** A frozen dropped bomb item: no gravity, no despawn, never picked up or merged by the game. */
+    private org.bukkit.entity.Item droppedItem(Location at, boolean glow) {
+        return world.dropItem(at, createItem(), i -> {
+            i.setGravity(false);
+            i.setVelocity(new org.bukkit.util.Vector());
+            i.setPickupDelay(Integer.MAX_VALUE); // 32767 = never: also stops merging
+            i.setUnlimitedLifetime(true);
+            i.setCanMobPickup(false);
+            i.setInvulnerable(true);
+            i.setPersistent(false);
+            i.setVisibleByDefault(false);
+            if (glow) i.setGlowing(true);
+        });
+    }
+
+    /** Ground (as returned by groundBelow) that is solid, above the void and at least BORDER_MARGIN inside the bounds. */
+    private boolean safeGround(Location g) {
+        if (g == null || g.getY() <= voidY + 1) return false;
+        if (world.getBlockAt(g.getBlockX(), g.getBlockY() - 1, g.getBlockZ()).isPassable()) return false;
+        return insideBorder(g);
+    }
+
+    private boolean insideBorder(Location l) {
+        if (bounds == null) return true;
+        double m = BORDER_MARGIN;
+        return l.getX() >= bounds.min().x() + m && l.getX() <= bounds.max().x() + 1 - m
+                && l.getZ() >= bounds.min().z() + m && l.getZ() <= bounds.max().z() + 1 - m
+                && l.getY() >= bounds.min().y() && l.getY() <= bounds.max().y() + 1;
     }
 
     // ------------------------------------------------------------------ per tick
@@ -284,6 +349,10 @@ public final class BombController {
                 match.bus().publish(new dev.tactical.paper.match.MatchEvents.BombBeep());
             }
         }
+        if (dropped != null && carrier == null && ticks % 10 == 0) {
+            // pulsing critical-hit sparks on the dropped bomb
+            world.spawnParticle(org.bukkit.Particle.CRIT, dropped.clone().add(0, 0.35, 0), 6, 0.15, 0.15, 0.15, 0.12);
+        }
         for (Player p : world.getPlayers()) lastPositions.put(p.getUniqueId(), p.getLocation());
         if (ticks % 10 == 0) syncGlow(); // newcomers, reconnects, spectators
     }
@@ -298,6 +367,7 @@ public final class BombController {
         }
         if (p == null) return; // virtual carrier
         carrierLast = p.getLocation();
+        if (onGround(p) && safeGround(groundBelow(p.getLocation()))) lastSafe = p.getLocation();
         if (!hasBombItem(p)) p.getInventory().addItem(createItem()); // restore if something removed it
         boolean holding = s == MatchState.ROUND_LIVE && p.isHandRaised() && isBombItem(p.getActiveItem());
         Optional<BombSite> site = siteAt(p.getLocation());

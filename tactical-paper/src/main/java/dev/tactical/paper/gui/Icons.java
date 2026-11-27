@@ -97,11 +97,12 @@ public final class Icons {
         Material m = material(kit.iconMaterial(), Material.IRON_SWORD);
         String model = kit.iconModel();
         boolean logo = model != null && !model.isBlank();
-        // Bundled logos have generated variants: grey when taken / not available, an animated grey shine when picked
+        // Bundled logos have variants: the locked art when a teammate locked it, generated grey when not available, an animated grey shine when picked
         // (instead of the enchantment glint).
         boolean variants = logo && model.startsWith("tactical:kit_icon_");
         String suffix = !variants ? "" : switch (state) {
-            case "taken", "unavailable" -> "_gray";
+            case "taken" -> "_locked";
+            case "unavailable" -> "_gray";
             case "selected", "locked" -> "_selected";
             default -> "";
         };

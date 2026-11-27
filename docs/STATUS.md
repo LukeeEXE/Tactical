@@ -344,3 +344,10 @@ All positions are estimates and need a client check; every value is adjustable i
 | Header icon | Player icon in the header box | 🟡 |
 | HUD icons | New kills, deaths, assists (match results), bomb timer icon and team banner | 🟡 |
 | Player head model | Menu heads use the new display model (face-on, 1.7x) through their own item model `tactical:player_head`; player heads elsewhere keep the vanilla look | 🟡 needs a client test |
+
+### Bomb on the ground, locked kit icons
+| Request | Change | Status |
+|---|---|---|
+| Locked kit icons | A kit locked by a teammate shows its new "locked" art; kits not available to you keep the generated grey | 🟡 needs a client test |
+| Bomb lost out of bounds | A bomb that would land out of bounds, over the void or on nothing (carrier fell / died there, or threw it over the edge) is placed where the carrier last stood on solid ground at least 1.5 blocks inside the border (bomb spawn if there is none); recorded as BOMB_DROP reason `<reason>_rescued` | 🟡 logic only, needs a playtest |
+| Dropped bomb look | A real dropped item (TNT), frozen in place (no gravity, never despawns, never picked up or merged by the game: attackers pick it up by walking over it as before); glowing copy shown only to the attackers; "Bomb" label above it (text display, billboard centre); crit particles pulse on it every 0.5 s. The same at round start (bomb spawn) | ✅ Server-tested: 2 items + label spawn at the bomb spawn |

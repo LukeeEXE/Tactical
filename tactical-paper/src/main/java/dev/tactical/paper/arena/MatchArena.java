@@ -68,7 +68,8 @@ public final class MatchArena {
         dev.tactical.engine.geo.SpawnPoint bombSpawn = map.bombSpawn() != null ? map.bombSpawn()
                 : map.attackerSpawns().isEmpty() ? null : map.attackerSpawns().get(0);
         this.bomb = new BombController(match, world, map.sites(), itemKey,
-                bombSpawn == null ? world.getSpawnLocation() : new Location(world, bombSpawn.x(), bombSpawn.y(), bombSpawn.z()));
+                bombSpawn == null ? world.getSpawnLocation() : new Location(world, bombSpawn.x(), bombSpawn.y(), bombSpawn.z()),
+                map.bounds(), map.voidY());
         this.spectators = new SpectatorController(match);
         this.lobby = lobby;
         this.equipper = equipper;
