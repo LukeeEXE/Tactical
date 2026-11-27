@@ -343,4 +343,4 @@ All positions are estimates and need a client check; every value is adjustable i
 | Skip button | New skip / skip pressed textures | 🟡 |
 | Header icon | Player icon in the header box | 🟡 |
 | HUD icons | New kills, deaths, assists (match results), bomb timer icon and team banner | 🟡 |
-| Player head model | Not added: the file only points at models (custom/entities/player/*) that were not included, and uses the pre-1.21.4 "overrides" format the 26.3 client ignores | ❌ needs the model files |
+| Player head model | Menu heads use the new display model (face-on, 1.7x) through their own item model `tactical:player_head`; player heads elsewhere keep the vanilla look | 🟡 needs a client test |

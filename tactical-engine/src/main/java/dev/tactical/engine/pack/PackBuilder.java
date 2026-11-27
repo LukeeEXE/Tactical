@@ -461,6 +461,13 @@ public final class PackBuilder {
         menuItem(files, "kit_skip_pressed", bundled("pack/gui/kit_skip_pressed.png"), drop, true);
         menuItem(files, "blank", HudGlyphs.png(new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)), null);
         generateMoneyItem(files);
+        // Player heads in menus (tactical:player_head): the vanilla head renderer with the user's display transforms
+        // (face-on, larger). Only items with this item_model change; other player heads keep the vanilla look.
+        files.put("assets/tactical/models/item/player_head.json", bundled("pack/gui/player_head_model.json"));
+        files.put("assets/tactical/items/player_head.json", ("{\"model\":{\"type\":\"minecraft:special\","
+                + "\"base\":\"tactical:item/player_head\",\"model\":{\"type\":\"minecraft:player_head\"},"
+                + "\"transformation\":{\"left_rotation\":[1,0,0,0],\"right_rotation\":[0,0,0,1],"
+                + "\"scale\":[1,1,1],\"translation\":[0.5,0,0.5]}}}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
         // The vanilla chest background is made invisible: the custom screens draw their own.
         files.put("assets/minecraft/textures/gui/container/generic_54.png",
                 HudGlyphs.png(new java.awt.image.BufferedImage(256, 256, java.awt.image.BufferedImage.TYPE_INT_ARGB)));
