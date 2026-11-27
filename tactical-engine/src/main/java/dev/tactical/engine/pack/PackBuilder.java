@@ -616,9 +616,13 @@ public final class PackBuilder {
         // Dust particles (bomb-site ring, editor previews): two supplied shapes, large while young, small when fading.
         files.put("assets/tactical/textures/particle/dust_big.png", bundled("pack/particle/dust_big.png"));
         files.put("assets/tactical/textures/particle/dust_small.png", bundled("pack/particle/dust_small.png"));
-        files.put("assets/minecraft/particles/dust.json", ("{\"textures\":[\"tactical:dust_big\",\"tactical:dust_big\","
+        byte[] dustLook = ("{\"textures\":[\"tactical:dust_big\",\"tactical:dust_big\","
                 + "\"tactical:dust_big\",\"tactical:dust_big\",\"tactical:dust_small\",\"tactical:dust_small\","
-                + "\"tactical:dust_small\",\"tactical:dust_small\"]}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                + "\"tactical:dust_small\",\"tactical:dust_small\"]}").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        files.put("assets/minecraft/particles/dust.json", dustLook);
+        // Potion swirls (active effects) and splash-potion effect particles use the same square dust look (still tinted).
+        files.put("assets/minecraft/particles/entity_effect.json", dustLook);
+        files.put("assets/minecraft/particles/effect.json", dustLook);
         if (!smoothGlow) return;
         // "Smoother Glowing" v1.5.1 (the 26.3 variant, supplied by the server owner): smoother entity glow outlines.
         files.put("assets/minecraft/post_effect/entity_outline.json", bundled("pack/glow/entity_outline.json"));

@@ -167,7 +167,10 @@ public final class BombController {
 
     private void removeDropped() {
         if (droppedDisplay != null) droppedDisplay.remove();
-        if (droppedGlow != null) droppedGlow.remove();
+        if (droppedGlow != null) {
+            redGlowTeam().removeEntry(droppedGlow.getUniqueId().toString());
+            droppedGlow.remove();
+        }
         if (droppedLabel != null) droppedLabel.remove();
         droppedDisplay = null;
         droppedGlow = null;
@@ -309,8 +312,20 @@ public final class BombController {
             i.setInvulnerable(true);
             i.setPersistent(false);
             i.setVisibleByDefault(false);
-            if (glow) i.setGlowing(true);
+            if (glow) {
+                i.setGlowing(true);
+                redGlowTeam().addEntry(i.getUniqueId().toString()); // dropped items glow in their team's colour
+            }
         });
+    }
+
+    /** Main-scoreboard team that only colours the dropped bomb's glow red. */
+    private static org.bukkit.scoreboard.Team redGlowTeam() {
+        org.bukkit.scoreboard.Scoreboard board = Bukkit.getScoreboardManager().getMainScoreboard();
+        org.bukkit.scoreboard.Team t = board.getTeam("tactical_bomb_glow");
+        if (t == null) t = board.registerNewTeam("tactical_bomb_glow");
+        if (!t.hasColor() || t.color() != NamedTextColor.RED) t.color(NamedTextColor.RED);
+        return t;
     }
 
     /** Ground (as returned by groundBelow) that is solid, above the void and at least BORDER_MARGIN inside the bounds. */
