@@ -375,6 +375,10 @@ public final class PackBuilder {
      */
     public static final int PROGRESS_ASCENT = 12, PROGRESS_BAR_ASCENT = 2;
 
+    /** Kit logos shipped with the plugin: item model {@code tactical:kit_icon_<id>} (kits/<id>.yml icon.model). */
+    public static final List<String> BUNDLED_KIT_ICONS = List.of("bruiser", "tactician", "initiator", "marksman", "recon",
+            "medic", "specialist");
+
     /** Item models used by menus: {@code tactical:<id>} via the item_model component. */
     public static final String MODEL_SHOP_CONFIRM = "tactical:shop_confirm", MODEL_KIT_LOCK_IN = "tactical:kit_lock_in",
             MODEL_KIT_LOCKED = "tactical:kit_locked",
@@ -434,6 +438,7 @@ public final class PackBuilder {
         flatIcon(files, "shop_confirm", bundled("pack/gui/shop_confirm.png"));
         // Kit menu: category icons and the lock button (lock in / locked), drawn from hotbar slot 5 over the footer's recess.
         for (String c : List.of("defense", "damage", "support")) menuItem(files, "kit_" + c, bundled("pack/gui/kit_" + c + ".png"), null);
+        for (String k : BUNDLED_KIT_ICONS) menuItem(files, "kit_icon_" + k, bundled("pack/kits/" + k + ".png"), null);
         flatIcon(files, "kit_lock_in", bundled("pack/gui/kit_lock_in.png"));
         flatIcon(files, "kit_locked", bundled("pack/gui/kit_locked.png"));
         menuItem(files, "blank", HudGlyphs.png(new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)), null);

@@ -48,8 +48,8 @@ public final class ConfigService implements Service {
     static final List<String> DEFAULT_FILES = List.of(
             "config.yml",
             "modes/quickplay.yml", "modes/competitive.yml", "modes/test.yml",
-            "kits/vanguard.yml", "kits/sentinel.yml", "kits/phantom.yml",
-            "kits/warden.yml", "kits/striker.yml", "kits/medic.yml",
+            "kits/bruiser.yml", "kits/tactician.yml", "kits/initiator.yml", "kits/marksman.yml",
+            "kits/recon.yml", "kits/medic.yml", "kits/specialist.yml",
             "messages/en_US.yml", "items/shots.yml", "items/healing.yml", "economy/economy.yml", "gui/icons.yml", "hud/hud.yml");
 
     /** Folders created on first start, even if empty, so admins see the layout. */
@@ -280,6 +280,13 @@ public final class ConfigService implements Service {
                         log.warning(name + ": format changed in this version; your old file was backed up to backups/config/ and replaced with the new default");
                         return YamlLoader.parse(fresh, name, report);
                     }
+                }
+                if (kind.equals("kit")) {
+                    // A retired placeholder kit (no longer bundled): put it aside so it stops showing up.
+                    backup(file);
+                    Files.delete(file);
+                    log.warning(name + ": retired placeholder kit removed (backed up to backups/config/)");
+                    return Optional.empty();
                 }
             }
             Map<String, Object> map = YamlLoader.loadMap(text);

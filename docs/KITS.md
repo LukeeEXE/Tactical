@@ -17,6 +17,7 @@ id: medic
 name: "Medic"
 description: "Keeps the team alive."
 category: support      # kit menu row: defense, damage or support (bundled kits default to their own)
+icon: { material: golden_apple, model: "tactical:kit_icon_medic" }   # model = logo from the resource pack
 enabled: true
 icon: { material: golden_apple }
 base-kit:
@@ -67,3 +68,14 @@ The kit selection screen is drawn like the shop (title glyphs + slots on the fra
 - Rows 3-5: one row per `category` (Defense, Damage, Support): the category icon in column 1, up to six kits.
 - Footer: vote to skip in the small square (hotbar slot 2) and the LOCK IN / LOCKED button (hotbar slots 4-6).
 - Your inventory is put aside while the menu is open and given back when it closes.
+
+## Bundled kits (placeholders)
+
+| Kit | Category |
+|---|---|
+| Bruiser, Tactician | Defense |
+| Initiator, Marksman, Recon | Damage |
+| Medic, Specialist | Support |
+
+All use the same placeholder base kit and shop for now. Kit files from older versions (schema 3) are replaced; the
+retired kits (vanguard, sentinel, phantom, warden, striker) are removed after a backup to `backups/config/`.

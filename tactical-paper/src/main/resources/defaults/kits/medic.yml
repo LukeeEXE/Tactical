@@ -7,15 +7,16 @@
 #           Entries: name, price, max (how many a player may carry), and one of
 #             give: { material | item, amount }   enchant: { enchantment, level, applies-to }
 #             absorption: { hearts: 2 | 4 | 6 }  (Absorption I/II/III for the round; model: shop icon item model)
-schema-version: 3
+schema-version: 4
 id: medic
 name: "Medic"
 description: "Keeps the team alive."
 category: support          # kit menu row: defense, damage or support
 enabled: true
-# Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/medic" for a resource-pack logo.
+# Icon: the item model (texture from the bundled resource pack); material is the fallback without the pack.
 icon:
   material: golden_apple
+  model: "tactical:kit_icon_medic"
 base-kit:
   - { slot: 0, material: wooden_sword }
   - { slot: 1, material: wooden_pickaxe }

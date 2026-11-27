@@ -1,4 +1,4 @@
-# Kit "Sentinel". PLACEHOLDER CONTENT: replace the base kit and shop with the real design.
+# Kit "Marksman". PLACEHOLDER CONTENT: replace the base kit and shop with the real design.
 # base-kit: given at the start of EVERY round (not purchases, never lost). slot: 0-8 hotbar, 9-35 inventory,
 #           helmet/chestplate/leggings/boots/offhand, or auto. Each entry: material (vanilla) or item (items/*.yml).
 # shop:     this kit's own shop, the same on every map. Categories and their places in the shop screen:
@@ -7,19 +7,19 @@
 #           Entries: name, price, max (how many a player may carry), and one of
 #             give: { material | item, amount }   enchant: { enchantment, level, applies-to }
 #             absorption: { hearts: 2 | 4 | 6 }  (Absorption I/II/III for the round; model: shop icon item model)
-schema-version: 3
-id: sentinel
-name: "Sentinel"
-description: "Holds sites and angles."
-category: defense          # kit menu row: defense, damage or support
+schema-version: 4
+id: marksman
+name: "Marksman"
+description: "Long-range shooter."
+category: damage          # kit menu row: defense, damage or support
 enabled: true
-# Placeholder icon item; the GUI item also carries custom_model_data "tactical:kit/sentinel" for a resource-pack logo.
+# Icon: the item model (texture from the bundled resource pack); material is the fallback without the pack.
 icon:
-  material: shield
+  material: bow
+  model: "tactical:kit_icon_marksman"
 base-kit:
   - { slot: 0, material: wooden_sword }
   - { slot: 1, material: wooden_pickaxe }
-  - { slot: 2, item: slowness_shot }
 shop:
   melee:
     stone_sword: { name: "Stone Sword", price: 300, max: 1, give: { material: stone_sword } }

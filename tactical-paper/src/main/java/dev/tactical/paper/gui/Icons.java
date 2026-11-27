@@ -95,7 +95,11 @@ public final class Icons {
 
     public ItemStack kit(KitDefinition kit, String state, Component name, List<Component> lore, boolean glow) {
         Material m = material(kit.iconMaterial(), Material.IRON_SWORD);
-        return build(m, name, lore, List.of("tactical:kit/" + kit.id(), "state:" + state), glow);
+        ItemStack item = build(m, name, lore, List.of("tactical:kit/" + kit.id(), "state:" + state), glow);
+        if (kit.iconModel() != null && !kit.iconModel().isBlank()) {
+            item.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key(kit.iconModel()));
+        }
+        return item;
     }
 
     public ItemStack head(UUID player, String playerName, boolean real, Component name, List<Component> lore) {

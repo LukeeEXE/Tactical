@@ -325,3 +325,8 @@ All positions are estimates and need a client check; every value is adjustable i
 | Lock button | One item (flat plane model, like the shop confirm) stretched to fill the 60x22 recess; LOCK IN / LOCKED textures; clicking hotbar slots 4-6 locks the selected kit | 🟡 |
 | Skip | Vote to skip in the square left of the lock button (hotbar slot 2) | 🟡 |
 | Inventory | Put aside while the menu is open, given back on close (items received meanwhile are kept) | 🟡 |
+
+### New kit roster
+| Request | Change | Status |
+|---|---|---|
+| Replace all kits | Bruiser, Tactician (Defense), Initiator, Marksman, Recon (Damage), Medic, Specialist (Support) with the new icons as item models; placeholder base kit and shop (copied from the old Medic) | ✅ Server-tested: old files backed up and removed, 7 kits loaded and in the match kit pool |

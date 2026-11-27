@@ -1,0 +1,43 @@
+# Kit "Recon". PLACEHOLDER CONTENT: replace the base kit and shop with the real design.
+# base-kit: given at the start of EVERY round (not purchases, never lost). slot: 0-8 hotbar, 9-35 inventory,
+#           helmet/chestplate/leggings/boots/offhand, or auto. Each entry: material (vanilla) or item (items/*.yml).
+# shop:     this kit's own shop, the same on every map. Categories and their places in the shop screen:
+#             melee (5, top row), utility (3, middle), ranged (5, bottom row),
+#             absorption (3, right column, top to bottom), arrows (1, bottom right).
+#           Entries: name, price, max (how many a player may carry), and one of
+#             give: { material | item, amount }   enchant: { enchantment, level, applies-to }
+#             absorption: { hearts: 2 | 4 | 6 }  (Absorption I/II/III for the round; model: shop icon item model)
+schema-version: 4
+id: recon
+name: "Recon"
+description: "Finds the enemy first."
+category: damage          # kit menu row: defense, damage or support
+enabled: true
+# Icon: the item model (texture from the bundled resource pack); material is the fallback without the pack.
+icon:
+  material: spyglass
+  model: "tactical:kit_icon_recon"
+base-kit:
+  - { slot: 0, material: wooden_sword }
+  - { slot: 1, material: wooden_pickaxe }
+shop:
+  melee:
+    stone_sword: { name: "Stone Sword", price: 300, max: 1, give: { material: stone_sword } }
+    iron_sword: { name: "Iron Sword", price: 750, max: 1, give: { material: iron_sword } }
+    stone_axe: { name: "Stone Axe", price: 400, max: 1, give: { material: stone_axe } }
+    iron_axe: { name: "Iron Axe", price: 900, max: 1, give: { material: iron_axe } }
+    sharpness: { name: "Sharpness I", price: 800, max: 1, enchant: { enchantment: sharpness, level: 1, applies-to: [wooden_sword, stone_sword, iron_sword, stone_axe, iron_axe] } }
+  utility:
+    speed_shot: { name: "Shot of Speed", price: 200, max: 2, give: { item: speed_shot } }
+    slowness_shot: { name: "Shot of Slowness", price: 250, max: 2, give: { item: slowness_shot } }
+    heal_shot: { name: "Shot of Healing", price: 300, max: 1, give: { item: heal_shot } }
+  ranged:
+    bow: { name: "Bow", price: 500, max: 1, give: { material: bow } }
+    crossbow: { name: "Crossbow", price: 700, max: 1, give: { material: crossbow } }
+    power: { name: "Power I", price: 600, max: 1, enchant: { enchantment: power, level: 1, applies-to: [bow] } }
+  absorption:
+    absorption_1: { name: "2 Absorption Hearts", price: 300, absorption: { hearts: 2 }, model: "tactical:absorption_1" }
+    absorption_2: { name: "4 Absorption Hearts", price: 550, absorption: { hearts: 4 }, model: "tactical:absorption_2" }
+    absorption_3: { name: "6 Absorption Hearts", price: 800, absorption: { hearts: 6 }, model: "tactical:absorption_3" }
+  arrows:
+    arrows: { name: "Arrows x8", price: 100, max: 3, give: { material: arrow, amount: 8 } }

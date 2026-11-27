@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
  * and the kit's own SHOP (the same on every map).
  */
 public record KitDefinition(String id, String name, String description, boolean enabled, String iconMaterial,
-                            Category category, List<KitItem> baseKit, ShopDefinition shop) {
+                            String iconModel, Category category, List<KitItem> baseKit, ShopDefinition shop) {
 
     /** Row of the kit menu the kit is listed in. */
     public enum Category {
@@ -36,8 +36,11 @@ public record KitDefinition(String id, String name, String description, boolean 
         }
     }
 
-    /** 3: shop categories absorption + arrows (older placeholder kit files are replaced by the new defaults, with a backup). */
-    public static final int SCHEMA_VERSION = 3;
+    /**
+     * 4: the new kit roster (older files are replaced by the bundled defaults, or removed if that kit was retired;
+     * either way backed up first).
+     */
+    public static final int SCHEMA_VERSION = 4;
     public static final Pattern ID = Pattern.compile("[a-z0-9_]{1,32}");
 
     /**
@@ -59,6 +62,7 @@ public record KitDefinition(String id, String name, String description, boolean 
         String description = root.string("description", "");
         boolean enabled = root.bool("enabled", true);
         String icon = root.child("icon").string("material", "iron_sword");
+        String iconModel = root.child("icon").has("model") ? root.child("icon").string("model", "") : null;
         Category category = Category.DAMAGE;
         String cat = root.string("category", defaultCategory(id)).toUpperCase(Locale.ROOT);
         try {
@@ -95,14 +99,14 @@ public record KitDefinition(String id, String name, String description, boolean 
         }
         ShopDefinition shop = ShopDefinition.parseKitShop(root.child("shop"), id);
         if (root.report().errors().size() > before) return Optional.empty();
-        return Optional.of(new KitDefinition(id, name, description, enabled, icon, category, List.copyOf(base), shop));
+        return Optional.of(new KitDefinition(id, name, description, enabled, icon, iconModel, category, List.copyOf(base), shop));
     }
 
     /** Category of the bundled kits when their file has no {@code category} yet. */
     private static String defaultCategory(String id) {
         return switch (id) {
-            case "vanguard", "sentinel", "warden" -> "defense";
-            case "medic" -> "support";
+            case "bruiser", "tactician" -> "defense";
+            case "medic", "specialist" -> "support";
             default -> "damage";
         };
     }
