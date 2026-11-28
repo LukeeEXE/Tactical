@@ -364,3 +364,4 @@ All positions are estimates and need a client check; every value is adjustable i
 | Examples | items/utility.yml: cleanse_shot, flash_shot, knockback_shot | ✅ loads |
 | Cleanse frees from cobwebs | Cleansing breaks every cobweb the target's hitbox touches (through the arena block journal, so map cobwebs return at the map reset) | 🟡 needs a playtest |
 | Shot texture | New bottle + liquid textures as item model `tactical:shot` (liquid tinted with the shot colour, like vanilla potions); default for potion shots, `model:` in items/*.yml overrides it | 🟡 needs a client test |
+| Bomb drop animation | Q throws the bomb like a vanilla drop (real item with physics, nobody can pick it up mid-air); where it lands it turns into the frozen dropped bomb (exact spot; out-of-bounds / void throws are rescued as before). Label bobs with the same height and speed as a dropped item; no text shadow | 🟡 label verified on the server, throw needs a playtest |

@@ -78,6 +78,11 @@ public final class BombController {
      */
     private org.bukkit.entity.Item droppedDisplay;
     private org.bukkit.entity.Item droppedGlow;
+    /** The bomb in the air after Q: a real item with vanilla physics; becomes the dropped bomb where it lands. */
+    private org.bukkit.entity.Item thrown;
+    private UUID thrownBy;
+    private long thrownAt;
+    private static final long THROW_MAX_TICKS = 60;
     /** Name label above the dropped bomb (billboard centre). */
     private org.bukkit.entity.TextDisplay droppedLabel;
     /** Last place the carrier stood on solid ground well inside the map: where an out-of-bounds bomb ends up. */
@@ -172,6 +177,8 @@ public final class BombController {
             droppedGlow.remove();
         }
         if (droppedLabel != null) droppedLabel.remove();
+        if (thrown != null) thrown.remove();
+        thrown = null;
         droppedDisplay = null;
         droppedGlow = null;
         droppedLabel = null;
@@ -247,33 +254,73 @@ public final class BombController {
         if (plant != null) plant.interrupt();
         if (at == null) return; // virtual carrier: the bomb simply leaves play with them
         if (reason.equals("dropped") && p != null) {
-            // Thrown a short way forward, and the dropper cannot pick it straight back up.
-            at = throwTarget(p);
+            // Thrown like a vanilla drop; it becomes the dropped bomb where it lands. The dropper cannot pick it
+            // straight back up.
             noPickupUntil.put(id, ticks + DROP_PICKUP_DELAY_TICKS);
+            throwFrom(p);
+            return;
         }
         dropAt(at, id, reason);
     }
 
-    private static final long DROP_PICKUP_DELAY_TICKS = 40;
-    private final Map<UUID, Long> noPickupUntil = new HashMap<>();
-
-    /** Up to 1.5 blocks ahead of the player (horizontally), stopping before walls. */
-    private Location throwTarget(Player p) {
-        Location eye = p.getLocation();
-        org.bukkit.util.Vector dir = eye.getDirection().setY(0);
-        if (dir.lengthSquared() < 1e-6) return eye;
-        dir.normalize();
-        Location best = eye.clone();
-        for (double d = 0.25; d <= 1.5; d += 0.25) {
-            Location t = eye.clone().add(dir.clone().multiply(d));
-            if (!world.getBlockAt(t).isPassable() || !world.getBlockAt(t.clone().add(0, 1, 0)).isPassable()) break;
-            best = t;
-        }
-        return best;
+    /** Vanilla drop motion: 0.3 along the view, +0.1 up, from just below the eyes. */
+    private void throwFrom(Player p) {
+        removeDropped();
+        Location eye = p.getEyeLocation().subtract(0, 0.3, 0);
+        org.bukkit.util.Vector v = eye.getDirection().multiply(0.3).add(new org.bukkit.util.Vector(0, 0.1, 0));
+        thrown = world.dropItem(eye, createItem(), i -> {
+            i.setPickupDelay(Integer.MAX_VALUE);
+            i.setCanMobPickup(false);
+            i.setInvulnerable(true);
+            i.setPersistent(false);
+            i.setVelocity(v);
+        });
+        thrownBy = p.getUniqueId();
+        thrownAt = ticks;
     }
 
+    /** Thrown bomb landed (or flew too long / fell out of the map): turn it into the dropped bomb right there. */
+    private void tickThrown() {
+        if (thrown == null) return;
+        boolean gone = !thrown.isValid();
+        Location at = gone ? null : thrown.getLocation();
+        boolean lost = at != null && (at.getY() < voidY || (bounds != null && !bounds.contains(at.getX(), at.getY(), at.getZ())));
+        if (!gone && !lost && !thrown.isOnGround() && ticks - thrownAt < THROW_MAX_TICKS) return;
+        org.bukkit.entity.Item t = thrown;
+        thrown = null;
+        if (t.isValid()) t.remove();
+        UUID by = thrownBy;
+        thrownBy = null;
+        if (at == null) at = carrierLast != null ? carrierLast : spawn;
+        dropAt(at, by, "dropped", true);
+    }
+
+    private static final long DROP_PICKUP_DELAY_TICKS = 40;
+    /** The label bobs like a dropped item (0.1 * sin(age / 10) + 0.1 blocks), stepped every few ticks and interpolated. */
+    private static final int LABEL_BOB_STEP = 4;
+    private long labelSince;
+
+    private void bobLabel() {
+        if (droppedLabel == null || !droppedLabel.isValid()) return;
+        long age = ticks - labelSince;
+        if (age % LABEL_BOB_STEP != 0) return;
+        float y = (float) (0.1 * Math.sin((age + LABEL_BOB_STEP) / 10.0) + 0.1);
+        droppedLabel.setInterpolationDelay(0);
+        droppedLabel.setTransformation(new Transformation(new Vector3f(0, y, 0), new AxisAngle4f(), new Vector3f(1), new AxisAngle4f()));
+    }
+    private final Map<UUID, Long> noPickupUntil = new HashMap<>();
+
     private void dropAt(Location at, UUID by, String reason) {
+        dropAt(at, by, reason, false);
+    }
+
+    /** {@code exact}: keep the x/z where it landed (a thrown bomb) instead of the block centre. */
+    private void dropAt(Location at, UUID by, String reason, boolean exact) {
         Location ground = groundBelow(at);
+        if (exact) {
+            ground.setX(at.getX());
+            ground.setZ(at.getZ());
+        }
         if (!safeGround(ground)) {
             // Out of bounds, over the void or with nothing under it: it would be lost. Put it back where the carrier last
             // stood safely (at least BORDER_MARGIN inside the border), or at the bomb spawn.
@@ -290,10 +337,13 @@ public final class BombController {
             t.text(Component.text("Bomb", NamedTextColor.RED));
             t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
             t.setPersistent(false);
-            t.setShadowed(true);
+            t.setShadowed(false);
             t.setDefaultBackground(false);
             t.setBackgroundColor(Color.fromARGB(0x40000000));
+            t.setInterpolationDuration(LABEL_BOB_STEP);
+            t.setTeleportDuration(0);
         });
+        labelSince = ticks;
         syncGlow();
         Map<String, Object> data = loc(ground);
         data.put("reason", reason);
@@ -364,6 +414,8 @@ public final class BombController {
                 match.bus().publish(new dev.tactical.paper.match.MatchEvents.BombBeep());
             }
         }
+        tickThrown();
+        bobLabel();
         if (dropped != null && carrier == null && ticks % 10 == 0) {
             // pulsing critical-hit sparks on the dropped bomb
             world.spawnParticle(org.bukkit.Particle.CRIT, dropped.clone().add(0, 0.35, 0), 6, 0.15, 0.15, 0.15, 0.12);
