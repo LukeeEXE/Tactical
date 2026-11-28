@@ -54,6 +54,8 @@ public final class HudGlyphs {
     public static final char BAR_SKULL = '\uE223';
     /** Mouse icons for item lore usage lines ("Right-Click to Use"). */
     public static final char MOUSE_LEFT = '\uE224', MOUSE_RIGHT = '\uE225';
+    /** Clickable 49x7 chat buttons (forfeit vote). */
+    public static final char CHAT_ACCEPT = '\uE226', CHAT_REJECT = '\uE227';
     public static final char MONEY_PANEL = '\uE240', MONEY_COIN = '\uE241';
     /** Plant/defuse progress segments (2x7): empty, half, full. */
     public static final char PLANT_EMPTY = '\uE720', PLANT_HALF = '\uE721', PLANT_FULL = '\uE722', PLANT_MARK = '\uE723';
@@ -121,6 +123,8 @@ public final class HudGlyphs {
                 art("chat_timer", CHAT_TIMER, Slot.CHAT,
                         "kkkkkkkk", ".kyyyyk.", "..kyyk..", "...kk...", "...kk...", "..k..k..", ".kyyyyk.", "kkkkkkkk"),
                 image("chat_warning", CHAT_WARNING, Slot.CHAT, "pack/hud/warning.png"),
+                image("chat_accept", CHAT_ACCEPT, Slot.CHAT, "pack/hud/accept.png"),
+                image("chat_reject", CHAT_REJECT, Slot.CHAT, "pack/hud/reject.png"),
                 art("chat_coin", CHAT_COIN, Slot.CHAT,
                         "..kkkk..", ".kyyyyk.", "kyywyyok", "kywyyyok", "kyyyyyok", "kyyyyook", ".kooook.", "..kkkk.."),
                 art("chat_kit", CHAT_KIT, Slot.CHAT,

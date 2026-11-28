@@ -120,6 +120,12 @@ public final class GameCommand {
                                         .executes(ctx -> withTestMatch(ctx, m -> eliminate(ctx, m)))))))
                 .then(Commands.literal("plant").then(matchArg()
                         .executes(ctx -> withTestMatch(ctx, m -> plant(ctx, m)))))
+                .then(Commands.literal("forfeit").then(matchArg()
+                        .executes(ctx -> withTestMatch(ctx, m -> {
+                            boolean ok = m.flow().forfeit(dev.tactical.engine.team.TeamId.A);
+                            reply(ctx, ok ? "Team A forfeited." : "This match cannot be forfeited now.", ok ? NamedTextColor.GREEN : NamedTextColor.RED);
+                            return ok ? 1 : 0;
+                        }))))
                 .then(Commands.literal("defuse").then(matchArg()
                         .executes(ctx -> withTestMatch(ctx, m -> defuse(ctx, m)))))
                 .then(Commands.literal("heads").executes(ctx -> {

@@ -9,6 +9,6 @@ public enum MatchEndReason {
     ERROR,
     /** Server restarted and the match could not be resumed. */
     INTERRUPTED,
-    /** A team had no connected players for longer than the forfeit window. */
+    /** A team forfeited: it voted to give up, or had no connected players for longer than the forfeit window. */
     FORFEIT
 }

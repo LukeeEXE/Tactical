@@ -366,3 +366,10 @@ All positions are estimates and need a client check; every value is adjustable i
 | Shot texture | New bottle + liquid textures as item model `tactical:shot` (liquid tinted with the shot colour, like vanilla potions); default for potion shots, `model:` in items/*.yml overrides it | 🟡 needs a client test |
 | Bomb drop animation | Q throws the bomb like a vanilla drop (real item with physics, nobody can pick it up mid-air); where it lands it turns into the frozen dropped bomb (exact spot; out-of-bounds / void throws are rescued as before). Label bobs with the same height and speed as a dropped item; no text shadow | 🟡 label verified on the server, throw needs a playtest |
 | Pickup labels | Map pickups get the same name label (item name, "x2" for stacks; billboard centre, no shadow) and pulsing crit sparks; the label follows the item and disappears when it is picked up. Bomb label no longer bobs | ✅ Server-tested (label on the golden apple pickup) |
+
+### Forfeit, skip at match start, 90 s kit selection
+| Request | Change | Status |
+|---|---|---|
+| Skip button in the bottom-left slot | The skip vote now also exists in the first kit selection, so the button is always there while picking; every kit selection starts early only when everyone is locked AND both teams voted to skip | 🟡 needs a client test |
+| 90 s kit selection and halftime | Defaults kit-select 90, halftime 90; modes/*.yml schema 2 (files still on the old 30 / 60 are moved to 90; customised values stay; the migration rewrites the file without its comments, original backed up) | ✅ Server-tested |
+| /forfeit | Team vote: the starter accepts automatically, every other connected teammate gets ACCEPT / REJECT pixel buttons in chat; "A teammate has accepted to forfeit (n/total)" without names; one REJECT cancels; no full yes after 20 s cancels; all yes = the other team wins (end reason FORFEIT). Works in every phase from kit selection to halftime. Admin test: /game debug forfeit <match> | ✅ engine + server-tested forfeit; chat buttons need a client test |

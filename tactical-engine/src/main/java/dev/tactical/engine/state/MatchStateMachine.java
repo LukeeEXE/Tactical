@@ -19,13 +19,13 @@ public final class MatchStateMachine {
     static {
         allow(CREATED, LOADING, ABORTED);
         allow(LOADING, KIT_SELECT, ABORTED);
-        allow(KIT_SELECT, BUY_PHASE, ABORTED);
-        allow(BUY_PHASE, ROUND_LIVE, ROUND_END, ABORTED); // ROUND_END: admin force-end during buy
-        allow(ROUND_LIVE, BOMB_PLANTED, ROUND_END, ABORTED);
-        allow(BOMB_PLANTED, ROUND_END, ABORTED);
+        allow(KIT_SELECT, BUY_PHASE, MATCH_END, ABORTED); // MATCH_END: a team forfeits
+        allow(BUY_PHASE, ROUND_LIVE, ROUND_END, MATCH_END, ABORTED); // ROUND_END: admin force-end during buy
+        allow(ROUND_LIVE, BOMB_PLANTED, ROUND_END, MATCH_END, ABORTED);
+        allow(BOMB_PLANTED, ROUND_END, MATCH_END, ABORTED);
         allow(ROUND_END, BUY_PHASE, HALFTIME, SUDDEN_DEATH_KIT_SELECT, MATCH_END, ABORTED);
-        allow(HALFTIME, BUY_PHASE, ABORTED);
-        allow(SUDDEN_DEATH_KIT_SELECT, BUY_PHASE, ABORTED);
+        allow(HALFTIME, BUY_PHASE, MATCH_END, ABORTED);
+        allow(SUDDEN_DEATH_KIT_SELECT, BUY_PHASE, MATCH_END, ABORTED);
         allow(MATCH_END, POSTGAME, CLEANUP, ABORTED);
         allow(POSTGAME, CLEANUP, ABORTED);
         allow(ABORTED, CLEANUP);

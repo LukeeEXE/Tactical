@@ -1,6 +1,6 @@
 # Game mode rules. Durations are in SECONDS (decimals allowed).
 # Changes apply to matches created AFTER '/game reload modes'; running matches keep their snapshot.
-schema-version: 1
+schema-version: 2
 id: quickplay
 display-name: "<aqua>Quickplay"
 team-size: 5
@@ -17,7 +17,7 @@ skip-vote: majority
 # Whether results count for stats, XP and leaderboards.
 ranked: true
 timers:
-  kit-select: 30
+  kit-select: 90
   buy-phase: 30
   round: 100
   bomb: 45
@@ -25,7 +25,7 @@ timers:
   defuse: 10
   defuse-checkpoint: 5
   round-end: 5
-  halftime: 60
+  halftime: 90
   sudden-death-kit-select: 20
   postgame: 15
 bomb:

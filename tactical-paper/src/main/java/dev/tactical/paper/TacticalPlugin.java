@@ -97,8 +97,11 @@ public final class TacticalPlugin extends JavaPlugin {
         MapCommands mapCommands = new MapCommands(maps, editor, config, audit, lobby, tasks);
         GameCommand command = new GameCommand(config, matches, recorders, audit, messages, tasks, getPluginMeta().getVersion(),
                 maps, List.of(mapCommands::attach, new PackCommands(pack, audit, tasks)::attach, items::attach));
-        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS,
-                event -> event.registrar().register(command.build(), "Tactical shooter commands", List.of("tactical")));
+        dev.tactical.paper.match.ForfeitService forfeit = new dev.tactical.paper.match.ForfeitService(this, matches);
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            event.registrar().register(command.build(), "Tactical shooter commands", List.of("tactical"));
+            event.registrar().register(forfeit.build(), "Vote with your team to forfeit the match");
+        });
         getLogger().info("Tactical enabled in " + (System.currentTimeMillis() - start) + " ms");
     }
 

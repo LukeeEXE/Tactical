@@ -11,7 +11,25 @@ import java.util.Optional;
 /** Parses {@code modes/<id>.yml}. Durations are written in SECONDS in YAML and converted to ticks. */
 public final class ModeRulesParser {
 
-    public static final int SCHEMA_VERSION = 1;
+    /** 2: kit selection and halftime default to 90 s (files still on the old defaults are moved to them). */
+    public static final int SCHEMA_VERSION = 2;
+
+    /** Migrations for {@code modes/*.yml}: 1 -> 2 raises kit-select 30 -> 90 and halftime 60 -> 90 (customised values stay). */
+    public static final java.util.List<ConfigMigration> MIGRATIONS = java.util.List.of(new ConfigMigration() {
+        @Override
+        public int fromVersion() {
+            return 1;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public void migrate(java.util.Map<String, Object> root) {
+            if (!(root.get("timers") instanceof java.util.Map<?, ?> t)) return;
+            java.util.Map<String, Object> timers = (java.util.Map<String, Object>) t;
+            if (timers.get("kit-select") instanceof Number n && n.doubleValue() == 30) timers.put("kit-select", 90);
+            if (timers.get("halftime") instanceof Number n && n.doubleValue() == 60) timers.put("halftime", 90);
+        }
+    });
 
     private static final List<String> TOP_KEYS = List.of("schema-version", "id", "display-name", "team-size",
             "rounds-to-win", "halftime-after-round", "sudden-death-at", "sudden-death-sides", "skip-vote", "ranked",
@@ -42,7 +60,7 @@ public final class ModeRulesParser {
 
         ConfigNode t = root.child("timers");
         t.warnUnknownKeys(TIMER_KEYS);
-        int kitSelect = sec(t, "kit-select", 30);
+        int kitSelect = sec(t, "kit-select", 90);
         int buy = sec(t, "buy-phase", 30);
         int roundT = sec(t, "round", 100);
         int bomb = sec(t, "bomb", 45);
@@ -50,7 +68,7 @@ public final class ModeRulesParser {
         int defuse = sec(t, "defuse", 10);
         int checkpoint = sec(t, "defuse-checkpoint", 5);
         int roundEnd = sec(t, "round-end", 5);
-        int half = sec(t, "halftime", 60);
+        int half = sec(t, "halftime", 90);
         int sdKit = sec(t, "sudden-death-kit-select", 20);
         int post = sec(t, "postgame", 15);
 

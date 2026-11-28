@@ -1,5 +1,5 @@
 # Fast mode for administrators' isolated test matches (never ranked: no stats, XP, leaderboards).
-schema-version: 1
+schema-version: 2
 id: test
 display-name: "<gray>Test"
 team-size: 5

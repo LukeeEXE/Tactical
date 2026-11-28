@@ -259,6 +259,31 @@ public final class MatchFlow {
         startRound();
     }
 
+    /**
+     * {@code team} gives up (its players voted to forfeit): the other team wins now, whatever the phase. Returns false
+     * once the match is already over or has not started.
+     */
+    public boolean forfeit(TeamId team) {
+        MatchState s = state();
+        boolean playing = switch (s) {
+            case KIT_SELECT, BUY_PHASE, ROUND_LIVE, BOMB_PLANTED, ROUND_END, HALFTIME, SUDDEN_DEATH_KIT_SELECT -> true;
+            default -> false;
+        };
+        if (!playing) return false;
+        winner = team.other();
+        endReason = MatchEndReason.FORFEIT;
+        paused = false;
+        resumeCountdown = -1;
+        if (kitSelection != null) {
+            KitSelection sel = kitSelection;
+            kitSelection = null;
+            emit(new MatchFlowEvent.KitSelectionClosed(tick, sel.phase(), Map.copyOf(sel.locks()))); // menus close
+        }
+        transition(MatchState.MATCH_END, 1);
+        emit(new MatchFlowEvent.MatchEnded(tick, winner, endReason, scoreOf(TeamId.A), scoreOf(TeamId.B), "forfeit by " + team));
+        return true;
+    }
+
     private void finishMatch(TeamId winningTeam) {
         winner = winningTeam;
         endReason = MatchEndReason.COMPLETED;
@@ -368,9 +393,9 @@ public final class MatchFlow {
         return skipVotes.contains(player);
     }
 
-    /** Whether the current phase offers a skip vote (halftime and the sudden-death kit selection). */
+    /** Whether the current phase offers a skip vote (every kit selection: match start, halftime, sudden death). */
     public boolean skipVoteAvailable() {
-        return state() == MatchState.HALFTIME || state() == MatchState.SUDDEN_DEATH_KIT_SELECT;
+        return state() == MatchState.KIT_SELECT || state() == MatchState.HALFTIME || state() == MatchState.SUDDEN_DEATH_KIT_SELECT;
     }
 
     public boolean teamAgreesToSkip(TeamId team) {
@@ -386,7 +411,7 @@ public final class MatchFlow {
 
     private void checkSelectionComplete() {
         if (kitSelection == null || !kitSelection.allLocked()) return;
-        boolean needsSkip = state() == MatchState.HALFTIME || state() == MatchState.SUDDEN_DEATH_KIT_SELECT;
+        boolean needsSkip = skipVoteAvailable(); // all locked AND both teams agree to skip
         if (needsSkip && !(teamAgreesToSkip(TeamId.A) && teamAgreesToSkip(TeamId.B))) return;
         if (stateTicksRemaining > LOCKED_GRACE_TICKS) {
             setStateTimer(LOCKED_GRACE_TICKS, "all-locked");

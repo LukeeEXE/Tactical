@@ -290,7 +290,7 @@ public final class ConfigService implements Service {
                 }
             }
             Map<String, Object> map = YamlLoader.loadMap(text);
-            ConfigMigrator.Result result = new ConfigMigrator(kind, version, List.of()).migrate(map);
+            ConfigMigrator.Result result = new ConfigMigrator(kind, version, kind.equals("mode") ? dev.tactical.engine.config.ModeRulesParser.MIGRATIONS : List.of()).migrate(map);
             switch (result.outcome()) {
                 case MIGRATED -> {
                     backup(file);
