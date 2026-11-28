@@ -80,6 +80,8 @@ public final class BombController {
     private org.bukkit.entity.Item droppedGlow;
     /** The bomb in the air after Q: a real item with vanilla physics; becomes the dropped bomb where it lands. */
     private org.bukkit.entity.Item thrown;
+    /** Glowing twin of the thrown bomb (same path), shown only to the attackers like the dropped one. */
+    private org.bukkit.entity.Item thrownGlow;
     private UUID thrownBy;
     private long thrownAt;
     private static final long THROW_MAX_TICKS = 60;
@@ -178,7 +180,12 @@ public final class BombController {
         }
         if (droppedLabel != null) droppedLabel.remove();
         if (thrown != null) thrown.remove();
+        if (thrownGlow != null) {
+            redGlowTeam().removeEntry(thrownGlow.getUniqueId().toString());
+            thrownGlow.remove();
+        }
         thrown = null;
+        thrownGlow = null;
         droppedDisplay = null;
         droppedGlow = null;
         droppedLabel = null;
@@ -207,12 +214,13 @@ public final class BombController {
 
     /** Attackers (alive or spectating) see the glowing bomb; defenders and anyone else see the plain one. */
     private void syncGlow() {
-        if (droppedDisplay == null && plantedDisplay == null) return;
+        if (droppedDisplay == null && plantedDisplay == null && thrown == null) return;
         org.bukkit.plugin.Plugin plugin = org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(BombController.class);
         dev.tactical.engine.team.TeamId attackers = flow.teamOn(dev.tactical.engine.team.Side.ATTACKERS);
         for (Player p : world.getPlayers()) {
             boolean attacker = match.member(p.getUniqueId()).map(m -> m.team() == attackers).orElse(false);
-            for (org.bukkit.entity.Entity[] pair : new org.bukkit.entity.Entity[][]{{droppedDisplay, droppedGlow}, {plantedDisplay, plantedGlow}}) {
+            for (org.bukkit.entity.Entity[] pair : new org.bukkit.entity.Entity[][]{{droppedDisplay, droppedGlow},
+                    {thrown, thrownGlow}, {plantedDisplay, plantedGlow}}) {
                 if (pair[0] == null || pair[1] == null) continue;
                 org.bukkit.entity.Entity shown = attacker ? pair[1] : pair[0];
                 org.bukkit.entity.Entity hidden = attacker ? pair[0] : pair[1];
@@ -268,15 +276,33 @@ public final class BombController {
         removeDropped();
         Location eye = p.getEyeLocation().subtract(0, 0.3, 0);
         org.bukkit.util.Vector v = eye.getDirection().multiply(0.3).add(new org.bukkit.util.Vector(0, 0.1, 0));
-        thrown = world.dropItem(eye, createItem(), i -> {
+        // Two items on exactly the same path: the plain one for everyone else, the glowing one for the attackers.
+        thrown = thrownItem(eye, v, false);
+        thrownGlow = thrownItem(eye, v, true);
+        thrownBy = p.getUniqueId();
+        thrownAt = ticks;
+        syncGlow();
+        sparks(eye);
+    }
+
+    private org.bukkit.entity.Item thrownItem(Location at, org.bukkit.util.Vector v, boolean glow) {
+        return world.dropItem(at, createItem(), i -> {
             i.setPickupDelay(Integer.MAX_VALUE);
             i.setCanMobPickup(false);
             i.setInvulnerable(true);
             i.setPersistent(false);
             i.setVelocity(v);
+            i.setVisibleByDefault(false);
+            if (glow) {
+                i.setGlowing(true);
+                redGlowTeam().addEntry(i.getUniqueId().toString());
+            }
         });
-        thrownBy = p.getUniqueId();
-        thrownAt = ticks;
+    }
+
+    /** The pulsing critical-hit sparks around the bomb on the ground or in the air. */
+    private void sparks(Location at) {
+        world.spawnParticle(org.bukkit.Particle.CRIT, at.clone().add(0, 0.35, 0), 6, 0.15, 0.15, 0.15, 0.12);
     }
 
     /** Thrown bomb landed (or flew too long / fell out of the map): turn it into the dropped bomb right there. */
@@ -289,6 +315,11 @@ public final class BombController {
         org.bukkit.entity.Item t = thrown;
         thrown = null;
         if (t.isValid()) t.remove();
+        if (thrownGlow != null) {
+            redGlowTeam().removeEntry(thrownGlow.getUniqueId().toString());
+            if (thrownGlow.isValid()) thrownGlow.remove();
+            thrownGlow = null;
+        }
         UUID by = thrownBy;
         thrownBy = null;
         if (at == null) at = carrierLast != null ? carrierLast : spawn;
@@ -400,9 +431,10 @@ public final class BombController {
             }
         }
         tickThrown();
-        if (dropped != null && carrier == null && ticks % 10 == 0) {
-            // pulsing critical-hit sparks on the dropped bomb
-            world.spawnParticle(org.bukkit.Particle.CRIT, dropped.clone().add(0, 0.35, 0), 6, 0.15, 0.15, 0.15, 0.12);
+        if (ticks % 10 == 0) {
+            // pulsing critical-hit sparks on the dropped bomb, and on the bomb in the air after Q
+            if (thrown != null && thrown.isValid()) sparks(thrown.getLocation());
+            else if (dropped != null && carrier == null) sparks(dropped);
         }
         for (Player p : world.getPlayers()) lastPositions.put(p.getUniqueId(), p.getLocation());
         if (ticks % 10 == 0) syncGlow(); // newcomers, reconnects, spectators
