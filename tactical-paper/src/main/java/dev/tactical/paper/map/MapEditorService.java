@@ -107,10 +107,10 @@ public final class MapEditorService implements Service, Listener {
         if (!p.getWorld().equals(w)) {
             SpawnPoint sp = def.attackerSpawns().isEmpty() ? null : def.attackerSpawns().getFirst();
             if (sp != null) {
-                p.teleport(new org.bukkit.Location(w, sp.x(), sp.y(), sp.z(), sp.yaw(), sp.pitch()));
+                dev.tactical.paper.core.Teleports.to(p, new org.bukkit.Location(w, sp.x(), sp.y(), sp.z(), sp.yaw(), sp.pitch()));
             } else {
                 if (w.getBlockAt(0, 63, 0).getType().isAir()) w.getBlockAt(0, 63, 0).setType(Material.STONE);
-                p.teleport(new org.bukkit.Location(w, 0.5, 64, 0.5));
+                dev.tactical.paper.core.Teleports.to(p, new org.bukkit.Location(w, 0.5, 64, 0.5));
             }
         }
         p.setGameMode(org.bukkit.GameMode.CREATIVE);

@@ -12,7 +12,7 @@
 # description:     MiniMessage lines (green by default); <duration> = longest effect, e.g. 1.8s; <level> = first effect level
 # color:           particle colour of the ring around the target and the trail while the effect lasts
 # ring-radius:     radius of that ring in blocks
-# trail:           particles around the target while the effect lasts
+# trail:           (no longer used: shots only draw the ring)
 # cooldown-ticks:  shared by all shots (20 = 1 second)
 # effects:         list of effects; every effect has a 'type'. Available now:
 #   { type: potion, effect: <any vanilla effect>, level: 1, duration-ticks: 100, polarity: positive|negative }

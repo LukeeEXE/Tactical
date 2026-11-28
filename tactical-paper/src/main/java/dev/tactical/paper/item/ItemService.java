@@ -49,7 +49,7 @@ import java.util.concurrent.ThreadLocalRandom;
  *   <li>left-click (punch) a player: a positive shot on a teammate / a negative shot on an opponent applies the
  *       effects to them and deals no damage; any other punch is just a normal punch;</li>
  *   <li>one shot is used up per application; every shot shares one cooldown (default 1 s);</li>
- *   <li>the target gets a ring of particles in the shot's colour, and a trail while the effect lasts.</li>
+ *   <li>the target gets a ring of particles in the shot's colour (no trail).</li>
  * </ul>
  * Only during a live round, by and on alive participants of the same match.
  */
@@ -289,7 +289,7 @@ public final class ItemService implements Service, Listener {
         target.getWorld().playSound(target.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.6f);
         Particle.DustOptions dust = new Particle.DustOptions(Color.fromRGB(d.color().value()), 1.0f);
         ring(target, dust, d.ringRadius());
-        if (d.trail() && d.durationTicks() > 0) trail(target, dust, d.durationTicks());
+        // Only the ring: no trail while the effect lasts.
     }
 
     /** A ring of particles around the player, at waist height. */

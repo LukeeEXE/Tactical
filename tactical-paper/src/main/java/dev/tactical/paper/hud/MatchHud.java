@@ -64,6 +64,9 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
     private final HudText text;
     /** Per team perspective: [0] timer text, [1] heads/scores/timer panel, [2] bomb icon (see update()). */
     private final Map<MatchId, EnumMap<TeamId, BossBar[]>> bars = new HashMap<>();
+    /** Per player: the content row (heads, health lines, scores, timer box). Opponents' health lines only show to a
+     *  player who hurt them this round, so this row cannot be shared by a team. Replaces the team's bar [0]. */
+    private final Map<MatchId, Map<UUID, BossBar>> rows = new HashMap<>();
     private final Map<MatchId, Long> hudTicks = new HashMap<>();
     private final Map<MatchId, Long> bombFlashUntil = new HashMap<>();
 
@@ -97,6 +100,7 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
                     BossBar.bossBar(Component.empty(), 1f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS)});
         }
         bars.put(match.id(), perTeam);
+        rows.put(match.id(), new HashMap<>());
         for (Player p : match.onlinePlayers()) attach(match, p);
         int[] ticks = {0};
         match.flow().addTickable(f -> {
@@ -123,12 +127,14 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
     @Override
     public void teardown(GameMatch match) {
         EnumMap<TeamId, BossBar[]> b = bars.remove(match.id());
+        Map<UUID, BossBar> r = rows.remove(match.id());
         hudTicks.remove(match.id());
         bombFlashUntil.remove(match.id());
         for (MatchMember m : match.members()) {
             Player p = Bukkit.getPlayer(m.uuid());
             if (p == null) continue;
             if (b != null) b.values().forEach(trio -> { for (BossBar bar : trio) p.hideBossBar(bar); });
+            if (r != null && r.get(m.uuid()) != null) p.hideBossBar(r.get(m.uuid()));
             p.playerListName(null);
         }
     }
@@ -138,8 +144,18 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
         EnumMap<TeamId, BossBar[]> b = bars.get(match.id());
         if (m == null || b == null) return;
         b.values().forEach(trio -> { for (BossBar bar : trio) p.hideBossBar(bar); });
-        for (BossBar bar : b.get(m.team())) p.showBossBar(bar); // shown first = drawn on top
+        BossBar row = rowOf(match, p.getUniqueId());
+        p.hideBossBar(row);
+        p.showBossBar(row); // shown first = drawn on top
+        BossBar[] trio = b.get(m.team());
+        p.showBossBar(trio[1]);
+        p.showBossBar(trio[2]);
         p.playerListName(Component.text(" ").append(Component.text(p.getName(), TeamStyle.color(m.team()))));
+    }
+
+    private BossBar rowOf(GameMatch match, UUID player) {
+        return rows.computeIfAbsent(match.id(), k -> new HashMap<>()).computeIfAbsent(player,
+                k -> BossBar.bossBar(Component.empty(), 1f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS));
     }
 
     @EventHandler
@@ -193,16 +209,21 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
             var mine = progress0.filter(p -> p.team() == viewer);
             Component under = mine.isPresent() ? progressWidget(mine.get()) : bomb;
             Component textRow = Component.text().append(time).append(under).build().shadowColor(ShadowColor.none());
-            Component row = Component.text()
-                    .append(strip(match, viewer, true)).append(TextOffsets.space(gap))
-                    .append(scoreBox(f, viewer)).append(TextOffsets.space(gap))
-                    .append(timerSlot).append(TextOffsets.space(gap))
-                    .append(scoreBox(f, viewer.other())).append(TextOffsets.space(gap))
-                    .append(strip(match, viewer.other(), false))
-                    .build()
-                    .shadowColor(ShadowColor.none());
+            Component ownStrip = strip(match, viewer, true, null); // teammates' health always shows
+            for (MatchMember member : match.members()) {
+                if (member.team() != viewer || member.virtual() || Bukkit.getPlayer(member.uuid()) == null) continue;
+                Component row = Component.text()
+                        .append(ownStrip).append(TextOffsets.space(gap))
+                        .append(scoreBox(f, viewer)).append(TextOffsets.space(gap))
+                        .append(timerSlot).append(TextOffsets.space(gap))
+                        .append(scoreBox(f, viewer.other())).append(TextOffsets.space(gap))
+                        .append(strip(match, viewer.other(), false, member.uuid()))
+                        .build()
+                        .shadowColor(ShadowColor.none());
+                BossBar bar = rowOf(match, member.uuid());
+                if (!row.equals(bar.name())) bar.name(row);
+            }
             BossBar[] trio = b.get(viewer);
-            if (!row.equals(trio[0].name())) trio[0].name(row);
             if (!textRow.equals(trio[1].name())) trio[1].name(textRow);
             if (!Component.empty().equals(trio[2].name())) trio[2].name(Component.empty());
         }
@@ -270,7 +291,8 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
      * player a 1 px line as wide as the head shows their health in % of their maximum (absorption ignored): white,
      * red below 5 hearts.
      */
-    private Component strip(GameMatch match, TeamId team, boolean leftSide) {
+    /** {@code healthViewer}: only show health lines this player may see (opponents they hurt); null = all. */
+    private Component strip(GameMatch match, TeamId team, boolean leftSide, UUID healthViewer) {
         HudConfig h = config.hud();
         List<MatchMember> members = new ArrayList<>();
         for (MatchMember m : match.members()) if (m.team() == team && members.size() < match.rules().teamSize()) members.add(m);
@@ -292,7 +314,10 @@ public final class MatchHud implements Service, Listener, MatchLifecycleHook {
                 row.append(Component.text(String.valueOf(HudGlyphs.BAR_SKULL)).font(font).color(NamedTextColor.WHITE));
                 iconAdvance = 9;
             } else {
-                row.append(healthLine(m)).append(TextOffsets.space(-8)); // under the head, zero advance
+                if (healthViewer == null || DamageMemory.get() == null
+                        || DamageMemory.get().canSeeHealth(match, healthViewer, m.uuid())) {
+                    row.append(healthLine(m)).append(TextOffsets.space(-8)); // under the head, zero advance
+                }
                 if (m.virtual()) { // test players: a 5 px dot centred in the 8 px head cell
                     row.append(TextOffsets.space(2)).append(Component.text("o", NamedTextColor.WHITE));
                     iconAdvance = 2 + 6;

@@ -84,7 +84,7 @@ public final class SpectatorController {
             watching.remove(viewer.getUniqueId());
             if (viewer.getGameMode() == GameMode.SPECTATOR) viewer.setSpectatorTarget(null);
             Location a = anchors.get(viewer.getUniqueId());
-            if (a != null) viewer.teleport(a);
+            if (a != null) dev.tactical.paper.core.Teleports.to(viewer, a);
             return;
         }
         UUID current = watching.get(viewer.getUniqueId());
@@ -99,7 +99,7 @@ public final class SpectatorController {
         }
         Player target = mates.get(idx);
         watching.put(viewer.getUniqueId(), target.getUniqueId());
-        if (!viewer.getWorld().equals(target.getWorld())) viewer.teleport(target.getLocation());
+        if (!viewer.getWorld().equals(target.getWorld())) dev.tactical.paper.core.Teleports.to(viewer, target.getLocation());
         viewer.setSpectatorTarget(target);
     }
 

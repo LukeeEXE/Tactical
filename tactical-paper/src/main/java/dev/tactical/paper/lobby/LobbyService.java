@@ -59,7 +59,7 @@ public final class LobbyService implements Service {
 
     /** Teleports to the lobby and resets match-related state (inventory, game mode, health, effects). */
     public void sendToLobby(Player p) {
-        p.teleport(spawn());
+        dev.tactical.paper.core.Teleports.to(p, spawn());
         resetPlayer(p, Bukkit.getDefaultGameMode() == GameMode.SURVIVAL ? GameMode.ADVENTURE : Bukkit.getDefaultGameMode());
         p.getInventory().clear();
     }

@@ -100,6 +100,7 @@ public final class PackBuilder {
         generateHud(files);
         addBundledShaders(files, smoothGlow);
         addEffectSounds(files);
+        addHealthFont(files);
         generateGui(files);
         Map<String, byte[]> user = new TreeMap<>();
         readTree(sourceRoot.resolve("assets"), "assets/", user);
@@ -421,6 +422,40 @@ public final class PackBuilder {
             sounds.add("effect." + n, entry);
         }
         files.put("assets/tactical/sounds.json", json(sounds));
+    }
+
+    /**
+     * Font {@code tactical:health} for the health bars above players: a 13x7 segment per 2 hearts
+     * ({@link #HEALTH_SEGMENT} + filled half hearts 0-4) and the 13x7 health number ({@link #HEALTH_NUMBER} + half
+     * hearts 0-20: "0.0" .. "9.5", "10").
+     */
+    public static final char HEALTH_SEGMENT = '\uF100', HEALTH_NUMBER = '\uF110';
+    public static final String HEALTH_FONT = "health";
+
+    private static void addHealthFont(Map<String, byte[]> files) throws IOException {
+        com.google.gson.JsonArray providers = new com.google.gson.JsonArray();
+        java.util.function.BiConsumer<String, Character> add = (name, ch) -> {
+            JsonObject p = new JsonObject();
+            p.addProperty("type", "bitmap");
+            p.addProperty("file", "tactical:health/" + name + ".png");
+            p.addProperty("ascent", 7);
+            p.addProperty("height", 7);
+            com.google.gson.JsonArray chars = new com.google.gson.JsonArray();
+            chars.add(String.valueOf(ch));
+            p.add("chars", chars);
+            providers.add(p);
+        };
+        for (int i = 0; i <= 4; i++) {
+            files.put("assets/tactical/textures/health/seg_" + i + ".png", bundled("pack/hud/health/seg_" + i + ".png"));
+            add.accept("seg_" + i, (char) (HEALTH_SEGMENT + i));
+        }
+        for (int h = 0; h <= 20; h++) {
+            files.put("assets/tactical/textures/health/num_" + h + ".png", bundled("pack/hud/health/num_" + h + ".png"));
+            add.accept("num_" + h, (char) (HEALTH_NUMBER + h));
+        }
+        JsonObject font = new JsonObject();
+        font.add("providers", providers);
+        files.put("assets/tactical/font/" + HEALTH_FONT + ".json", json(font));
     }
 
     private static void generateGui(Map<String, byte[]> files) throws IOException {

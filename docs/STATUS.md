@@ -377,3 +377,12 @@ All positions are estimates and need a client check; every value is adjustable i
 | Glow and sparks from the throw | The thrown bomb is two items on the same path (plain for defenders, red-glowing for attackers) with the crit sparks pulsing from the moment Q is pressed | 🟡 needs a playtest |
 | Label in the air | The "Bomb" label follows the thrown bomb (teleported each tick, smoothed) until it lands | 🟡 needs a playtest |
 | Effect sounds | 12 sounds in the pack (tactical:effect.<name>); played only to the player who gets the effect: vanilla effects from any source (ADDED / CHANGED, harming for instant damage) and cleanse / flash / knockback | ✅ in the pack; 🟡 playback needs a client test |
+
+### Name tags and health bars
+| Request | Change | Status |
+|---|---|---|
+| No shot trail | Shots only draw the particle ring (`trail:` is ignored) | ✅ |
+| Custom name tags | Vanilla name tags hidden (main-scoreboard team `tactical_nametags`, name tags NEVER) for players in a match; instead a text display riding on each living player: name in the team colour, billboard centre, no shadow, faint background like the bomb label; hidden by walls; sneaking hides it; the player never sees their own | 🟡 needs a client test (bots have none) |
+| Health bars above players | Second text display above the name: your segments (2 hearts each, borders shared) + the number (6.5; generated 8.5-9.5 and "10" in the same style). Seen by teammates, and by an opponent only after they hurt that player this round | 🟡 needs a client test |
+| Boss bar enemy health | The heads row is now one boss bar per player: an opponent's health line only shows once you hurt them this round (teammates always) | 🟡 needs a client test |
+| Cross-world teleports | Players carrying name tags / flash screens drop them before being moved to another world (Paper refuses otherwise); same-world teleports carry them along | ✅ checked in Paper's code |

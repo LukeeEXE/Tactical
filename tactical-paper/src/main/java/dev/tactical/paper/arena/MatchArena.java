@@ -119,7 +119,7 @@ public final class MatchArena {
                 Player p = Bukkit.getPlayer(e.player());
                 if (p != null) {
                     Location anchor = spawnFor(e.player(), 0);
-                    p.teleport(anchor);
+                    dev.tactical.paper.core.Teleports.to(p, anchor);
                     spectators.onEliminated(p, anchor);
                 }
             }
@@ -311,7 +311,7 @@ public final class MatchArena {
 
     private void placeAtSpawn(Player p) {
         int index = indexOnSide(p.getUniqueId());
-        p.teleport(spawnFor(p.getUniqueId(), index));
+        dev.tactical.paper.core.Teleports.to(p, spawnFor(p.getUniqueId(), index));
         LobbyService.resetPlayer(p, GameMode.ADVENTURE);
         p.getInventory().clear();
         equipper.accept(p, flow.participant(p.getUniqueId()).map(Participant::currentKit).orElse(null));
@@ -370,7 +370,7 @@ public final class MatchArena {
                 lobby.sendToLobby(p);
             } catch (RuntimeException e) {
                 log.log(java.util.logging.Level.SEVERE, "[match=" + match.id() + "] could not return " + p.getName() + " to the lobby", e);
-                p.teleport(lobby.spawn()); // never leave anyone in a world that is about to be deleted
+                dev.tactical.paper.core.Teleports.to(p, lobby.spawn()); // never leave anyone in a world that is about to be deleted
             }
         }
     }
