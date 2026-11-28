@@ -7,6 +7,7 @@
 #               A shot can never mix positive and negative effects.
 #
 # material:        item used for the shot (potion bottles get the shot's colour)
+# model:           item model; potion shots default to tactical:shot (bottle + liquid in the shot's colour); none = vanilla look
 # name:            MiniMessage display name
 # description:     MiniMessage lines (green by default); <duration> = longest effect, e.g. 1.8s; <level> = first effect level
 # color:           particle colour of the ring around the target and the trail while the effect lasts

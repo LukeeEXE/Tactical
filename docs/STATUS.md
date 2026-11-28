@@ -363,3 +363,4 @@ All positions are estimates and need a client check; every value is adjustable i
 | Mining fatigue | While a player has it: mining disabled completely (block break speed 0), attack-speed penalty cancelled | 🟡 needs a client test |
 | Examples | items/utility.yml: cleanse_shot, flash_shot, knockback_shot | ✅ loads |
 | Cleanse frees from cobwebs | Cleansing breaks every cobweb the target's hitbox touches (through the arena block journal, so map cobwebs return at the map reset) | 🟡 needs a playtest |
+| Shot texture | New bottle + liquid textures as item model `tactical:shot` (liquid tinted with the shot colour, like vanilla potions); default for potion shots, `model:` in items/*.yml overrides it | 🟡 needs a client test |

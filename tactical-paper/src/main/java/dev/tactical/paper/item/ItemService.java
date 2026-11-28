@@ -227,6 +227,7 @@ public final class ItemService implements Service, Listener {
             item.setData(DataComponentTypes.POTION_CONTENTS, PotionContents.potionContents()
                     .customColor(Color.fromRGB(d.color().value())).build());
         }
+        if (d.model() != null) item.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key(d.model()));
         item.lore(ItemLore.lines(d.category(), description(d), List.of(ItemLore.Usage.RIGHT_CLICK_USE, ItemLore.Usage.LEFT_CLICK_APPLY)));
         ItemLore.hideVanillaLines(item);
         return item;

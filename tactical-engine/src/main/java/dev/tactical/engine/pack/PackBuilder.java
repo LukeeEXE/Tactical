@@ -462,6 +462,15 @@ public final class PackBuilder {
         menuItem(files, "kit_skip_pressed", bundled("pack/gui/kit_skip_pressed.png"), drop, true);
         menuItem(files, "blank", HudGlyphs.png(new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)), null);
         generateMoneyItem(files);
+        // Shots (tactical:shot): liquid layer tinted with the item's potion colour (like vanilla potions), bottle on top.
+        files.put("assets/tactical/textures/item/shot_overlay.png", bundled("pack/gui/shot_overlay.png"));
+        files.put("assets/tactical/textures/item/shot_bottle.png", bundled("pack/gui/shot_bottle.png"));
+        files.put("assets/tactical/models/item/shot.json", ("{\"parent\":\"minecraft:item/generated\",\"textures\":{"
+                + "\"layer0\":\"tactical:item/shot_overlay\",\"layer1\":\"tactical:item/shot_bottle\"}}")
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        files.put("assets/tactical/items/shot.json", ("{\"model\":{\"type\":\"minecraft:model\",\"model\":\"tactical:item/shot\","
+                + "\"tints\":[{\"type\":\"minecraft:potion\",\"default\":-13083194}]}}")
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
         // Player heads in menus (tactical:player_head): the vanilla head renderer with the user's display transforms
         // (face-on, larger). Only items with this item_model change; other player heads keep the vanilla look.
         files.put("assets/tactical/models/item/player_head.json", bundled("pack/gui/player_head_model.json"));

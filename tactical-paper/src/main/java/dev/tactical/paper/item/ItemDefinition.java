@@ -18,7 +18,10 @@ import java.util.Optional;
  */
 public record ItemDefinition(String id, String type, Material material, String name, List<String> description,
                              TextColor color, double ringRadius, boolean trail, int cooldownTicks,
-                             ItemEffect.Polarity polarity, List<ItemEffect> effects) {
+                             ItemEffect.Polarity polarity, List<ItemEffect> effects, String model) {
+
+    /** Item model of potion shots unless {@code model} says otherwise: liquid tinted with the shot colour + bottle. */
+    public static final String DEFAULT_SHOT_MODEL = "tactical:shot";
 
     public static final List<String> TYPES = List.of("shot");
 
@@ -45,7 +48,7 @@ public record ItemDefinition(String id, String type, Material material, String n
 
     static Optional<ItemDefinition> parse(String id, ConfigNode n) {
         n.warnUnknownKeys(List.of("type", "material", "name", "description", "color", "ring-radius", "trail",
-                "cooldown-ticks", "effects"));
+                "cooldown-ticks", "effects", "model"));
         if (!id.matches("[a-z0-9_]{1,32}")) {
             n.error("item id '" + id + "' must be 1-32 chars of a-z, 0-9, _");
             return Optional.empty();
@@ -80,6 +83,16 @@ public record ItemDefinition(String id, String type, Material material, String n
         }
         return Optional.of(new ItemDefinition(id, type, material, n.string("name", id), n.stringList("description"), color,
                 n.number("ring-radius", 0.8, 0.2, 4.0), n.bool("trail", true), n.integer("cooldown-ticks", 20, 0, 20 * 60),
-                polarity, List.copyOf(effects)));
+                polarity, List.copyOf(effects), model(n, material)));
+    }
+
+    /** {@code model}: an item model id, or "none" for the material's own look; default tactical:shot for potions. */
+    private static String model(ConfigNode n, Material material) {
+        boolean potion = material == Material.POTION || material == Material.SPLASH_POTION || material == Material.LINGERING_POTION;
+        String m = n.string("model", potion ? DEFAULT_SHOT_MODEL : "none").trim().toLowerCase(Locale.ROOT);
+        if (m.equals("none") || m.isEmpty()) return null;
+        if (net.kyori.adventure.key.Key.parseable(m)) return m;
+        n.child("model").error("not a valid item model id: '" + m + "'");
+        return null;
     }
 }
