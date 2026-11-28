@@ -38,6 +38,18 @@ Every effect has a `type`. Available now:
 | Type | Keys |
 |---|---|
 | `potion` | `effect` (any vanilla effect id), `level` (1 = I), `duration-ticks`, `polarity` (`positive`/`negative`; defaults to the effect's own: speed positive, slowness negative; neutral effects must say) |
+| `cleanse` | `polarity` (default positive). Instantly removes every vanilla and custom effect (and fire / freezing) |
+| `knockback` | `distance` (blocks on flat ground, default 7.5), `lift` (upward speed, default 0.42), `polarity` (default negative). Launches the target backwards, away from where they are looking |
+| `flash` | `duration-ticks` (default 60), `polarity` (default negative). The target's screen turns fully white while they can still move; the last second fades out |
+
+Flash is drawn in the world, not on the HUD, so F1 does not remove it: two huge white text-display backgrounds ride
+on the target, are visible only to them, always face their camera and render on top of all blocks (in first and third
+person). Particles and the first-person hand can still show on top.
+
+Mining fatigue (`type: potion, effect: mining_fatigue`) is changed while a player has it from any source: mining is
+disabled completely and the vanilla attack-speed penalty is cancelled out.
+
+Examples: `items/utility.yml` (`cleanse_shot`, `flash_shot`, `knockback_shot`).
 
 New effect types (custom effects) are added in code with `ItemEffects.register("<type>", parser)`; items then use
 them in YAML like any other effect. Each effect declares its polarity, which decides who a shot can target.

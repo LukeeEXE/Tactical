@@ -16,6 +16,10 @@
 # effects:         list of effects; every effect has a 'type'. Available now:
 #   { type: potion, effect: <any vanilla effect>, level: 1, duration-ticks: 100, polarity: positive|negative }
 #   (polarity defaults to the effect's own: speed is positive, slowness negative)
+#   { type: cleanse }                          removes every effect at once (positive; polarity: negative to strip an opponent)
+#   { type: knockback, distance: 7.5, lift: 0.42 }  launches the target backwards (away from where they look), ~distance blocks
+#   { type: flash, duration-ticks: 60 }        white screen (they can still move), fades out over the last second
+#   Mining fatigue (type: potion, effect: mining_fatigue) only stops mining: no attack-speed penalty.
 schema-version: 1
 items:
   speed_shot:

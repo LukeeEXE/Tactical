@@ -353,3 +353,12 @@ All positions are estimates and need a client check; every value is adjustable i
 | Dropped bomb look | A real dropped item (TNT), frozen in place (no gravity, never despawns, never picked up or merged by the game: attackers pick it up by walking over it as before); glowing copy shown only to the attackers; "Bomb" label above it (text display, billboard centre); crit particles pulse on it every 0.5 s. The same at round start (bomb spawn) | ✅ Server-tested: 2 items + label spawn at the bomb spawn |
 | Red glow on the dropped bomb | The glowing copy joins the main-scoreboard team `tactical_bomb_glow` (colour red) | ✅ Server-tested (team has the item) |
 | Potion swirl particles | `entity_effect` and `effect` particles use the same dust textures as `dust` (still tinted by the potion colour) | 🟡 needs a client test |
+
+### Custom effects
+| Request | Change | Status |
+|---|---|---|
+| Cleansing | `{ type: cleanse }`: instantly removes every vanilla and custom effect (positive by default) | ✅ loads |
+| Knockback | `{ type: knockback, distance: 7.5 }`: launches the target backwards (away from their view direction), ~7.5 blocks on flat ground | 🟡 needs a playtest (distance tuning) |
+| Flashing | `{ type: flash, duration-ticks: 60 }`: white screen drawn in the world (billboard see-through text-display backgrounds riding the player, visible only to them), fades over the last second; F1 cannot hide it | 🟡 needs a client test |
+| Mining fatigue | While a player has it: mining disabled completely (block break speed 0), attack-speed penalty cancelled | 🟡 needs a client test |
+| Examples | items/utility.yml: cleanse_shot, flash_shot, knockback_shot | ✅ loads |

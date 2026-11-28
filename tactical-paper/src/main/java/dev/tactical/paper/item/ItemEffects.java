@@ -22,6 +22,9 @@ public final class ItemEffects {
 
     static {
         register("potion", PotionItemEffect::parse);
+        register("cleanse", CleanseItemEffect::parse);
+        register("knockback", KnockbackItemEffect::parse);
+        register("flash", FlashItemEffect::parse);
     }
 
     private ItemEffects() {

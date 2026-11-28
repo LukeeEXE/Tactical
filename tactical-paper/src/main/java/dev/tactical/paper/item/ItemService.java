@@ -73,12 +73,21 @@ public final class ItemService implements Service, Listener {
     @Override
     public void enable() {
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        customEffects = new CustomEffects(plugin);
+        Bukkit.getPluginManager().registerEvents(customEffects, plugin);
     }
 
     @Override
     public void disable() {
         HandlerList.unregisterAll(this);
+        if (customEffects != null) {
+            HandlerList.unregisterAll(customEffects);
+            customEffects.shutdown();
+        }
     }
+
+    /** Flash, cleanse and the mining fatigue change (see {@link CustomEffects}). */
+    private CustomEffects customEffects;
 
     /** {@code /game item list} and {@code /game item give <id> [amount]} (permission tactical.admin.items). */
     public void attach(com.mojang.brigadier.builder.LiteralArgumentBuilder<io.papermc.paper.command.brigadier.CommandSourceStack> root) {

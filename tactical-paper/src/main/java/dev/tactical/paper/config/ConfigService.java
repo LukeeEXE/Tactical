@@ -50,7 +50,7 @@ public final class ConfigService implements Service {
             "modes/quickplay.yml", "modes/competitive.yml", "modes/test.yml",
             "kits/bruiser.yml", "kits/tactician.yml", "kits/initiator.yml", "kits/marksman.yml",
             "kits/recon.yml", "kits/medic.yml", "kits/specialist.yml",
-            "messages/en_US.yml", "items/shots.yml", "items/healing.yml", "economy/economy.yml", "gui/icons.yml", "hud/hud.yml");
+            "messages/en_US.yml", "items/shots.yml", "items/healing.yml", "items/utility.yml", "economy/economy.yml", "gui/icons.yml", "hud/hud.yml");
 
     /** Folders created on first start, even if empty, so admins see the layout. */
     static final List<String> FOLDERS = List.of("maps", "map-pools", "kits", "items", "economy",

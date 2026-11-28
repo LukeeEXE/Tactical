@@ -1,0 +1,33 @@
+# Example utility shots using the custom effects (see shots.yml for every option). Not sold anywhere yet: add them to
+# a kit's shop (utility: <id>: { name, price, max, give: { item: <id> } }) to use them.
+schema-version: 1
+items:
+  cleanse_shot:
+    type: shot
+    material: potion
+    name: "<white>Shot of Cleansing"
+    description:
+      - "Remove <white>every effect</white> at once."
+    color: "#e8f4ff"
+    trail: false
+    effects:
+      - { type: cleanse }
+  flash_shot:
+    type: shot
+    material: potion
+    name: "<white>Shot of Flashing"
+    description:
+      - "Blind an opponent completely for <white><duration></white>."
+    color: "#ffffff"
+    effects:
+      - { type: flash, duration-ticks: 60 }
+  knockback_shot:
+    type: shot
+    material: potion
+    name: "<white>Shot of Knockback"
+    description:
+      - "Launch an opponent <white>7.5 blocks</white> backwards."
+    color: "#d0a050"
+    trail: false
+    effects:
+      - { type: knockback, distance: 7.5 }
