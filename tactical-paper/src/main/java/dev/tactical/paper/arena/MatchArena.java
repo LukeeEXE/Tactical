@@ -156,7 +156,10 @@ public final class MatchArena {
 
     // ------------------------------------------------------------------ pickups
 
+    private long tickCount;
     private final List<org.bukkit.entity.Item> pickups = new ArrayList<>();
+    /** Name label above each pickup still lying on the map (same order as {@link #pickups}). */
+    private final List<org.bukkit.entity.TextDisplay> pickupLabels = new ArrayList<>();
     private final NamespacedKey pickupKey = new NamespacedKey("tactical", "pickup");
 
     /** (Re)spawns the map's pickup items: never despawn or merge, pick-up straight away, only by alive players. */
@@ -178,12 +181,51 @@ public final class MatchArena {
                 i.setPersistent(false);
                 i.getPersistentDataContainer().set(pickupKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
             }));
+            net.kyori.adventure.text.Component name = prepared.effectiveName().colorIfAbsent(net.kyori.adventure.text.format.NamedTextColor.WHITE);
+            if (prepared.getAmount() > 1) {
+                name = name.append(net.kyori.adventure.text.Component.text(" x" + prepared.getAmount(),
+                        net.kyori.adventure.text.format.NamedTextColor.GRAY));
+            }
+            pickupLabels.add(itemLabel(at.clone().add(0, 0.85, 0), name));
+        }
+    }
+
+    /** Name label above an item on the ground: billboard centre, no shadow, faint background. */
+    private org.bukkit.entity.TextDisplay itemLabel(Location at, net.kyori.adventure.text.Component text) {
+        return world.spawn(at, org.bukkit.entity.TextDisplay.class, t -> {
+            t.text(text);
+            t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+            t.setPersistent(false);
+            t.setShadowed(false);
+            t.setDefaultBackground(false);
+            t.setBackgroundColor(org.bukkit.Color.fromARGB(0x40000000));
+        });
+    }
+
+    /** Labels follow their item (it may settle after spawning) and go when it is picked up; crit sparks pulse. */
+    private void tickPickups() {
+        for (int k = 0; k < pickups.size() && k < pickupLabels.size(); k++) {
+            org.bukkit.entity.Item item = pickups.get(k);
+            org.bukkit.entity.TextDisplay label = pickupLabels.get(k);
+            if (label == null) continue;
+            if (!item.isValid()) {
+                if (label.isValid()) label.remove();
+                pickupLabels.set(k, null);
+                continue;
+            }
+            Location want = item.getLocation().add(0, 0.85, 0);
+            if (label.getLocation().distanceSquared(want) > 0.0025) label.teleport(want);
+            if (tickCount % 10 == 0) {
+                world.spawnParticle(org.bukkit.Particle.CRIT, item.getLocation().add(0, 0.35, 0), 6, 0.15, 0.15, 0.15, 0.12);
+            }
         }
     }
 
     private void removePickups() {
         for (org.bukkit.entity.Item i : pickups) if (i.isValid()) i.remove();
         pickups.clear();
+        for (org.bukkit.entity.TextDisplay t : pickupLabels) if (t != null && t.isValid()) t.remove();
+        pickupLabels.clear();
     }
 
     /** True if the item entity is one of this match's map pickups. */
@@ -225,6 +267,8 @@ public final class MatchArena {
     private void tick() {
         ticks++;
         bomb.tick();
+        tickCount++;
+        tickPickups();
         if (ticks % 10 == 0 && flow.state().isRoundActive()) checkBounds();
         if (ticks % positionInterval == 0) recordPositions();
     }

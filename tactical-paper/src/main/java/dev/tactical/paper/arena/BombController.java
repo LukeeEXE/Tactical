@@ -296,18 +296,6 @@ public final class BombController {
     }
 
     private static final long DROP_PICKUP_DELAY_TICKS = 40;
-    /** The label bobs like a dropped item (0.1 * sin(age / 10) + 0.1 blocks), stepped every few ticks and interpolated. */
-    private static final int LABEL_BOB_STEP = 4;
-    private long labelSince;
-
-    private void bobLabel() {
-        if (droppedLabel == null || !droppedLabel.isValid()) return;
-        long age = ticks - labelSince;
-        if (age % LABEL_BOB_STEP != 0) return;
-        float y = (float) (0.1 * Math.sin((age + LABEL_BOB_STEP) / 10.0) + 0.1);
-        droppedLabel.setInterpolationDelay(0);
-        droppedLabel.setTransformation(new Transformation(new Vector3f(0, y, 0), new AxisAngle4f(), new Vector3f(1), new AxisAngle4f()));
-    }
     private final Map<UUID, Long> noPickupUntil = new HashMap<>();
 
     private void dropAt(Location at, UUID by, String reason) {
@@ -340,10 +328,7 @@ public final class BombController {
             t.setShadowed(false);
             t.setDefaultBackground(false);
             t.setBackgroundColor(Color.fromARGB(0x40000000));
-            t.setInterpolationDuration(LABEL_BOB_STEP);
-            t.setTeleportDuration(0);
         });
-        labelSince = ticks;
         syncGlow();
         Map<String, Object> data = loc(ground);
         data.put("reason", reason);
@@ -415,7 +400,6 @@ public final class BombController {
             }
         }
         tickThrown();
-        bobLabel();
         if (dropped != null && carrier == null && ticks % 10 == 0) {
             // pulsing critical-hit sparks on the dropped bomb
             world.spawnParticle(org.bukkit.Particle.CRIT, dropped.clone().add(0, 0.35, 0), 6, 0.15, 0.15, 0.15, 0.12);
