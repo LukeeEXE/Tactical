@@ -281,8 +281,22 @@ public final class BombController {
         thrownGlow = thrownItem(eye, v, true);
         thrownBy = p.getUniqueId();
         thrownAt = ticks;
+        droppedLabel = bombLabel(eye.clone().add(0, 0.85, 0));
         syncGlow();
         sparks(eye);
+    }
+
+    /** "Bomb" label (billboard centre, no shadow) shown above the bomb on the ground and in the air. */
+    private org.bukkit.entity.TextDisplay bombLabel(Location at) {
+        return world.spawn(at, org.bukkit.entity.TextDisplay.class, t -> {
+            t.text(Component.text("Bomb", NamedTextColor.RED));
+            t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+            t.setPersistent(false);
+            t.setShadowed(false);
+            t.setDefaultBackground(false);
+            t.setBackgroundColor(Color.fromARGB(0x40000000));
+            t.setTeleportDuration(1); // smooth while it follows the thrown bomb
+        });
     }
 
     private org.bukkit.entity.Item thrownItem(Location at, org.bukkit.util.Vector v, boolean glow) {
@@ -311,6 +325,9 @@ public final class BombController {
         boolean gone = !thrown.isValid();
         Location at = gone ? null : thrown.getLocation();
         boolean lost = at != null && (at.getY() < voidY || (bounds != null && !bounds.contains(at.getX(), at.getY(), at.getZ())));
+        if (!gone && droppedLabel != null && droppedLabel.isValid()) {
+            droppedLabel.teleport(at.clone().add(0, 0.85, 0)); // the label flies with the bomb
+        }
         if (!gone && !lost && !thrown.isOnGround() && ticks - thrownAt < THROW_MAX_TICKS) return;
         org.bukkit.entity.Item t = thrown;
         thrown = null;
@@ -352,14 +369,7 @@ public final class BombController {
         Location itemAt = ground.clone().add(0, 0.05, 0);
         droppedDisplay = droppedItem(itemAt, false);
         droppedGlow = droppedItem(itemAt, true);
-        droppedLabel = world.spawn(ground.clone().add(0, 0.85, 0), org.bukkit.entity.TextDisplay.class, t -> {
-            t.text(Component.text("Bomb", NamedTextColor.RED));
-            t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
-            t.setPersistent(false);
-            t.setShadowed(false);
-            t.setDefaultBackground(false);
-            t.setBackgroundColor(Color.fromARGB(0x40000000));
-        });
+        droppedLabel = bombLabel(ground.clone().add(0, 0.85, 0));
         syncGlow();
         Map<String, Object> data = loc(ground);
         data.put("reason", reason);
