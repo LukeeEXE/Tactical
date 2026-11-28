@@ -192,6 +192,37 @@ public final class CustomEffects implements Listener {
         }
     }
 
+    // ------------------------------------------------------------------ effect sounds
+
+    /** Effects with their own sound in the resource pack ({@code tactical:effect.<name>}). */
+    private static final java.util.Set<String> SOUNDS = java.util.Set.copyOf(dev.tactical.engine.pack.PackBuilder.EFFECT_SOUNDS);
+    /** Last sound per player and the tick it played: the same sound twice in one tick plays once. */
+    private final Map<UUID, String> lastSound = new HashMap<>();
+
+    /**
+     * Plays the effect's sound to that player only (the files are stereo: no distance falloff). {@code effect} is a
+     * vanilla effect id (instant_damage plays "harming") or a custom effect sound name. Unknown names are ignored.
+     */
+    public static void playEffectSound(Player p, String effect) {
+        CustomEffects fx = instance;
+        if (fx == null || p == null) return;
+        String name = effect.equals("instant_damage") ? "harming" : effect;
+        if (!SOUNDS.contains(name)) return;
+        String stamp = name + "@" + Bukkit.getCurrentTick();
+        if (stamp.equals(fx.lastSound.put(p.getUniqueId(), stamp))) return;
+        p.playSound(net.kyori.adventure.sound.Sound.sound(net.kyori.adventure.key.Key.key("tactical", "effect." + name),
+                net.kyori.adventure.sound.Sound.Source.PLAYER, 1f, 1f));
+    }
+
+    /** Any vanilla effect a player gets (shots, kits, anything else) plays its sound. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEffectSound(EntityPotionEffectEvent e) {
+        if (!(e.getEntity() instanceof Player p)) return;
+        if (e.getAction() != EntityPotionEffectEvent.Action.ADDED && e.getAction() != EntityPotionEffectEvent.Action.CHANGED) return;
+        if (e.getNewEffect() == null) return;
+        playEffectSound(p, e.getNewEffect().getType().getKey().getKey());
+    }
+
     // ------------------------------------------------------------------ mining fatigue
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -235,6 +266,7 @@ public final class CustomEffects implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         clearFlash(e.getPlayer());
+        lastSound.remove(e.getPlayer().getUniqueId());
     }
 
     @EventHandler

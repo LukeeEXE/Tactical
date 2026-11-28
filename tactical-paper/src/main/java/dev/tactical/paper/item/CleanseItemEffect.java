@@ -34,6 +34,7 @@ public record CleanseItemEffect(Polarity polarity) implements ItemEffect {
 
     @Override
     public void apply(Player target, Player source) {
+        CustomEffects.playEffectSound(target, "cleansing");
         CustomEffects.get().cleanse(target);
     }
 }

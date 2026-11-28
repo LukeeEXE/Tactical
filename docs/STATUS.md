@@ -376,3 +376,4 @@ All positions are estimates and need a client check; every value is adjustable i
 | Forfeit not too early | /forfeit only once half of the first half is played (rounds finished >= ceil(halftime-after-round / 2): 2 with the default 4); before that it tells the player how many rounds are needed | ✅ engine test |
 | Glow and sparks from the throw | The thrown bomb is two items on the same path (plain for defenders, red-glowing for attackers) with the crit sparks pulsing from the moment Q is pressed | 🟡 needs a playtest |
 | Label in the air | The "Bomb" label follows the thrown bomb (teleported each tick, smoothed) until it lands | 🟡 needs a playtest |
+| Effect sounds | 12 sounds in the pack (tactical:effect.<name>); played only to the player who gets the effect: vanilla effects from any source (ADDED / CHANGED, harming for instant damage) and cleanse / flash / knockback | ✅ in the pack; 🟡 playback needs a client test |

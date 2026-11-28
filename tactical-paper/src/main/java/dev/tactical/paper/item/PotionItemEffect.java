@@ -54,5 +54,7 @@ public record PotionItemEffect(PotionEffectType effect, int level, int durationT
     public void apply(Player target, Player source) {
         // No vanilla swirl particles: the item draws its own coloured ring and trail.
         target.addPotionEffect(new PotionEffect(effect, durationTicks, level - 1, false, false, true));
+        // Instant effects (harming) may never show up as an added effect: play their sound here (deduplicated).
+        if (effect.isInstant()) CustomEffects.playEffectSound(target, effect.getKey().getKey());
     }
 }

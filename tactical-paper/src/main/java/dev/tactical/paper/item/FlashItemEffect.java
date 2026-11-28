@@ -30,6 +30,7 @@ public record FlashItemEffect(int durationTicks, Polarity polarity) implements I
 
     @Override
     public void apply(Player target, Player source) {
+        CustomEffects.playEffectSound(target, "flashing");
         CustomEffects.get().flash(target, durationTicks);
     }
 }

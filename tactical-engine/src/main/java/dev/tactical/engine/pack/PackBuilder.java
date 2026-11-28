@@ -99,6 +99,7 @@ public final class PackBuilder {
         generateTrueTypeFonts(sourceRoot.resolve("fonts"), files, issues);
         generateHud(files);
         addBundledShaders(files, smoothGlow);
+        addEffectSounds(files);
         generateGui(files);
         Map<String, byte[]> user = new TreeMap<>();
         readTree(sourceRoot.resolve("assets"), "assets/", user);
@@ -399,6 +400,29 @@ public final class PackBuilder {
      * Also blanks the "Inventory" label of chest screens ({@code container.inventory}) in every language, since it
      * would be drawn over these backgrounds.
      */
+    /**
+     * Sounds played to a player when they get an effect: {@code tactical:effect.<name>} (stereo, so the client plays
+     * them straight to the listener without distance falloff). Names: vanilla effect ids (harming = instant_damage)
+     * and the custom effects (cleansing, flashing, knockback).
+     */
+    public static final List<String> EFFECT_SOUNDS = List.of("blindness", "cleansing", "flashing", "glowing", "harming",
+            "jump_boost", "knockback", "mining_fatigue", "poison", "regeneration", "speed", "weakness");
+
+    private static void addEffectSounds(Map<String, byte[]> files) throws IOException {
+        JsonObject sounds = new JsonObject();
+        for (String n : EFFECT_SOUNDS) {
+            files.put("assets/tactical/sounds/effect/" + n + ".ogg", bundled("pack/sounds/effect/" + n + ".ogg"));
+            JsonObject entry = new JsonObject();
+            com.google.gson.JsonArray list = new com.google.gson.JsonArray();
+            JsonObject snd = new JsonObject();
+            snd.addProperty("name", "tactical:effect/" + n);
+            list.add(snd);
+            entry.add("sounds", list);
+            sounds.add("effect." + n, entry);
+        }
+        files.put("assets/tactical/sounds.json", json(sounds));
+    }
+
     private static void generateGui(Map<String, byte[]> files) throws IOException {
         record G(String name, char ch, int ascent, int height) { }
         com.google.gson.JsonArray providers = new com.google.gson.JsonArray();

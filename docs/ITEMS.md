@@ -49,6 +49,12 @@ person). Particles and the first-person hand can still show on top.
 Mining fatigue (`type: potion, effect: mining_fatigue`) is changed while a player has it from any source: mining is
 disabled completely and the vanilla attack-speed penalty is cancelled out.
 
+Effect sounds: when a player gets an effect they hear its sound (only them; the files are stereo, so no distance
+falloff): `tactical:effect.<name>` for blindness, glowing, harming (instant damage), jump_boost, mining_fatigue,
+poison, regeneration, speed, weakness (from any source), and cleansing, flashing, knockback (the custom effects).
+Re-applying an active effect plays it again. Replace a sound by putting an .ogg at
+`resourcepack/assets/tactical/sounds/effect/<name>.ogg` and running `/game pack rebuild`.
+
 Examples: `items/utility.yml` (`cleanse_shot`, `flash_shot`, `knockback_shot`).
 
 New effect types (custom effects) are added in code with `ItemEffects.register("<type>", parser)`; items then use

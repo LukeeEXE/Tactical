@@ -37,6 +37,7 @@ public record KnockbackItemEffect(double distance, double lift, Polarity polarit
 
     @Override
     public void apply(Player target, Player source) {
+        CustomEffects.playEffectSound(target, "knockback");
         Vector back = target.getLocation().getDirection().setY(0);
         if (back.lengthSquared() < 1e-6) back = new Vector(0, 0, 1);
         back.normalize().multiply(-1);
