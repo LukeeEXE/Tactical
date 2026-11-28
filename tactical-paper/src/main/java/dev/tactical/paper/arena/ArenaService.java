@@ -90,6 +90,8 @@ public final class ArenaService implements Service, Listener, MatchLifecycleHook
     public void enable() {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         matches.addHook(this);
+        dev.tactical.paper.item.CustomEffects.setBlockClearer(b -> arenaOfWorld(b.getWorld())
+                .ifPresentOrElse(a -> a.clearBlock(b), () -> b.setType(org.bukkit.Material.AIR)));
     }
 
     @Override

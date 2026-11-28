@@ -362,3 +362,4 @@ All positions are estimates and need a client check; every value is adjustable i
 | Flashing | `{ type: flash, duration-ticks: 60 }`: white screen drawn in the world (billboard see-through text-display backgrounds riding the player, visible only to them), fades over the last second; F1 cannot hide it | 🟡 needs a client test |
 | Mining fatigue | While a player has it: mining disabled completely (block break speed 0), attack-speed penalty cancelled | 🟡 needs a client test |
 | Examples | items/utility.yml: cleanse_shot, flash_shot, knockback_shot | ✅ loads |
+| Cleanse frees from cobwebs | Cleansing breaks every cobweb the target's hitbox touches (through the arena block journal, so map cobwebs return at the map reset) | 🟡 needs a playtest |

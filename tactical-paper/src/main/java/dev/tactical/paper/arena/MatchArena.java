@@ -283,6 +283,11 @@ public final class MatchArena {
         return 0;
     }
 
+    /** Removes a block during the match (journaled: the map reset puts it back). */
+    public boolean clearBlock(Block b) {
+        return journal.set(dev.tactical.engine.geo.BlockPos.of(b.getX(), b.getY(), b.getZ()), Material.AIR.createBlockData());
+    }
+
     Location spawnFor(UUID id, int index) {
         TeamId team = match.member(id).map(MatchMember::team).orElse(TeamId.A);
         List<SpawnPoint> spawns = flow.sideOf(team) == Side.ATTACKERS ? map.attackerSpawns() : map.defenderSpawns();

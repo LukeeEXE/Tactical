@@ -157,12 +157,39 @@ public final class CustomEffects implements Listener {
 
     // ------------------------------------------------------------------ cleanse
 
-    /** Removes every potion effect and every custom effect still running. */
+    /** Removes a block; in a match arena this goes through its block journal (restored at the next map reset). */
+    private static java.util.function.Consumer<org.bukkit.block.Block> blockClearer =
+            b -> b.setType(org.bukkit.Material.AIR);
+
+    public static void setBlockClearer(java.util.function.Consumer<org.bukkit.block.Block> clearer) {
+        blockClearer = clearer;
+    }
+
+    /** Removes every potion effect and every custom effect still running, and frees the player from cobwebs. */
     public void cleanse(Player p) {
         for (PotionEffect e : p.getActivePotionEffects()) p.removePotionEffect(e.getType());
         clearFlash(p);
         p.setFireTicks(0);
         p.setFreezeTicks(0);
+        clearCobwebs(p);
+    }
+
+    /** Every cobweb the player's hitbox touches. */
+    private static void clearCobwebs(Player p) {
+        org.bukkit.util.BoundingBox box = p.getBoundingBox().expand(0.01);
+        org.bukkit.World w = p.getWorld();
+        for (int x = (int) Math.floor(box.getMinX()); x <= (int) Math.floor(box.getMaxX()); x++) {
+            for (int y = (int) Math.floor(box.getMinY()); y <= (int) Math.floor(box.getMaxY()); y++) {
+                for (int z = (int) Math.floor(box.getMinZ()); z <= (int) Math.floor(box.getMaxZ()); z++) {
+                    org.bukkit.block.Block b = w.getBlockAt(x, y, z);
+                    if (b.getType() != org.bukkit.Material.COBWEB) continue;
+                    org.bukkit.block.data.BlockData data = b.getBlockData();
+                    blockClearer.accept(b);
+                    w.spawnParticle(org.bukkit.Particle.BLOCK, b.getLocation().add(0.5, 0.5, 0.5), 20, 0.3, 0.3, 0.3, data);
+                    w.playSound(b.getLocation().add(0.5, 0.5, 0.5), org.bukkit.Sound.BLOCK_WOOL_BREAK, 1f, 1f);
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------------ mining fatigue

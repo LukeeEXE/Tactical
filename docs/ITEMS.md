@@ -38,7 +38,7 @@ Every effect has a `type`. Available now:
 | Type | Keys |
 |---|---|
 | `potion` | `effect` (any vanilla effect id), `level` (1 = I), `duration-ticks`, `polarity` (`positive`/`negative`; defaults to the effect's own: speed positive, slowness negative; neutral effects must say) |
-| `cleanse` | `polarity` (default positive). Instantly removes every vanilla and custom effect (and fire / freezing) |
+| `cleanse` | `polarity` (default positive). Instantly removes every vanilla and custom effect (and fire / freezing) and breaks any cobweb the target is standing in (map cobwebs come back at the next map reset) |
 | `knockback` | `distance` (blocks on flat ground, default 7.5), `lift` (upward speed, default 0.42), `polarity` (default negative). Launches the target backwards, away from where they are looking |
 | `flash` | `duration-ticks` (default 60), `polarity` (default negative). The target's screen turns fully white while they can still move; the last second fades out |
 
