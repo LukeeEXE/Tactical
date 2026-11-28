@@ -1,0 +1,34 @@
+# Timed throwable potions. Right-click: throw it (snowball physics). It drops where it first hits a block or player
+# and bursts fuse-ticks later. Left-click: light the fuse in your hand (prime-ticks); it keeps burning when thrown,
+# so you can time a burst in the air - or in your hand if you hold it too long.
+# The burst applies the effects to every player in 'radius' blocks in line of sight: OPPONENTS for a negative item,
+# TEAMMATES (and you) for a positive one. Same effect types as shots (see shots.yml). Sell it in a kit's shop like a
+# shot: give: { item: <id> }, or put it in a base kit with item: <id>.
+#
+# fuse-ticks:  fuse after the first hit (40 = 2 s)       prime-ticks: fuse when lit by left-click (100 = 5 s)
+# radius:      burst radius in blocks                    color: liquid colour and the burst's dust colour
+schema-version: 1
+items:
+  slowness_throwable:
+    type: throwable
+    material: potion
+    name: "<white>Timed Potion of Slowness"
+    description:
+      - "Slows opponents in <white>5 blocks</white> by <white>30%</white>"
+      - "for <white><duration></white>."
+    color: "#6b5a8e"
+    fuse-ticks: 40
+    prime-ticks: 100
+    radius: 5
+    effects:
+      - { type: potion, effect: slowness, level: 2, duration-ticks: 80 }
+  healing_throwable:
+    type: throwable
+    material: potion
+    name: "<white>Timed Potion of Healing"
+    description:
+      - "Heals teammates in <white>5 blocks</white>."
+    color: "#f2557a"
+    radius: 5
+    effects:
+      - { type: potion, effect: instant_health, level: 1, duration-ticks: 1 }

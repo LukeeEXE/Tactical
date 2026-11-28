@@ -421,6 +421,27 @@ public final class PackBuilder {
             entry.add("sounds", list);
             sounds.add("effect." + n, entry);
         }
+        // Timed throwable potion: 3 explosion variants (the client picks one at random each time) and the fuses.
+        com.google.gson.JsonArray explode = new com.google.gson.JsonArray();
+        for (int i = 1; i <= 3; i++) {
+            files.put("assets/tactical/sounds/throwable/explode" + i + ".ogg", bundled("pack/sounds/throwable/explode" + i + ".ogg"));
+            JsonObject snd = new JsonObject();
+            snd.addProperty("name", "tactical:throwable/explode" + i);
+            explode.add(snd);
+        }
+        JsonObject ex = new JsonObject();
+        ex.add("sounds", explode);
+        sounds.add("throwable.explode", ex);
+        for (String fuse : List.of("fuse_2s", "fuse_5s")) {
+            files.put("assets/tactical/sounds/throwable/" + fuse + ".ogg", bundled("pack/sounds/throwable/" + fuse + ".ogg"));
+            JsonObject entry = new JsonObject();
+            com.google.gson.JsonArray list = new com.google.gson.JsonArray();
+            JsonObject snd = new JsonObject();
+            snd.addProperty("name", "tactical:throwable/" + fuse);
+            list.add(snd);
+            entry.add("sounds", list);
+            sounds.add("throwable." + fuse, entry);
+        }
         files.put("assets/tactical/sounds.json", json(sounds));
     }
 
@@ -521,6 +542,30 @@ public final class PackBuilder {
         menuItem(files, "kit_skip_pressed", bundled("pack/gui/kit_skip_pressed.png"), drop, true);
         menuItem(files, "blank", HudGlyphs.png(new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)), null);
         generateMoneyItem(files);
+        // Timed throwable potion (tactical:timed_throwable): tinted liquid + bottle; custom_model_data float 0 = fuse
+        // frame 1-5 (0 = unlit), each frame also liquid + its own bottle texture.
+        files.put("assets/tactical/textures/item/throwable_overlay.png", bundled("pack/gui/throwable_overlay.png"));
+        com.google.gson.JsonArray frames = new com.google.gson.JsonArray();
+        for (int f = 0; f <= 5; f++) {
+            String tex = f == 0 ? "throwable" : "throwable_f" + f;
+            files.put("assets/tactical/textures/item/" + tex + ".png", bundled("pack/gui/" + tex + ".png"));
+            files.put("assets/tactical/models/item/" + tex + ".json", ("{\"parent\":\"minecraft:item/generated\",\"textures\":{"
+                    + "\"layer0\":\"tactical:item/throwable_overlay\",\"layer1\":\"tactical:item/" + tex + "\"}}")
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            if (f == 0) continue;
+            frames.add(com.google.gson.JsonParser.parseString("{\"threshold\":" + (f - 0.5) + ",\"model\":{\"type\":\"minecraft:model\","
+                    + "\"model\":\"tactical:item/" + tex + "\",\"tints\":[{\"type\":\"minecraft:potion\",\"default\":-13083194}]}}"));
+        }
+        JsonObject range = new JsonObject();
+        range.addProperty("type", "minecraft:range_dispatch");
+        range.addProperty("property", "minecraft:custom_model_data");
+        range.addProperty("index", 0);
+        range.add("entries", frames);
+        range.add("fallback", com.google.gson.JsonParser.parseString("{\"type\":\"minecraft:model\",\"model\":\"tactical:item/throwable\","
+                + "\"tints\":[{\"type\":\"minecraft:potion\",\"default\":-13083194}]}"));
+        JsonObject throwDef = new JsonObject();
+        throwDef.add("model", range);
+        files.put("assets/tactical/items/timed_throwable.json", json(throwDef));
         // Shots (tactical:shot): liquid layer tinted with the item's potion colour (like vanilla potions), bottle on top.
         files.put("assets/tactical/textures/item/shot_overlay.png", bundled("pack/gui/shot_overlay.png"));
         files.put("assets/tactical/textures/item/shot_bottle.png", bundled("pack/gui/shot_bottle.png"));

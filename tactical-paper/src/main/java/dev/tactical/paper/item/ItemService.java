@@ -75,11 +75,18 @@ public final class ItemService implements Service, Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         customEffects = new CustomEffects(plugin);
         Bukkit.getPluginManager().registerEvents(customEffects, plugin);
+        throwables = new ThrowableService(plugin, matches, this);
+        Bukkit.getPluginManager().registerEvents(throwables, plugin);
+        throwables.start();
     }
 
     @Override
     public void disable() {
         HandlerList.unregisterAll(this);
+        if (throwables != null) {
+            HandlerList.unregisterAll(throwables);
+            throwables.stop();
+        }
         if (customEffects != null) {
             HandlerList.unregisterAll(customEffects);
             customEffects.shutdown();
@@ -88,6 +95,8 @@ public final class ItemService implements Service, Listener {
 
     /** Flash, cleanse and the mining fatigue change (see {@link CustomEffects}). */
     private CustomEffects customEffects;
+    /** Timed throwable potions (see {@link ThrowableService}). */
+    private ThrowableService throwables;
 
     /** {@code /game item list} and {@code /game item give <id> [amount]} (permission tactical.admin.items). */
     public void attach(com.mojang.brigadier.builder.LiteralArgumentBuilder<io.papermc.paper.command.brigadier.CommandSourceStack> root) {
@@ -228,7 +237,9 @@ public final class ItemService implements Service, Listener {
                     .customColor(Color.fromRGB(d.color().value())).build());
         }
         if (d.model() != null) item.setData(DataComponentTypes.ITEM_MODEL, net.kyori.adventure.key.Key.key(d.model()));
-        item.lore(ItemLore.lines(d.category(), description(d), List.of(ItemLore.Usage.RIGHT_CLICK_USE, ItemLore.Usage.LEFT_CLICK_APPLY)));
+        item.lore(ItemLore.lines(d.category(), description(d), d.throwable() != null
+                ? List.of(ItemLore.Usage.RIGHT_CLICK_THROW, ItemLore.Usage.LEFT_CLICK_PRIME)
+                : List.of(ItemLore.Usage.RIGHT_CLICK_USE, ItemLore.Usage.LEFT_CLICK_APPLY)));
         ItemLore.hideVanillaLines(item);
         return item;
     }

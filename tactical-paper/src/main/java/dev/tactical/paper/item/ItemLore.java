@@ -39,7 +39,9 @@ public final class ItemLore {
     /** A usage line under the description. */
     public enum Usage {
         RIGHT_CLICK_USE(HudGlyphs.MOUSE_RIGHT, "Right-Click to Use"),
-        LEFT_CLICK_APPLY(HudGlyphs.MOUSE_LEFT, "Left-Click to Apply to Other Player");
+        LEFT_CLICK_APPLY(HudGlyphs.MOUSE_LEFT, "Left-Click to Apply to Other Player"),
+        RIGHT_CLICK_THROW(HudGlyphs.MOUSE_RIGHT, "Right-Click to Throw"),
+        LEFT_CLICK_PRIME(HudGlyphs.MOUSE_LEFT, "Left-Click to Light the Fuse");
 
         final char icon;
         final String text;

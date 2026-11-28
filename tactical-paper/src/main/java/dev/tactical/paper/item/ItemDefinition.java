@@ -18,12 +18,22 @@ import java.util.Optional;
  */
 public record ItemDefinition(String id, String type, Material material, String name, List<String> description,
                              TextColor color, double ringRadius, boolean trail, int cooldownTicks,
-                             ItemEffect.Polarity polarity, List<ItemEffect> effects, String model) {
+                             ItemEffect.Polarity polarity, List<ItemEffect> effects, String model, Throw throwable) {
+
+    /**
+     * {@code type: throwable}: thrown like a snowball; the fuse ({@code fuse-ticks}) starts on the first surface or
+     * player it hits; left-click primes it ({@code prime-ticks}, also running after the throw); it bursts in
+     * {@code radius} blocks and applies its effects to opponents (negative) or teammates (positive) in sight.
+     */
+    public record Throw(int fuseTicks, int primeTicks, double radius) {
+    }
+
+    public static final String DEFAULT_THROWABLE_MODEL = "tactical:timed_throwable";
 
     /** Item model of potion shots unless {@code model} says otherwise: liquid tinted with the shot colour + bottle. */
     public static final String DEFAULT_SHOT_MODEL = "tactical:shot";
 
-    public static final List<String> TYPES = List.of("shot");
+    public static final List<String> TYPES = List.of("shot", "throwable");
 
     public ItemCategory category() {
         return ItemCategory.UTILITY;
@@ -48,7 +58,7 @@ public record ItemDefinition(String id, String type, Material material, String n
 
     static Optional<ItemDefinition> parse(String id, ConfigNode n) {
         n.warnUnknownKeys(List.of("type", "material", "name", "description", "color", "ring-radius", "trail",
-                "cooldown-ticks", "effects", "model"));
+                "cooldown-ticks", "effects", "model", "fuse-ticks", "prime-ticks", "radius"));
         if (!id.matches("[a-z0-9_]{1,32}")) {
             n.error("item id '" + id + "' must be 1-32 chars of a-z, 0-9, _");
             return Optional.empty();
@@ -73,23 +83,26 @@ public record ItemDefinition(String id, String type, Material material, String n
         List<ItemEffect> effects = new ArrayList<>();
         for (ConfigNode en : n.child("effects").list()) ItemEffects.parse(en).ifPresent(effects::add);
         if (effects.isEmpty()) {
-            n.error("a shot needs at least one effect");
+            n.error("a " + type + " needs at least one effect");
             return Optional.empty();
         }
         ItemEffect.Polarity polarity = effects.get(0).polarity();
         if (effects.stream().anyMatch(x -> x.polarity() != polarity)) {
-            n.child("effects").error("a shot cannot mix positive and negative effects");
+            n.child("effects").error("a " + type + " cannot mix positive and negative effects");
             return Optional.empty();
         }
         return Optional.of(new ItemDefinition(id, type, material, n.string("name", id), n.stringList("description"), color,
                 n.number("ring-radius", 0.8, 0.2, 4.0), n.bool("trail", true), n.integer("cooldown-ticks", 20, 0, 20 * 60),
-                polarity, List.copyOf(effects), model(n, material)));
+                polarity, List.copyOf(effects), model(n, material, type),
+                type.equals("throwable") ? new Throw(n.integer("fuse-ticks", 40, 1, 20 * 30),
+                        n.integer("prime-ticks", 100, 1, 20 * 60), n.number("radius", 5.0, 0.5, 32)) : null));
     }
 
     /** {@code model}: an item model id, or "none" for the material's own look; default tactical:shot for potions. */
-    private static String model(ConfigNode n, Material material) {
+    private static String model(ConfigNode n, Material material, String type) {
         boolean potion = material == Material.POTION || material == Material.SPLASH_POTION || material == Material.LINGERING_POTION;
-        String m = n.string("model", potion ? DEFAULT_SHOT_MODEL : "none").trim().toLowerCase(Locale.ROOT);
+        String def = !potion ? "none" : type.equals("throwable") ? DEFAULT_THROWABLE_MODEL : DEFAULT_SHOT_MODEL;
+        String m = n.string("model", def).trim().toLowerCase(Locale.ROOT);
         if (m.equals("none") || m.isEmpty()) return null;
         if (net.kyori.adventure.key.Key.parseable(m)) return m;
         n.child("model").error("not a valid item model id: '" + m + "'");
