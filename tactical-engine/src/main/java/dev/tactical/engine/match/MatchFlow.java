@@ -259,17 +259,31 @@ public final class MatchFlow {
         startRound();
     }
 
+    /** Rounds that must be finished before a team may forfeit: half of the first half, rounded up. */
+    public int forfeitMinRounds() {
+        return Math.max(1, (rules.halftimeAfterRound() + 1) / 2);
+    }
+
+    /** Finished rounds (every round has exactly one winner). */
+    public int roundsPlayed() {
+        return scoreOf(TeamId.A) + scoreOf(TeamId.B);
+    }
+
+    /** Whether a forfeit is allowed now: the match is being played and enough rounds are finished. */
+    public boolean forfeitAvailable() {
+        boolean playing = switch (state()) {
+            case KIT_SELECT, BUY_PHASE, ROUND_LIVE, BOMB_PLANTED, ROUND_END, HALFTIME, SUDDEN_DEATH_KIT_SELECT -> true;
+            default -> false;
+        };
+        return playing && roundsPlayed() >= forfeitMinRounds();
+    }
+
     /**
      * {@code team} gives up (its players voted to forfeit): the other team wins now, whatever the phase. Returns false
      * once the match is already over or has not started.
      */
     public boolean forfeit(TeamId team) {
-        MatchState s = state();
-        boolean playing = switch (s) {
-            case KIT_SELECT, BUY_PHASE, ROUND_LIVE, BOMB_PLANTED, ROUND_END, HALFTIME, SUDDEN_DEATH_KIT_SELECT -> true;
-            default -> false;
-        };
-        if (!playing) return false;
+        if (!forfeitAvailable()) return false;
         winner = team.other();
         endReason = MatchEndReason.FORFEIT;
         paused = false;

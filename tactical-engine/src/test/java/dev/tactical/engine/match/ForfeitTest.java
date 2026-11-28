@@ -11,12 +11,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ForfeitTest {
 
     @Test
-    void forfeitDuringKitSelectEndsTheMatchForTheOtherTeam() {
+    void forfeitOnlyAfterHalfOfTheFirstHalf() {
         TestMatches m = new TestMatches(TestMatches.fast(5, 4, 4, dev.tactical.engine.mode.SuddenDeathSides.RANDOM), 5);
         m.start();
         MatchFlow flow = m.flow;
         assertEquals(MatchState.KIT_SELECT, flow.state());
         assertTrue(flow.skipVoteAvailable());
+        assertEquals(2, flow.forfeitMinRounds());
+        assertFalse(flow.forfeit(TeamId.A)); // no round played yet
+        m.runUntil(f -> f.roundsPlayed() >= 1 && f.state() == MatchState.BUY_PHASE);
+        assertFalse(flow.forfeit(TeamId.A)); // 1 of 2
+        m.runUntil(f -> f.roundsPlayed() >= 2 && f.state() == MatchState.BUY_PHASE);
         assertTrue(flow.forfeit(TeamId.A));
         assertEquals(MatchState.MATCH_END, flow.state());
         assertEquals(TeamId.B, flow.winner().orElseThrow());

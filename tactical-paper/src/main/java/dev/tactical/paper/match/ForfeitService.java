@@ -27,7 +27,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * {@code /forfeit}: a team vote to give up the match. Every connected (real) teammate must accept within 20 seconds;
+ * {@code /forfeit}: a team vote to give up the match, allowed once half of the first half has been played. Every connected (real) teammate must accept within 20 seconds;
  * a single REJECT cancels it. Teammates get clickable ACCEPT / REJECT buttons in chat; accepts are announced without
  * names. When everyone accepted, the other team wins (end reason FORFEIT).
  */
@@ -72,7 +72,14 @@ public final class ForfeitService {
         GameMatch match = matches.matchOf(p.getUniqueId()).orElse(null);
         MatchMember me = match == null ? null : match.member(p.getUniqueId()).orElse(null);
         if (me == null) return fail(p, "You are not in a match.");
-        if (!canForfeit(match.flow())) return fail(p, "The match cannot be forfeited right now.");
+        MatchFlow flow = match.flow();
+        if (!flow.forfeitAvailable()) {
+            if (flow.roundsPlayed() < flow.forfeitMinRounds() && !flow.isFinished()) {
+                return fail(p, "You can only forfeit after " + flow.forfeitMinRounds() + " rounds have been played ("
+                        + flow.roundsPlayed() + " so far).");
+            }
+            return fail(p, "The match cannot be forfeited right now.");
+        }
         String key = key(match, me.team());
         if (votes.containsKey(key)) return answer(p, true);
         Vote v = new Vote(match, me.team());
@@ -158,13 +165,6 @@ public final class ForfeitService {
     private void close(String key, Vote v) {
         votes.remove(key, v);
         if (v.timeout != null) v.timeout.cancel();
-    }
-
-    private static boolean canForfeit(MatchFlow f) {
-        return switch (f.state()) {
-            case KIT_SELECT, BUY_PHASE, ROUND_LIVE, BOMB_PLANTED, ROUND_END, HALFTIME, SUDDEN_DEATH_KIT_SELECT -> true;
-            default -> false;
-        };
     }
 
     private static Component button(char glyph, String command, String hover, NamedTextColor hoverColor) {
